@@ -15,17 +15,35 @@ Database Schema
 
 ![ERS](gfx/ers.png "ERS")
 
+Transactions
+------------
+
+```javascript
+nopg.start('postgres://user:pass@localhost/dbname').then(function(db) {
+	/* ... */
+	return db.commit();
+});
+```
+
 Objects
 -------
 
 ### Creating objects
 
 ```javascript
+db.create({"hello":"world"}).commit().then(function(db) {
+	var doc = db.fetch();
+	console.log("Successfully created new object: " + util.inspect(doc) );
+});
 ```
 
 ### Editing objects
 
 ```javascript
+doc.hello = "world";
+db.update(doc).commit().then(function(db) {
+	console.log("Successfully edited object: " + util.inspect(doc) );
+});
 ```
 
 ### Searching objects
