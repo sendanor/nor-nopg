@@ -203,7 +203,7 @@ doc.createAttachment(data, {"content-type": "image/png"}).then(function(db) {
 ### Searching attachments
 
 ```javascript
-doc.getAttachments().then(function(db) {
+doc.searchAttachments().then(function(db) {
 	var list = db.fetch();
 	console.log("Found attachments: " + util.inspect(list) );
 });
@@ -230,7 +230,7 @@ Libs
 ### Importing/Upgrading modules into database
 
 ```javascript
-db.import('/path/to/tv4.js').then(function(db) {
+db.import('/path/to/tv4.js', {'name': 'tv4'}).then(function(db) {
 	console.log("Library imported succesfully.");
 });
 ```
