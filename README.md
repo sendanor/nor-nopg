@@ -25,13 +25,15 @@ nopg.start('postgres://user:pass@localhost/dbname').then(function(db) {
 });
 ```
 
+You must call `db.commit()` to actually save any changes to the database.
+
 Objects
 -------
 
 ### Creating objects
 
 ```javascript
-db.create({"hello":"world"}).commit().then(function(db) {
+db.create({"hello":"world"}).then(function(db) {
 	var doc = db.fetch();
 	console.log("Successfully created new object: " + util.inspect(doc) );
 });
@@ -41,7 +43,8 @@ db.create({"hello":"world"}).commit().then(function(db) {
 
 ```javascript
 doc.hello = "world";
-db.update(doc).commit().then(function(db) {
+
+db.update(doc).then(function(db) {
 	console.log("Successfully edited object: " + util.inspect(doc) );
 });
 ```
