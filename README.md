@@ -149,6 +149,13 @@ db.createType("Product", {"schema":{"type":"object"}}).then(function(db) {
 });
 ```
 
+```javascript
+db.createType({"schema":{"type":"object"}}).then(function(db) {
+	var product_type = db.fetch();
+	console.log("Successfully created new type: " + util.inspect(product_type) );
+});
+```
+
 ### Editing types
 
 ```javascript
