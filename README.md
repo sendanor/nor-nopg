@@ -52,11 +52,22 @@ db.update(doc).then(function(db) {
 ### Searching objects
 
 ```javascript
+db.search(function(doc) {
+	return doc.hello === 'world';
+}).then(function(db) {
+	var list = db.fetch();
+	console.log("Found objects: " + util.inspect(list) );
+});
 ```
 
 ### Deleting objects
 
 ```javascript
+db.del(function(doc) {
+	return doc.hello === 'world';
+}).then(function(db) {
+	console.log("Objects deleted succesfully.");
+});
 ```
 
 Types
