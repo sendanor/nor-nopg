@@ -4,7 +4,7 @@
   "description": "NoPostgreSQL Client Module for Sendanor NoSQL Server",
   "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha -R spec tests/test-*.js"
   },
   "repository": {
     "type": "git",
@@ -18,7 +18,14 @@
     "client"
   ],
   "dependencies": {
+    "q": "*",
+    "nor-extend": "*",
     "nor-pg": "*"
+  },
+  "devDependencies": {
+    "lint": "*",
+    "mocha": "*",
+    "nor-is": "*"
   },
   "author": "Jaakko-Heikki Heusala <jheusala@iki.fi>",
   "license": "MIT",
