@@ -63,10 +63,8 @@ db.search(function(doc) {
 ### Deleting objects
 
 ```javascript
-db.del(function(doc) {
-	return doc.hello === 'world';
-}).then(function(db) {
-	console.log("Objects deleted succesfully.");
+db.del(doc).then(function(db) {
+	console.log("Object deleted succesfully.");
 });
 ```
 
