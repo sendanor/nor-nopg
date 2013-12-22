@@ -10,6 +10,11 @@ Usage
 var nopg = require('nor-nopg');
 ```
 
+Database Schema
+---------------
+
+![ERS](gfx/ers.png "ERS")
+
 Objects
 -------
 
@@ -18,7 +23,7 @@ Objects
 ```javascript
 ```
 
-### Changing objects
+### Editing objects
 
 ```javascript
 ```
@@ -46,7 +51,27 @@ Types
 ```javascript
 ```
 
+### Editing objects by type
+
+```javascript
+```
+
 ### Searching objects by type
+
+```javascript
+```
+
+### Deleting objects by type
+
+```javascript
+```
+
+### Editing types
+
+```javascript
+```
+
+### Deleting types
 
 ```javascript
 ```
@@ -65,6 +90,14 @@ Attachments
 ```
 
 ### Deleting attachments
+
+```javascript
+```
+
+Libs
+----
+
+### Importing/Upgrading modules into database
 
 ```javascript
 ```
