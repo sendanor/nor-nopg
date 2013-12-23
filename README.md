@@ -81,22 +81,6 @@ db.search(function(doc) {
 ```
 
 ```javascript
-db.search("function(doc) { return doc.hello === 'world'; }").then(function(db) {
-	var list = db.fetch();
-	console.log("Found objects: " + util.inspect(list) );
-});
-```
-
-```javascript
-db.search("this.hello === 'world'").then(function(db) {
-	var list = db.fetch();
-	console.log("Found objects: " + util.inspect(list) );
-});
-```
-
-### Deleting objects
-
-```javascript
 db.del(doc).then(function(db) {
 	console.log("Object deleted succesfully.");
 });
@@ -105,7 +89,7 @@ db.del(doc).then(function(db) {
 ### Creating objects with type
 
 ```javascript
-db.create({"hello":"world"}, type).then(function(db) {
+db.create(type)({"hello":"world"}).then(function(db) {
 	var doc = db.fetch();
 	console.log("Successfully created new object: " + util.inspect(doc) );
 });
@@ -120,7 +104,7 @@ db.create({"hello":"world"}, type).then(function(db) {
 ### Searching objects by type
 
 ```javascript
-db.search(type).then(function(db) {
+db.search(type)().then(function(db) {
 	var list = db.fetch();
 	console.log("Found objects: " + util.inspect(list) );
 });
