@@ -1,6 +1,7 @@
 "use strict";
 
-var pgconfig = process.env.PGCONFIG || 'postgres://test:1234567@localhost/test';
+var util = require('util');
+var PGCONFIG = process.env.PGCONFIG || 'postgres://test:1234567@localhost/test';
 
 /* */
 describe('nopg', function(){
@@ -24,14 +25,17 @@ describe('nopg', function(){
 	describe('tests', function(){
 
 		it('.create({"hello":"world"}) works', function(done){
-			nopg.start(pgconfig).create({"hello":"world"}).commit().then(function(db) {
+			nopg.start(PGCONFIG).create({"hello":"world"}).then(function(db) {
+				var doc = db.fetch();
+
+				util.debug('doc = ' + util.inspect(doc));
+				
+				return db.commit();
+			}).then(function(db) {
 				done();
 			}).fail(function(err) {
 				done(err);
 			}).done();
-		});
-
-		afterEach(function(done){
 		});
 
 	});
