@@ -80,6 +80,8 @@ db.search(function(doc) {
 });
 ```
 
+### Deleting objects
+
 ```javascript
 db.del(doc).then(function(db) {
 	console.log("Object deleted succesfully.");
