@@ -24,9 +24,7 @@ function meta(opts) {
 			metakey = metakey || '$meta';
 			if(self[metakey]) {
 				Object.keys(self[metakey]).forEach(function(key) {
-					if(self[key] === undefined) {
-						self[key] = self[metakey][key];
-					}
+					self[key] = self[metakey][key];
 				});
 				debug.log("object after resolve(", metakey, ") is: ", self);
 			}

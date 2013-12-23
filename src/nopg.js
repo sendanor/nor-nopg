@@ -93,7 +93,7 @@ NoPG.prototype.create = function(data) {
 NoPG.prototype.update = function(doc, data) {
 	var self = this;
 	assert_type(doc, NoPgObject, "doc is not NoPg.Object");
-	return do_query(self, "UPDATE objects SET content = $1 RETURNING *", [data]).then(get_object).then(save_object_to(doc));
+	return do_query(self, "UPDATE objects SET content = $1 RETURNING *", [data]).then(get_object).then(save_object_to(doc)).then(function() { return self; });
 };
 
 /* EOF */

@@ -26,8 +26,9 @@ NoPgObject.prototype.update = function(data) {
 	var self = this;
 	debug.log("NoPgObject.prototype.update(data = ", data, ")");
 	meta(self).set_meta_keys(data);
-	// FIXME: If `self` already has values for new properties, the value is NOT changed currently!
-	meta(self).resolve();
+	// FIXME: If values are removed from the database, local copy properties are NOT removed currently!
+	meta(self).resolve('$content');
+	return self;
 };
 
 /* EOF */
