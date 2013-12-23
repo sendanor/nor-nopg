@@ -39,6 +39,11 @@ function save_document_to(self) {
 	};
 }
 
+/** Perform query */
+function do_query(self, query, values) {
+	return extend.promise( [NoPG], self._db._query(query, values) );
+}
+
 /** Commit transaction */
 NoPG.prototype.commit = function() {
 	return extend.promise( [NoPG], this._db.commit() );
@@ -47,7 +52,7 @@ NoPG.prototype.commit = function() {
 /** Create document */
 NoPG.prototype.create = function(data) {
 	var self = this;
-	return extend.promise( [NoPG], self._db._query("INSERT INTO objects (content) VALUES ($1) RETURNING *", [data]).then(get_document).then(save_document_to(self)) );
+	return do_query(self, "INSERT INTO objects (content) VALUES ($1) RETURNING *", [data]).then(get_document).then(save_document_to(self));
 };
 
 /* EOF */
