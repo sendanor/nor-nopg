@@ -235,3 +235,9 @@ db.import('/path/to/tv4.js', {'name': 'tv4'}).then(function(db) {
 });
 ```
 
+Running tests
+-------------
+
+```
+PGCONFIG='pg://jhh:password@localhost/jhh' npm test
+```
