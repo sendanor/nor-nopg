@@ -20,7 +20,8 @@
   "dependencies": {
     "q": "*",
     "nor-extend": "*",
-    "nor-pg": "*"
+    "nor-pg": "*",
+    "nor-debug": "*"
   },
   "devDependencies": {
     "lint": "*",
