@@ -30,10 +30,10 @@ You must call `db.commit()` to actually save any changes to the database.
 Objects
 -------
 
-### Creating objects
+### Creating objects (without type)
 
 ```javascript
-db.create({"hello":"world"}).then(function(db) {
+db.create()({"hello":"world"}).then(function(db) {
 	var doc = db.fetch();
 	console.log("Successfully created new object: " + util.inspect(doc) );
 });
@@ -129,14 +129,14 @@ Types
 ### Creating types
 
 ```javascript
-db.createType("Product", {"schema":{"type":"object"}}).then(function(db) {
+db.createType("Product")({"schema":{"type":"object"}}).then(function(db) {
 	var type = db.fetch();
 	console.log("Successfully created new type: " + util.inspect(type) );
 });
 ```
 
 ```javascript
-db.createType({"schema":{"type":"object"}}).then(function(db) {
+db.createType()({"schema":{"type":"object"}}).then(function(db) {
 	var product_type = db.fetch();
 	console.log("Successfully created new type: " + util.inspect(product_type) );
 });
