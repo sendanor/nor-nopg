@@ -83,10 +83,16 @@ NoPG.prototype.commit = function() {
 	return extend.promise( [NoPG], this._db.commit() );
 };
 
-/** Create object */
-NoPG.prototype.create = function(data) {
-	var self = this;
-	return do_query(self, "INSERT INTO objects (content) VALUES ($1) RETURNING *", [data]).then(get_object).then(save_object_to(self));
+/** Create object by type: `db.create([TYPE])([OPT(S)])`. */
+NoPG.prototype.create = function(type) {
+	if(type !== undefined) {
+		throw new TypeError("Create by type not implemented");
+	}
+	var ret = function(data) {
+		var self = this;
+		return do_query(self, "INSERT INTO objects (content) VALUES ($1) RETURNING *", [data]).then(get_object).then(save_object_to(self));
+	};
+	return ret;
 };
 
 /** Update object */

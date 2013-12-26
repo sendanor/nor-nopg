@@ -22,10 +22,10 @@ describe('nopg', function(){
 
 	});
 
-	describe('tests', function(){
+	describe('tests', function() {
 
-		it('.create({"hello":"world"}) works', function(done){
-			nopg.start(PGCONFIG).create({"hello":"world"}).then(function(db) {
+		it('.create()({"hello":"world"}) works', function(done){
+			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
 				var doc = db.fetch();
 				util.debug('doc = ' + util.inspect(doc));
 				assert.strictEqual(typeof doc.hello, 'string');
@@ -40,7 +40,7 @@ describe('nopg', function(){
 
 		it('.create({"hello":"world"}) and .update(doc, {"hello": "another"}) works', function(done){
 			var doc;
-			nopg.start(PGCONFIG).create({"hello":"world"}).then(function(db) {
+			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
 				doc = db.fetch();
 				util.debug('before doc = ' + util.inspect(doc));
 				return db.update(doc, {"hello": "another"});

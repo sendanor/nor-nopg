@@ -1,7 +1,7 @@
 nor-nopg
 ========
 
-NoPostgreSQL Client Module for Sendanor NoSQL Server
+PostgreSQL Module for Sendanor NoSQL Schema.
 
 Usage
 -----
@@ -10,8 +10,8 @@ Usage
 var nopg = require('nor-nopg');
 ```
 
-Database Schema
----------------
+Internal Database Schema
+------------------------
 
 ![ERS](gfx/ers.png "ERS")
 
@@ -25,7 +25,8 @@ nopg.start('postgres://user:pass@localhost/dbname').then(function(db) {
 });
 ```
 
-You must call `db.commit()` to actually save any changes to the database.
+You must call `db.commit()` to actually save any changes to the database or `db.rollback()` to cancel the 
+transaction.
 
 Objects
 -------
