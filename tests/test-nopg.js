@@ -1,15 +1,20 @@
 "use strict";
 
+var Q = require('q');
+Q.longStackSupport = true;
+
+var is = require('nor-is');
+var assert = require('assert');
 var util = require('util');
-var PGCONFIG = process.env.PGCONFIG || 'postgres://test:1234567@localhost/test';
+var PGCONFIG = process.env.PGCONFIG || 'pg://postgres@localhost/test';
 var debug = require('nor-debug');
+var nopg = require('../src');
 
 /** Run init() at start */
 beforeEach(function(done){
-	var nopg = require('../src');
 	nopg.start(PGCONFIG).init().then(function(db) {
-		var doc = db.fetch();
-		util.debug('initialized database: doc = ' + util.inspect(doc));
+		//var doc = db.fetch();
+		//util.debug('initialized database: doc = ' + util.inspect(doc));
 		return db.commit();
 	}).then(function(db) {
 		done();
@@ -20,13 +25,6 @@ beforeEach(function(done){
 
 /* */
 describe('nopg', function(){
-
-	var Q = require('q');
-	Q.longStackSupport = true;
-
-	var is = require('nor-is');
-	var assert = require('assert');
-	var nopg = require('../src');
 
 	describe('.start', function(){
 
