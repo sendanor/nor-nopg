@@ -29,7 +29,7 @@ describe('nopg', function(){
 		before(function(done){
 			nopg.start(PGCONFIG).init().then(function(db) {
 				var doc = db.fetch();
-				util.debug('doc = ' + util.inspect(doc));
+				util.debug('initialized database: doc = ' + util.inspect(doc));
 				return db.commit();
 			}).then(function(db) {
 				done();
