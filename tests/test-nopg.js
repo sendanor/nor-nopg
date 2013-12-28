@@ -17,6 +17,7 @@ beforeEach(function(done){
 		//util.debug('initialized database: doc = ' + util.inspect(doc));
 		return db.commit();
 	}).then(function(db) {
+		debug.log('Database is OK.');
 		done();
 	}).fail(function(err) {
 		done(err);
