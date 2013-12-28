@@ -1,3 +1,5 @@
+[![Build Status](https://secure.travis-ci.org/Sendanor/nor-nopg.png?branch=master)](http://travis-ci.org/Sendanor/nor-nopg)
+
 nor-nopg
 ========
 
