@@ -6,6 +6,23 @@ function escape_function(f) {
 
 module.exports = [
 
+	/** #0 */
+	function(db) {
+		return db.query([
+				'CREATE TABLE IF NOT EXISTS dbversion (',
+				'    version integer PRIMARY KEY NOT NULL,',
+				'    updated timestamptz NOT NULL default now()',
+				')'].join('\n'))
+			.query([
+				'CREATE OR REPLACE FUNCTION db_version() RETURNS integer LANGUAGE SQL AS $$',
+				'SELECT max(version) AS version FROM dbversion;',
+				'$$'].join('\n'))
+			.query([
+				'CREATE OR REPLACE FUNCTION set_db_version(version integer) RETURNS void LANGUAGE SQL AS $$',
+				'INSERT INTO dbversion (version) VALUES ($1);',
+				'$$'].join('\n'));
+	},
+
 	/** #1 Function for checking that only valid javascript goes into libs table (01_js_library_environment.sql) */
 	function(db) {
 		function check_javascript() {
