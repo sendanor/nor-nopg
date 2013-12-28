@@ -15,21 +15,21 @@ module.exports = [
 			}
 			return true;
 		}
-		return db.query('CREATE OR REPLACE FUNCTION check_javascript(js text) RETURNS boolean LANGUAGE plv8 VOLATILE AS $1', check_javascript);
+		return db.query('CREATE OR REPLACE FUNCTION check_javascript(js text) RETURNS boolean LANGUAGE plv8 VOLATILE AS $check_javascript$\n' + check_javascript + '\n$check_javascript$');
 	},
 
 	/** #2 Table for storing JS libraries (01_js_library_environment.sql) */
 	function(db) {
 		return db.query('CREATE SEQUENCE libs_seq'
 			).query([
-				"CREATE TABLE IF NOT EXISTS libs ("
-				"	id uuid PRIMARY KEY NOT NULL default uuid_generate_v5('df4c8342-6be5-11e3-9eca-3c07543b96e1', nextval('libs_seq'::regclass)::text),"
-				"	name text UNIQUE NOT NULL,"
-				"	content text NOT NULL,"
-				"	meta json,"
-				"	created timestamptz NOT NULL default now(),"
-				"	modified timestamptz NOT NULL default now(),"
-				"	CHECK (check_javascript(content))"
+				"CREATE TABLE IF NOT EXISTS libs (",
+				"	id uuid PRIMARY KEY NOT NULL default uuid_generate_v5('df4c8342-6be5-11e3-9eca-3c07543b96e1', nextval('libs_seq'::regclass)::text),",
+				"	name text UNIQUE NOT NULL,",
+				"	content text NOT NULL,",
+				"	meta json,",
+				"	created timestamptz NOT NULL default now(),",
+				"	modified timestamptz NOT NULL default now(),",
+				"	CHECK (check_javascript(content))",
 				")"].join('\n')
 			).query("ALTER SEQUENCE libs_seq OWNED BY libs.id"
 			).query("CREATE TRIGGER libs_modified BEFORE UPDATE ON libs FOR EACH ROW EXECUTE PROCEDURE moddatetime (modified)");
@@ -99,59 +99,59 @@ $$;
 	 */
 	function(db) {
 		return db;
-/*
-CREATE SEQUENCE types_seq;
-CREATE TABLE IF NOT EXISTS types (
-	id uuid PRIMARY KEY NOT NULL default uuid_generate_v5('639a8bcf-06b1-4504-94fd-db0419a2db76', nextval('types_seq'::regclass)::text),
-	name text,
-	schema json,
-	validator text,
-	meta json,
-	created timestamptz NOT NULL default now(),
-	modified timestamptz NOT NULL default now(),
-	CHECK (check_javascript(validator))
-);
-ALTER SEQUENCE types_seq OWNED BY types.id;
+	/*
+	CREATE SEQUENCE types_seq;
+	CREATE TABLE IF NOT EXISTS types (
+		id uuid PRIMARY KEY NOT NULL default uuid_generate_v5('639a8bcf-06b1-4504-94fd-db0419a2db76', nextval('types_seq'::regclass)::text),
+		name text,
+		schema json,
+		validator text,
+		meta json,
+		created timestamptz NOT NULL default now(),
+		modified timestamptz NOT NULL default now(),
+		CHECK (check_javascript(validator))
+	);
+	ALTER SEQUENCE types_seq OWNED BY types.id;
 
---
--- CHECK constraint helper for tv4. Acceps json data column and types table id as arguments.
---
-CREATE OR REPLACE FUNCTION check_type(data json, types_id uuid) RETURNS boolean LANGUAGE plv8 VOLATILE AS $js$
-// Ignore typeless objects
-if (types_id === null) {
+	--
+	-- CHECK constraint helper for tv4. Acceps json data column and types table id as arguments.
+	--
+	CREATE OR REPLACE FUNCTION check_type(data json, types_id uuid) RETURNS boolean LANGUAGE plv8 VOLATILE AS $js$
+	// Ignore typeless objects
+	if (types_id === null) {
+		return true;
+	}
+
+	// Load type info
+	var type_row = plv8.execute("SELECT validator FROM types WHERE id = $1", [types_id])[0];
+	var schema = type_row.json_schema;
+	var validator_code = type_row.validator;
+	
+	// Validate JSON schema
+	if (schema) {
+		var tv4 = require('tv4');
+		var result = tv4.validateResult(data, schema);
+	
+		if (result.error) {
+			plv8.elog(ERROR, result.error);
+		}
+	
+		if (result.valid === false) {
+			return false;
+		}
+	}
+	
+	// Run the validator
+	if (validator_code) {
+		var validator = new Function("return (" + validator_code + ")");
+		if (validator()(data) === false) {
+			plv8.elog(ERROR, "Type validation failed");
+			return false;
+		}
+	}
+	
 	return true;
-}
-
-// Load type info
-var type_row = plv8.execute("SELECT validator FROM types WHERE id = $1", [types_id])[0];
-var schema = type_row.json_schema;
-var validator_code = type_row.validator;
-
-// Validate JSON schema
-if (schema) {
-	var tv4 = require('tv4');
-	var result = tv4.validateResult(data, schema);
-
-	if (result.error) {
-		plv8.elog(ERROR, result.error);
-	}
-
-	if (result.valid === false) {
-		return false;
-	}
-}
-
-// Run the validator
-if (validator_code) {
-	var validator = new Function("return (" + validator_code + ")");
-	if (validator()(data) === false) {
-		plv8.elog(ERROR, "Type validation failed");
-		return false;
-	}
-}
-
-return true;
-$js$;
+	$js$;
 
 		--
 		-- The json objects
@@ -175,19 +175,19 @@ $js$;
 	/** #4 */
 	function(db) {
 		return db;
-/*
-CREATE SEQUENCE attachments_seq;
-CREATE TABLE IF NOT EXISTS attachments (
-	id uuid PRIMARY KEY NOT NULL default uuid_generate_v5('7ff10638-7ede-4748-8732-c602754c10cc', nextval('attachments_seq'::regclass)::text),
-	objects_id uuid NOT NULL REFERENCES objects ON DELETE CASCADE,
-	content bytea NOT NULL,
-	meta json,
-	created timestamptz NOT NULL default now(),
-	modified timestamptz NOT NULL default now()
-);
-ALTER SEQUENCE attachments_seq OWNED BY attachments.id;
-CREATE TRIGGER attachments_modified BEFORE UPDATE ON attachments FOR EACH ROW EXECUTE PROCEDURE moddatetime (modified);
-*/
+		/*
+		CREATE SEQUENCE attachments_seq;
+		CREATE TABLE IF NOT EXISTS attachments (
+			id uuid PRIMARY KEY NOT NULL default uuid_generate_v5('7ff10638-7ede-4748-8732-c602754c10cc', nextval('attachments_seq'::regclass)::text),
+			objects_id uuid NOT NULL REFERENCES objects ON DELETE CASCADE,
+			content bytea NOT NULL,
+			meta json,
+			created timestamptz NOT NULL default now(),
+			modified timestamptz NOT NULL default now()
+		);
+		ALTER SEQUENCE attachments_seq OWNED BY attachments.id;
+		CREATE TRIGGER attachments_modified BEFORE UPDATE ON attachments FOR EACH ROW EXECUTE PROCEDURE moddatetime (modified);
+		*/
 	},
 
 	/** #5 - Used to insert objects */
@@ -199,5 +199,6 @@ CREATE TRIGGER attachments_modified BEFORE UPDATE ON attachments FOR EACH ROW EX
 		$$;
 		*/
 	}
-];
 
+];
+/* EOF */

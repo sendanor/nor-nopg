@@ -1,6 +1,7 @@
 /* nor-nopg */
 
 var debug = require('nor-debug');
+var Q = require('q');
 var pg = require('nor-pg');
 var extend = require('nor-extend').setup({useFunctionPromises:true});
 var NoPgObject = require('./Object.js');
@@ -86,7 +87,14 @@ NoPG.prototype.commit = function() {
 
 /** Initialize the database */
 NoPG.prototype.init = function() {
-	throw TypeError("not implemented");
+	var self = this;
+	var builders = require('./schema/');
+	return builders.reduce(function (so_far, f) {
+	    return so_far.then(function(db) {
+			db.fetchAll();
+			return db;
+		}).then(f);
+	}, Q(self._db)).then(function() { return self; });
 };
 
 /** Create object by type: `db.create([TYPE])([OPT(S)])`. */

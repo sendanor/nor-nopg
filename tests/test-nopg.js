@@ -25,6 +25,18 @@ describe('nopg', function(){
 
 	describe('tests', function() {
 
+		it('.init() works', function(done){
+			nopg.start(PGCONFIG).init().then(function(db) {
+				var doc = db.fetch();
+				util.debug('doc = ' + util.inspect(doc));
+				return db.commit();
+			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				done(err);
+			}).done();
+		});
+
 		it('.create()({"hello":"world"}) works', function(done){
 			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
 				debug.log('db is ', db);
