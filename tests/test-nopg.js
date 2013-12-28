@@ -25,7 +25,8 @@ describe('nopg', function(){
 
 	describe('tests', function() {
 
-		it('.init() works', function(done){
+		/** Run init() at start */
+		before(function(done){
 			nopg.start(PGCONFIG).init().then(function(db) {
 				var doc = db.fetch();
 				util.debug('doc = ' + util.inspect(doc));
