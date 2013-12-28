@@ -1,0 +1,7 @@
+language: node_js
+node_js:
+  - "0.11"
+  - "0.10"
+env: PGCONFIG='pg://postgres@localhost/nopg_test'
+before_script:
+  - psql -c 'create database nopg_test;' -U postgres
