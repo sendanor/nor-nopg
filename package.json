@@ -32,6 +32,7 @@
     "nor-extend": ">= 0.1.11",
     "nor-pg": "*",
     "nor-debug": "*",
+    "mori": "*",
     "optimist": "*",
     "nor-fs": "*"
   },
