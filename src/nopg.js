@@ -85,16 +85,48 @@ NoPG.prototype.commit = function() {
 	return extend.promise( [NoPG], this._db.commit() );
 };
 
+/** Checks if server has compatible version */
+NoPG.prototype.testServerVersion = function() {
+	var self = this;
+	return do_query(self, 'show server_version_num').then(function(num) {
+		num = parseInt(num, 10);
+		if(num < 90300) {
+			throw new TypeError("PostgreSQL server must be v9.3 or newer");
+		}
+		return self;
+	});
+};
+
+/** Checks if server has compatible version */
+NoPG.prototype.testExtension = function(name) {
+	var self = this;
+	return do_query(self, 'select COUNT(*) AS count from pg_catalog.pg_extension where extname = $1', [name]).then(function(rows) {
+		var row = rows.shift();
+		var count = parseInt(row.count, 10);
+		if(count === 0) {
+			throw new TypeError("PostgreSQL server does not have extension: " + name);
+		}
+		return self;
+	});
+};
+
+/** Tests if the server is compatible */
+NoPG.prototype.test = function() {
+	return this.testServerVersion().testExtension('plv8').testExtension('uuid-ossp').testExtension('moddatetime').testExtension('tcn');
+};
+
 /** Initialize the database */
 NoPG.prototype.init = function() {
 	var self = this;
 	var builders = require('./schema/');
-	return builders.reduce(function (so_far, f) {
-	    return so_far.then(function(db) {
-			db.fetchAll();
-			return db;
-		}).then(f);
-	}, Q(self._db)).then(function() { return self; });
+	return self.test(function() {
+		return builders.reduce(function (so_far, f) {
+		    return so_far.then(function(db) {
+				db.fetchAll();
+				return db;
+			}).then(f);
+		}, Q(db)).then(function() { return self; });
+	});
 };
 
 /** Create object by type: `db.create([TYPE])([OPT(S)])`. */
