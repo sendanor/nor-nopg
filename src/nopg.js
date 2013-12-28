@@ -124,7 +124,7 @@ NoPG.prototype.test = function() {
 /** Initialize the database */
 NoPG.prototype.init = function() {
 	var self = this;
-	return self.test(function() {
+	return self.test().then(function() {
 		var builders = require('./schema/');
 		return builders.reduce(function(so_far, f) {
 		    return so_far.then(function(db) {
