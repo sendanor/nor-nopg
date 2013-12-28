@@ -5,7 +5,7 @@ var PGCONFIG = process.env.PGCONFIG || 'postgres://test:1234567@localhost/test';
 var debug = require('nor-debug');
 
 /** Run init() at start */
-before(function(done){
+beforeEach(function(done){
 	var nopg = require('../src');
 	nopg.start(PGCONFIG).init().then(function(db) {
 		var doc = db.fetch();
