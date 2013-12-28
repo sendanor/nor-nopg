@@ -40,7 +40,23 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('.create({"hello":"world"}) and .update(doc, {"hello": "another"}) works', function(done){
+		it('.createType() and .create(Type)({"hello":"world"}) works', function(done){
+			nopg.start(PGCONFIG).createType("Test")({"schema":{"type":"object"}}).create("Test")({"hello":"world"}).then(function(db) {
+				debug.log('db is ', db);
+				var type = db.fetch();
+				var doc = db.fetch();
+				util.debug('doc = ' + util.inspect(doc));
+				assert.strictEqual(typeof doc.hello, 'string');
+				assert.strictEqual(doc.hello, 'world');
+				return db.commit();
+			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				done(err);
+			}).done();
+		});
+
+		it('.create()({"hello":"world"}) and .update(doc, {"hello": "another"}) works', function(done){
 			var doc;
 			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
 				doc = db.fetch();
