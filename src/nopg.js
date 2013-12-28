@@ -9,7 +9,6 @@ var orm = require('./orm');
 
 /* ------------- PUBLIC FUNCTIONS --------------- */
 
-
 /** The constructor */
 function NoPg(db) {
 	var self = this;
