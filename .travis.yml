@@ -13,3 +13,5 @@ before_script:
   - psql template1 -c 'CREATE EXTENSION tcn;' -U postgres
   - psql template1 -c 'CREATE EXTENSION moddatetime;' -U postgres
   - psql -c 'CREATE DATABASE nopg_test;' -U postgres
+after_failure:
+  - psql -c '\d' -U postgres
