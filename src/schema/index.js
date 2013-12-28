@@ -1,42 +1,45 @@
+/** Database schema creation functions */
+
 module.exports = [
 
-	/** #1 Function for checking that only valid javascript goes into libs table */
+	/** #1 Function for checking that only valid javascript goes into libs table (01_js_library_environment.sql) */
 	function(db) {
+		function check_javascript() {
+			var module = {'exports':{}};
+			try {
+				var fun = new Function("module", "exports", js);
+				fun(module, module.exports);
+			} catch (e) {
+				plv8.elog(ERROR, e);
+				return false;
+			}
+			return true;
+		}
+		return db.query('CREATE OR REPLACE FUNCTION check_javascript(js text) RETURNS boolean LANGUAGE plv8 VOLATILE AS $1', check_javascript);
+	},
 
+	/** #2 Table for storing JS libraries (01_js_library_environment.sql) */
+	function(db) {
+		return db.query('CREATE SEQUENCE libs_seq'
+			).query([
+				"CREATE TABLE IF NOT EXISTS libs ("
+				"	id uuid PRIMARY KEY NOT NULL default uuid_generate_v5('df4c8342-6be5-11e3-9eca-3c07543b96e1', nextval('libs_seq'::regclass)::text),"
+				"	name text UNIQUE NOT NULL,"
+				"	content text NOT NULL,"
+				"	meta json,"
+				"	created timestamptz NOT NULL default now(),"
+				"	modified timestamptz NOT NULL default now(),"
+				"	CHECK (check_javascript(content))"
+				")"].join('\n')
+			).query("ALTER SEQUENCE libs_seq OWNED BY libs.id"
+			).query("CREATE TRIGGER libs_modified BEFORE UPDATE ON libs FOR EACH ROW EXECUTE PROCEDURE moddatetime (modified)");
+	},
+
+	/*
+	 */
+	function(db) {
+		return db;
 /*
---
--- Function for checking that only valid javascript goes into libs table
---
-CREATE OR REPLACE FUNCTION check_javascript(js text) RETURNS boolean LANGUAGE plv8 VOLATILE AS $$
-var module = {'exports':{}};
-
-try {
-	var fun = new Function("module", "exports", js);
-	fun(module, module.exports);
-} catch (e) {
-	plv8.elog(ERROR, e);
-	return false;
-}
-
-return true;
-$$;
-
---
--- Table for storing JS libraries
---
-CREATE SEQUENCE libs_seq;
-CREATE TABLE IF NOT EXISTS libs (
-	id uuid PRIMARY KEY NOT NULL default uuid_generate_v5('df4c8342-6be5-11e3-9eca-3c07543b96e1', nextval('libs_seq'::regclass)::text),
-	name text UNIQUE NOT NULL,
-	content text NOT NULL,
-	meta json,
-	created timestamptz NOT NULL default now(),
-	modified timestamptz NOT NULL default now(),
-	CHECK (check_javascript(content))
-);
-ALTER SEQUENCE libs_seq OWNED BY libs.id;
-CREATE TRIGGER libs_modified BEFORE UPDATE ON libs FOR EACH ROW EXECUTE PROCEDURE moddatetime (modified);
-
 --
 -- plv8 environment initialization function
 -- - defines require (loads libs from libs table)
@@ -80,6 +83,7 @@ $$;
 
 	/** #2 - Namespace and sql function wrapper for tv4 */
 	function(db) {
+		return db;
 		/*
 		CREATE SCHEMA IF NOT EXISTS tv4;
 		CREATE OR REPLACE FUNCTION tv4.validateResult(data json, schema json) RETURNS json LANGUAGE plv8 VOLATILE AS $js$
@@ -94,6 +98,7 @@ $$;
 	 * There is a manually generated "namespace" UUID for UUIDv5 generator
 	 */
 	function(db) {
+		return db;
 /*
 CREATE SEQUENCE types_seq;
 CREATE TABLE IF NOT EXISTS types (
@@ -169,6 +174,7 @@ $js$;
 
 	/** #4 */
 	function(db) {
+		return db;
 /*
 CREATE SEQUENCE attachments_seq;
 CREATE TABLE IF NOT EXISTS attachments (
@@ -186,6 +192,7 @@ CREATE TRIGGER attachments_modified BEFORE UPDATE ON attachments FOR EACH ROW EX
 
 	/** #5 - Used to insert objects */
 	function(db) {
+		return db;
 		/*
 		CREATE OR REPLACE FUNCTION get_type(name text) RETURNS uuid LANGUAGE SQL AS $$
 		SELECT id FROM types WHERE name = $1
