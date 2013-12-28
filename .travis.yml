@@ -2,8 +2,10 @@ language: node_js
 node_js:
   - "0.11"
   - "0.10"
+addons:
+  postgresql: 9.3
 env: PGCONFIG='pg://postgres@localhost/nopg_test'
 before_script:
   - sudo apt-get update -qq
-  - sudo apt-get install -qq postgresql-9.3 postgresql-9.3-plv8 postgresql-client-9.3 postgresql-contrib-9.3 postgresql-9.3-ip4r postgresql-9.3-prefix
+#  - sudo apt-get install -qq postgresql-9.3 postgresql-9.3-plv8 postgresql-client-9.3 postgresql-contrib-9.3 postgresql-9.3-ip4r postgresql-9.3-prefix
   - psql -c 'create database nopg_test;CREATE EXTENSION plv8;CREATE EXTENSION "uuid-ossp";CREATE EXTENSION adminpack;CREATE EXTENSION pgcrypto;CREATE EXTENSION tcn;CREATE EXTENSION xml2;CREATE EXTENSION moddatetime;' -U postgres
