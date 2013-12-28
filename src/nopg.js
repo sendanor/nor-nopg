@@ -1,7 +1,8 @@
 /* nor-nopg */
 
+var debug = require('nor-debug');
 var pg = require('nor-pg');
-var extend = require('nor-extend');
+var extend = require('nor-extend').setup({useFunctionPromises:true});
 var NoPgObject = require('./Object.js');
 var NoPgType = require('./Type.js');
 var NoPgAttachment = require('./Attachment.js');
@@ -85,14 +86,16 @@ NoPG.prototype.commit = function() {
 
 /** Create object by type: `db.create([TYPE])([OPT(S)])`. */
 NoPG.prototype.create = function(type) {
+	debug.log('at create(', type, ')');
+	var self = this;
 	if(type !== undefined) {
 		throw new TypeError("Create by type not implemented");
 	}
-	var ret = function(data) {
-		var self = this;
+	function create2(data) {
+		debug.log('at create2(', data, ')');
 		return do_query(self, "INSERT INTO objects (content) VALUES ($1) RETURNING *", [data]).then(get_object).then(save_object_to(self));
-	};
-	return ret;
+	}
+	return create2;
 };
 
 /** Update object */

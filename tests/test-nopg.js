@@ -2,6 +2,7 @@
 
 var util = require('util');
 var PGCONFIG = process.env.PGCONFIG || 'postgres://test:1234567@localhost/test';
+var debug = require('nor-debug');
 
 /* */
 describe('nopg', function(){
@@ -26,6 +27,7 @@ describe('nopg', function(){
 
 		it('.create()({"hello":"world"}) works', function(done){
 			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
+				debug.log('db is ', db);
 				var doc = db.fetch();
 				util.debug('doc = ' + util.inspect(doc));
 				assert.strictEqual(typeof doc.hello, 'string');
