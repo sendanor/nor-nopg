@@ -11,13 +11,13 @@ var debug = require('nor-debug');
 var nopg = require('../src');
 
 /** Run init() at start */
-beforeEach(function(done){
+before(function(done){
 	nopg.start(PGCONFIG).init().then(function(db) {
 		//var doc = db.fetch();
 		//util.debug('initialized database: doc = ' + util.inspect(doc));
 		return db.commit();
 	}).then(function(db) {
-		debug.log('Database is OK.');
+		debug.log('Database init was successful.');
 		done();
 	}).fail(function(err) {
 		debug.log('Database init failed: ' + err);
