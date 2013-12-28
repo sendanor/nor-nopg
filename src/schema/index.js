@@ -158,6 +158,7 @@ module.exports = [
 	
 			// Run the validator
 			if (validator_code) {
+				//plv8.elog(NOTICE, "validator_code is " + JSON.stringify(validator_code) );
 				var validator = new Function("return (" + validator_code + ")");
 				if (validator()(data) === false) {
 					plv8.elog(ERROR, "Type validation failed");

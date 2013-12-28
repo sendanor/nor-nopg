@@ -54,7 +54,7 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it.skip('.createType() and .create(Type)({"hello":"world"}) works', function(done){
+		it('.createType("Test") and .create("Test")({"hello":"world"}) works', function(done){
 			nopg.start(PGCONFIG).createType("Test")({"schema":{"type":"object"}}).create("Test")({"hello":"world"}).then(function(db) {
 				debug.log('db is ', db);
 				var type = db.fetch();

@@ -46,23 +46,28 @@ NoPG.prototype.fetch = function() {
 	return this._values.shift();
 };
 
-/** Get object handler */
-function get_object(rows) {
-	var doc = rows.shift();
-	if(!doc) { throw new TypeError("failed to parse object"); }
-	var obj = {};
-	Object.keys(doc).forEach(function(key) {
-		obj['$'+key] = doc[key];
-	});
-	return new NoPgObject(obj);
+/** Get handler for objects for Type */
+function get_result(Type) {
+	return function(rows) {
+		var doc = rows.shift();
+		if(!doc) { throw new TypeError("failed to parse object"); }
+		var obj = {};
+		Object.keys(doc).forEach(function(key) {
+			obj['$'+key] = doc[key];
+		});
+		return new Type(obj);
+	};
 }
 
 /** Save object handler */
 function save_object_to(self) {
-	if(self instanceof NoPgObject) {
-		return function(doc) {
-			return self.update(doc);
-		};
+
+	if( (self instanceof NoPgObject)
+	 || (self instanceof NoPgType)
+	 || (self instanceof NoPgAttachment)
+	 || (self instanceof NoPgLib)
+	  ) {
+		return function(doc) { return self.update(doc); };
 	}
 
 	if(self._values) {
@@ -72,7 +77,7 @@ function save_object_to(self) {
 		};
 	}
 
-	throw new TypeError("Unknown target");
+	throw new TypeError("Unknown target: " + (typeof self));
 }
 
 /** Perform query */
@@ -159,7 +164,10 @@ NoPG.prototype.create = function(type) {
 			params = [data];
 		}
 
-		return do_query(self, query, params).then(get_object).then(save_object_to(self));
+		debug.log('query = ', query);
+		debug.log('params = ', params);
+
+		return do_query(self, query, params).then(get_result(NoPgObject)).then(save_object_to(self));
 	}
 	return create2;
 };
@@ -168,22 +176,26 @@ NoPG.prototype.create = function(type) {
 NoPG.prototype.update = function(doc, data) {
 	var self = this;
 	assert_type(doc, NoPgObject, "doc is not NoPg.Object");
-	return do_query(self, "UPDATE objects SET content = $1 RETURNING *", [data]).then(get_object).then(save_object_to(doc)).then(function() { return self; });
+	return do_query(self, "UPDATE objects SET content = $1 RETURNING *", [data]).then(get_result(NoPgObject)).then(save_object_to(doc)).then(function() { return self; });
 };
 
 /** Create type object by type: `db.createType([TYPE-NAME])([OPT(S)])`. */
 NoPG.prototype.createType = function(name) {
 	debug.log('at createType(', name, ')');
 	var self = this;
-	function create2(opts) {
+	function createType2(opts) {
 		opts = opts || {};
 		debug.log('at createType2(', opts, ')');
 		var schema = opts.schema || {};
-		var validator = (''+opts.validator) || null;
+		var validator = opts.validator ? (''+opts.validator) : null;
 		var meta = opts.meta || {};
-		return do_query(self, "INSERT INTO types (name, schema, validator, meta) VALUES ($1, $2, $3, $4) RETURNING *", [name, schema, validator, meta]).then(get_object).then(save_object_to(self));
+		var query = "INSERT INTO types (name, schema, validator, meta) VALUES ($1, $2, $3, $4) RETURNING *";
+		var params = [name, schema, validator, meta];
+		debug.log('query = ' + query);
+		debug.log('params = ' + params);
+		return do_query(self, query, params).then(get_result(NoPgType)).then(save_object_to(self));
 	}
-	return create2;
+	return createType2;
 };
 
 /* EOF */
