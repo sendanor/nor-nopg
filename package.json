@@ -19,7 +19,7 @@
   ],
   "dependencies": {
     "q": "*",
-    "nor-extend": "*",
+    "nor-extend": ">= 0.1.11",
     "nor-pg": "*",
     "nor-debug": "*"
   },
