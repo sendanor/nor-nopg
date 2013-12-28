@@ -20,6 +20,7 @@ beforeEach(function(done){
 		debug.log('Database is OK.');
 		done();
 	}).fail(function(err) {
+		debug.log('Database init failed: ' + err);
 		done(err);
 	}).done();
 });
@@ -48,6 +49,7 @@ describe('nopg', function(){
 			}).then(function(db) {
 				done();
 			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
 				done(err);
 			}).done();
 		});
@@ -64,6 +66,7 @@ describe('nopg', function(){
 			}).then(function(db) {
 				done();
 			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
 				done(err);
 			}).done();
 		});
@@ -82,6 +85,7 @@ describe('nopg', function(){
 			}).then(function(db) {
 				done();
 			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
 				done(err);
 			}).done();
 		});
