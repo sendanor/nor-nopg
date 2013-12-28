@@ -8,8 +8,8 @@ env: PGCONFIG='pg://postgres@localhost/nopg_test'
 before_script:
   - sudo apt-get update -qq
   - sudo apt-get install -qq postgresql-9.3-plv8
-  - psql -c 'CREATE EXTENSION plv8;' -U postgres
-  - psql -c 'CREATE EXTENSION "uuid-ossp";' -U postgres
-  - psql -c 'CREATE EXTENSION tcn;' -U postgres
-  - psql -c 'CREATE EXTENSION moddatetime;' -U postgres
+  - psql template1 -c 'CREATE EXTENSION plv8;' -U postgres
+  - psql template1 -c 'CREATE EXTENSION "uuid-ossp";' -U postgres
+  - psql template1 -c 'CREATE EXTENSION tcn;' -U postgres
+  - psql template1 -c 'CREATE EXTENSION moddatetime;' -U postgres
   - psql -c 'CREATE DATABASE nopg_test;' -U postgres
