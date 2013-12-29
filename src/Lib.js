@@ -15,6 +15,12 @@ function Lib(opts) {
 
 Lib.metaKeys = meta.keys;
 
+/** Get internal database object */
+Lib.prototype.valueOf = function() {
+	var self = this;
+	return meta(self).unresolve();
+};
+
 module.exports = Lib;
 
 /* EOF */

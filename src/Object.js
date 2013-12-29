@@ -21,6 +21,12 @@ NoPgObject.metaKeys = meta.keys;
 
 module.exports = NoPgObject;
 
+/** Get internal database object */
+NoPgObject.prototype.valueOf = function() {
+	var self = this;
+	return meta(self).unresolve('$content');
+};
+
 /** Update changes to current instance */
 NoPgObject.prototype.update = function(data) {
 	var self = this;

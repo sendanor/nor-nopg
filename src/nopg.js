@@ -176,7 +176,15 @@ NoPG.prototype.create = function(type) {
 NoPG.prototype.update = function(doc, data) {
 	var self = this;
 	assert_type(doc, NoPgObject, "doc is not NoPg.Object");
-	return do_query(self, "UPDATE objects SET content = $1 RETURNING *", [data]).then(get_result(NoPgObject)).then(save_object_to(doc)).then(function() { return self; });
+	var query, params;
+	if(data === undefined) {
+		query = "UPDATE objects SET content = $1 RETURNING *";
+		params = [doc.valueOf().$content];
+	} else {
+		query = "UPDATE objects SET content = $1 RETURNING *";
+		params = [data];
+	}
+	return do_query(self, query, params).then(get_result(NoPgObject)).then(save_object_to(doc)).then(function() { return self; });
 };
 
 /** Create type object by type: `db.createType([TYPE-NAME])([OPT(S)])`. */

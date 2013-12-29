@@ -13,6 +13,12 @@ function Type(opts) {
 	meta(self).resolve();
 }
 
+/** Get internal database object */
+Type.prototype.valueOf = function() {
+	var self = this;
+	return meta(self).unresolve();
+};
+
 Type.metaKeys = meta.keys;
 
 module.exports = Type;

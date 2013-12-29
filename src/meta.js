@@ -30,6 +30,26 @@ function meta(opts) {
 			}
 		};
 
+		/** Unresolve object back into internal database object */
+		obj.unresolve = function(metakey) {
+			metakey = metakey || '$meta';
+			var data = {};
+			Object.keys(self).filter(function(key) { return key[0] === '$' ? true : false; }).forEach(function(key) {
+				data[key] = self[key];
+			});
+
+			Object.keys(self).filter(function(key) { return key[0] !== '$' ? true : false; }).forEach(function(key) {
+				if(self[metakey] === undefined) {
+					self[metakey] = {};
+				}
+				if(self[metakey]) {
+					data[metakey][key] = self[key];
+				}
+			});
+
+			return data;
+		};
+
 		return obj;
 	}
 	

@@ -13,6 +13,12 @@ function Attachment(opts) {
 	meta(self).resolve();
 }
 
+/** Get internal database object */
+Attachment.prototype.valueOf = function() {
+	var self = this;
+	return meta(self).unresolve();
+};
+
 Attachment.metaKeys = meta.keys;
 
 module.exports = Attachment;

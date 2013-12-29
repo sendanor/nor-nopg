@@ -90,6 +90,26 @@ describe('nopg', function(){
 			}).done();
 		});
 
+		it('.create()({"hello":"world"}) and .update(doc) works', function(done){
+			var doc;
+			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
+				doc = db.fetch();
+				util.debug('before doc = ' + util.inspect(doc));
+				doc.hello = "another";
+				return db.update(doc);
+			}).then(function(db) {
+				util.debug('updated doc = ' + util.inspect(doc));
+				assert.strictEqual(typeof doc.hello, 'string');
+				assert.strictEqual(doc.hello, 'another');
+				return db.commit();
+			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
+				done(err);
+			}).done();
+		});
+
 	});
 
 });
