@@ -204,6 +204,32 @@ NoPG.prototype.update = function(doc, data) {
 	return do_query(self, query, params).then(get_result(type)).then(save_object_to(doc)).then(function() { return self; });
 };
 
+/** Delete object */
+NoPG.prototype.del = function(doc) {
+	var self = this;
+	var query, params;
+	if(doc instanceof NoPgObject) {
+		query = "DELETE FROM objects WHERE id = $1";
+		params = [doc.$id];
+	} else if(doc instanceof NoPgType) {
+		query = "DELETE FROM types WHERE id = $1";
+		params = [doc.$id];
+	} else if(doc instanceof NoPgAttachment) {
+		query = "DELETE FROM attachments WHERE id = $1";
+		// FIXME: Implement binary content support
+		params = [doc.$id];
+	} else if(doc instanceof NoPgLib) {
+		query = "DELETE FROM libs WHERE id = $1";
+		// FIXME: Implement binary content support
+		params = [doc.$id];
+	} else {
+		throw new TypeError("doc is unknown type: " + doc);
+	}
+	return do_query(self, query, params).then(function() { return self; });
+};
+
+NoPG.prototype['delete'] = NoPG.prototype.del;
+
 /** Create type object by type: `db.createType([TYPE-NAME])([OPT(S)])`. */
 NoPG.prototype.createType = function(name) {
 	debug.log('at createType(', name, ')');

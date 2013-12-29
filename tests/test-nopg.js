@@ -110,6 +110,23 @@ describe('nopg', function(){
 			}).done();
 		});
 
+		it('.create()({"hello":"world"}) and .del(doc) works', function(done){
+			var doc;
+			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
+				doc = db.fetch();
+				util.debug('before doc = ' + util.inspect(doc));
+				return db.del(doc);
+			}).then(function(db) {
+				// FIXME: Test that the doc was really deleted.
+				return db.commit();
+			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
+				done(err);
+			}).done();
+		});
+
 	});
 
 });
