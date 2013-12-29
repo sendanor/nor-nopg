@@ -172,6 +172,44 @@ NoPG.prototype.create = function(type) {
 	return create2;
 };
 
+/** Search objects */
+NoPG.prototype.search = function() {
+	debug.log('at search(', type, ')');
+	var self = this;
+	function search2(data) {
+		debug.log('at search2(', data, ')');
+
+		var query, params, type;
+		//assert_type(doc, NoPgObject, "doc is not NoPg.Object");
+		if(data === undefined) {
+			data = doc.valueOf();
+		}
+		if(doc instanceof NoPgObject) {
+			type = NoPgObject;
+			query = "UPDATE objects SET content = $1 WHERE id = $2 RETURNING *";
+			params = [data, doc.$id];
+		} else if(doc instanceof NoPgType) {
+			type = NoPgType;
+			query = "UPDATE types SET name = $1, schema = $2, validator = $3, meta = $4 WHERE id = $5 RETURNING *";
+			params = [doc.$name, doc.$schema, doc.$validator, data, doc.$id];
+		} else if(doc instanceof NoPgAttachment) {
+			type = NoPgAttachment;
+			query = "UPDATE attachments SET content = $1, meta = $2 WHERE id = $3 RETURNING *";
+			// FIXME: Implement binary content support
+			params = [doc.$content, data, doc.$id];
+		} else if(doc instanceof NoPgLib) {
+			type = NoPgLib;
+			query = "UPDATE libs SET name = $1, content = $2, meta = $3 WHERE id = $4 RETURNING *";
+			// FIXME: Implement binary content support
+			params = [doc.$name, doc.$content, data, doc.$id];
+		} else {
+			throw new TypeError("doc is unknown type: " + doc);
+		}
+		return do_query(self, query, params).then(get_result(type)).then(save_object_to(doc)).then(function() { return self; });
+	}
+	return search2;
+};
+
 /** Update object */
 NoPG.prototype.update = function(doc, data) {
 	var self = this;

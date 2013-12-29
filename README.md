@@ -67,8 +67,10 @@ Tested at [test-nopg.js:74](https://github.com/Sendanor/nor-nopg/blob/master/tes
 
 ### Searching objects
 
+#### Searching objects by id
+
 ```javascript
-db.search({"$id": "b58e402e-6b39-11e3-99c7-0800279ca880"}).then(function(db) {
+db.search()({"$id": "b58e402e-6b39-11e3-99c7-0800279ca880"}).then(function(db) {
 	var list = db.fetch();
 	console.log("Found objects: " + util.inspect(list) );
 });
@@ -76,8 +78,10 @@ db.search({"$id": "b58e402e-6b39-11e3-99c7-0800279ca880"}).then(function(db) {
 
 Unimplemented/Untested.
 
+#### Searching objects by values
+
 ```javascript
-db.search({"hello": "world"}).then(function(db) {
+db.search()({"hello": "world"}).then(function(db) {
 	var list = db.fetch();
 	console.log("Found objects: " + util.inspect(list) );
 });
@@ -85,10 +89,45 @@ db.search({"hello": "world"}).then(function(db) {
 
 Unimplemented/Untested.
 
+#### Searching objects by custom function
+
 ```javascript
-db.search(function(doc) {
+db.search()(function(doc) {
 	return doc.hello === 'world';
 }).then(function(db) {
+	var list = db.fetch();
+	console.log("Found objects: " + util.inspect(list) );
+});
+```
+
+Unimplemented/Untested.
+
+### Searching objects by type string
+
+```javascript
+db.search("Foobar")().then(function(db) {
+	var list = db.fetch();
+	console.log("Found objects: " + util.inspect(list) );
+});
+```
+
+Unimplemented/Untested.
+
+### Searching objects by type string with values
+
+```javascript
+db.search("Foobar")({"name":"hello"}).then(function(db) {
+	var list = db.fetch();
+	console.log("Found objects: " + util.inspect(list) );
+});
+```
+
+Unimplemented/Untested.
+
+### Searching objects by type
+
+```javascript
+db.search(type)().then(function(db) {
 	var list = db.fetch();
 	console.log("Found objects: " + util.inspect(list) );
 });
@@ -130,17 +169,6 @@ Unimplemented/Untested.
 
 ```javascript
 /* n/a */
-```
-
-Unimplemented/Untested.
-
-### Searching objects by type
-
-```javascript
-db.search(type)().then(function(db) {
-	var list = db.fetch();
-	console.log("Found objects: " + util.inspect(list) );
-});
 ```
 
 Unimplemented/Untested.
