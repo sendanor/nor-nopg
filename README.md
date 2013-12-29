@@ -105,7 +105,7 @@ db.search()(function(doc) {
 
 Unimplemented/Untested.
 
-### Searching objects by type string
+#### Searching objects by type string
 
 ```javascript
 db.search("Foobar")().then(function(db) {
@@ -116,7 +116,7 @@ db.search("Foobar")().then(function(db) {
 
 Unimplemented/Untested.
 
-### Searching objects by type string with values
+#### Searching objects by type string with values
 
 ```javascript
 db.search("Foobar")({"name":"hello"}).then(function(db) {
@@ -127,7 +127,7 @@ db.search("Foobar")({"name":"hello"}).then(function(db) {
 
 Unimplemented/Untested.
 
-### Searching objects by type
+#### Searching objects by type
 
 ```javascript
 db.search(type)().then(function(db) {
