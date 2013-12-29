@@ -42,6 +42,8 @@ db.create()({"hello":"world"}).then(function(db) {
 });
 ```
 
+Tested at [test-nopg.js:41](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L41).
+
 ### Editing objects
 
 ```javascript
@@ -52,11 +54,16 @@ db.update(doc).then(function(db) {
 });
 ```
 
+Tested at [test-nopg.js:93](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L93).
+
 ```javascript
 db.update(doc, {"hello": "world"}).then(function(db) {
 	console.log("Successfully edited object: " + util.inspect(doc) );
 });
 ```
+
+Tested at [test-nopg.js:74](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L74).
+
 
 ### Searching objects
 
@@ -67,12 +74,16 @@ db.search({"$id": "b58e402e-6b39-11e3-99c7-0800279ca880"}).then(function(db) {
 });
 ```
 
+Unimplemented/Untested.
+
 ```javascript
 db.search({"hello": "world"}).then(function(db) {
 	var list = db.fetch();
 	console.log("Found objects: " + util.inspect(list) );
 });
 ```
+
+Unimplemented/Untested.
 
 ```javascript
 db.search(function(doc) {
@@ -83,6 +94,8 @@ db.search(function(doc) {
 });
 ```
 
+Unimplemented/Untested.
+
 ### Deleting objects
 
 ```javascript
@@ -91,7 +104,18 @@ db.del(doc).then(function(db) {
 });
 ```
 
+Tested at [test-nopg.js:113](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L113).
+
 ### Creating objects with type
+
+```javascript
+db.create("MyType")({"hello":"world"}).then(function(db) {
+	var doc = db.fetch();
+	console.log("Successfully created new object: " + util.inspect(doc) );
+});
+```
+
+Tested at [test-nopg.js:57](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L57).
 
 ```javascript
 db.create(type)({"hello":"world"}).then(function(db) {
@@ -100,11 +124,15 @@ db.create(type)({"hello":"world"}).then(function(db) {
 });
 ```
 
+Unimplemented/Untested.
+
 ### Editing objects by type
 
 ```javascript
 /* n/a */
 ```
+
+Unimplemented/Untested.
 
 ### Searching objects by type
 
@@ -115,16 +143,15 @@ db.search(type)().then(function(db) {
 });
 ```
 
+Unimplemented/Untested.
+
 ### Deleting objects by type
 
 ```javascript
-db.del(function(doc) {
-	
-}).then(function(db) {
-	var list = db.fetch();
-	console.log("Found objects: " + util.inspect(list) );
-});
+// n/a
 ```
+
+Unimplemented/Untested.
 
 Types
 -----
@@ -138,12 +165,16 @@ db.createType("Product")({"schema":{"type":"object"}}).then(function(db) {
 });
 ```
 
+Tested at [test-nopg.js:57](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L57).
+
 ```javascript
 db.createType()({"schema":{"type":"object"}}).then(function(db) {
 	var product_type = db.fetch();
 	console.log("Successfully created new type: " + util.inspect(product_type) );
 });
 ```
+
+Unimplemented/Untested.
 
 ### Editing types
 
@@ -154,11 +185,15 @@ db.update(type).then(function(db) {
 });
 ```
 
+Implemented, but not tested.
+
 ```javascript
 db.update(type, {schema:{...}}).then(function(db) {
 	console.log("Successfully edited type: " + util.inspect(type) );
 });
 ```
+
+Implemented, but not tested.
 
 ### Deleting types
 
@@ -168,6 +203,8 @@ db.del(type).then(function(db) {
 });
 ```
 
+Implemented, but not tested.
+
 ### Searching types
 
 ```javascript
@@ -176,6 +213,8 @@ db.searchTypes({"$id": "b58e402e-6b39-11e3-99c7-0800279ca880"}).then(function(db
 	console.log("Found types: " + util.inspect(list) );
 });
 ```
+
+Unimplemented/Untested.
 
 Attachments
 -----------
@@ -189,6 +228,8 @@ doc.createAttachment(data, {"content-type": "image/png"}).then(function(db) {
 });
 ```
 
+Unimplemented/Untested.
+
 ### Searching attachments
 
 ```javascript
@@ -198,12 +239,16 @@ doc.searchAttachments().then(function(db) {
 });
 ```
 
+Unimplemented/Untested.
+
 ```javascript
 doc.getAttachment("b58e402e-6b39-11e3-99c7-0800279ca880").then(function(db) {
 	var attachment = db.fetch();
 	console.log("Found attachment: " + util.inspect(attachment) );
 });
 ```
+
+Unimplemented/Untested.
 
 ### Deleting attachments
 
@@ -212,6 +257,8 @@ db.del(attachment).then(function(db) {
 	console.log("Attachment deleted succesfully.");
 });
 ```
+
+Implemented, but not tested.
 
 Libs
 ----
@@ -223,6 +270,8 @@ db.import('/path/to/tv4.js', {'name': 'tv4'}).then(function(db) {
 	console.log("Library imported succesfully.");
 });
 ```
+
+Unimplemented/Untested.
 
 Running tests
 -------------
