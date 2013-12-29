@@ -33,7 +33,9 @@ transaction.
 Objects
 -------
 
-### Creating objects (without type)
+### Creating objects
+
+#### Creating objects without specific type
 
 ```javascript
 db.create()({"hello":"world"}).then(function(db) {
@@ -44,26 +46,27 @@ db.create()({"hello":"world"}).then(function(db) {
 
 Tested at [test-nopg.js:41](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L41).
 
-### Editing objects
+#### Creating objects with type string
 
 ```javascript
-doc.hello = "world";
-
-db.update(doc).then(function(db) {
-	console.log("Successfully edited object: " + util.inspect(doc) );
+db.create("MyType")({"hello":"world"}).then(function(db) {
+	var doc = db.fetch();
+	console.log("Successfully created new object: " + util.inspect(doc) );
 });
 ```
 
-Tested at [test-nopg.js:93](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L93).
+Tested at [test-nopg.js:57](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L57).
+
+#### Creating objects with type object
 
 ```javascript
-db.update(doc, {"hello": "world"}).then(function(db) {
-	console.log("Successfully edited object: " + util.inspect(doc) );
+db.create(type)({"hello":"world"}).then(function(db) {
+	var doc = db.fetch();
+	console.log("Successfully created new object: " + util.inspect(doc) );
 });
 ```
 
-Tested at [test-nopg.js:74](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L74).
-
+Unimplemented/Untested.
 
 ### Searching objects
 
@@ -137,6 +140,8 @@ Unimplemented/Untested.
 
 ### Deleting objects
 
+#### Deleting objects by document object
+
 ```javascript
 db.del(doc).then(function(db) {
 	console.log("Object deleted succesfully.");
@@ -145,27 +150,39 @@ db.del(doc).then(function(db) {
 
 Tested at [test-nopg.js:113](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L113).
 
-### Creating objects with type
+#### Deleting objects by type
 
 ```javascript
-db.create("MyType")({"hello":"world"}).then(function(db) {
-	var doc = db.fetch();
-	console.log("Successfully created new object: " + util.inspect(doc) );
-});
-```
-
-Tested at [test-nopg.js:57](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L57).
-
-```javascript
-db.create(type)({"hello":"world"}).then(function(db) {
-	var doc = db.fetch();
-	console.log("Successfully created new object: " + util.inspect(doc) );
-});
+// n/a
 ```
 
 Unimplemented/Untested.
 
-### Editing objects by type
+### Editing objects
+
+#### Editing objects by changing properties
+
+```javascript
+doc.hello = "world";
+
+db.update(doc).then(function(db) {
+	console.log("Successfully edited object: " + util.inspect(doc) );
+});
+```
+
+Tested at [test-nopg.js:93](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L93).
+
+#### Editing objects by argument
+
+```javascript
+db.update(doc, {"hello": "world"}).then(function(db) {
+	console.log("Successfully edited object: " + util.inspect(doc) );
+});
+```
+
+Tested at [test-nopg.js:74](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L74).
+
+#### Editing objects by type
 
 ```javascript
 /* n/a */
@@ -173,13 +190,6 @@ Unimplemented/Untested.
 
 Unimplemented/Untested.
 
-### Deleting objects by type
-
-```javascript
-// n/a
-```
-
-Unimplemented/Untested.
 
 Types
 -----

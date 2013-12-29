@@ -173,7 +173,7 @@ NoPG.prototype.create = function(type) {
 };
 
 /** Search objects */
-NoPG.prototype.search = function() {
+NoPG.prototype.search = function(type) {
 	debug.log('at search(', type, ')');
 	var self = this;
 	function search2(data) {
