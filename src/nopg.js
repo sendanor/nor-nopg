@@ -182,22 +182,22 @@ NoPG.prototype.update = function(doc, data) {
 	}
 	if(doc instanceof NoPgObject) {
 		type = NoPgObject;
-		query = "UPDATE objects SET content = $1 RETURNING *";
-		params = [data];
+		query = "UPDATE objects SET content = $1 WHERE id = $2 RETURNING *";
+		params = [data, doc.$id];
 	} else if(doc instanceof NoPgType) {
 		type = NoPgType;
-		query = "UPDATE types SET name = $1, schema = $2, validator = $3, meta = $4 RETURNING *";
-		params = [self.$name, self.$schema, self.$validator, data];
+		query = "UPDATE types SET name = $1, schema = $2, validator = $3, meta = $4 WHERE id = $5 RETURNING *";
+		params = [doc.$name, doc.$schema, doc.$validator, data, doc.$id];
 	} else if(doc instanceof NoPgAttachment) {
 		type = NoPgAttachment;
-		query = "UPDATE attachments SET content = $1, meta = $2 RETURNING *";
+		query = "UPDATE attachments SET content = $1, meta = $2 WHERE id = $3 RETURNING *";
 		// FIXME: Implement binary content support
-		params = [self.$content, data];
+		params = [doc.$content, data, doc.$id];
 	} else if(doc instanceof NoPgLib) {
 		type = NoPgLib;
-		query = "UPDATE libs SET name = $1, content = $2, meta = $3 RETURNING *";
+		query = "UPDATE libs SET name = $1, content = $2, meta = $3 WHERE id = $4 RETURNING *";
 		// FIXME: Implement binary content support
-		params = [self.$name, self.$content, data];
+		params = [doc.$name, doc.$content, data, doc.$id];
 	} else {
 		throw new TypeError("doc is unknown type: " + doc);
 	}
