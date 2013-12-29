@@ -138,26 +138,6 @@ db.search(type)().then(function(db) {
 
 Unimplemented/Untested.
 
-### Deleting objects
-
-#### Deleting objects by document object
-
-```javascript
-db.del(doc).then(function(db) {
-	console.log("Object deleted succesfully.");
-});
-```
-
-Tested at [test-nopg.js:113](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L113).
-
-#### Deleting objects by type
-
-```javascript
-// n/a
-```
-
-Unimplemented/Untested.
-
 ### Editing objects
 
 #### Editing objects by changing properties
@@ -191,10 +171,53 @@ Tested at [test-nopg.js:74](https://github.com/Sendanor/nor-nopg/blob/master/tes
 Unimplemented/Untested.
 
 
+### Deleting objects
+
+#### Deleting objects by document object
+
+```javascript
+db.del(doc).then(function(db) {
+	console.log("Object deleted succesfully.");
+});
+```
+
+Tested at [test-nopg.js:113](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L113).
+
+#### Deleting objects by type
+
+```javascript
+// n/a
+```
+
+Unimplemented/Untested.
+
+#### Deleting types
+
+```javascript
+db.del(type).then(function(db) {
+	console.log("Type deleted succesfully.");
+});
+```
+
+Implemented, but not tested.
+
+#### Deleting attachments
+
+```javascript
+db.del(attachment).then(function(db) {
+	console.log("Attachment deleted succesfully.");
+});
+```
+
+Implemented, but not tested.
+
+
 Types
 -----
 
 ### Creating types
+
+#### Creating types by string name
 
 ```javascript
 db.createType("Product")({"schema":{"type":"object"}}).then(function(db) {
@@ -204,6 +227,8 @@ db.createType("Product")({"schema":{"type":"object"}}).then(function(db) {
 ```
 
 Tested at [test-nopg.js:57](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L57).
+
+#### Creating unnamed types
 
 ```javascript
 db.createType()({"schema":{"type":"object"}}).then(function(db) {
@@ -216,6 +241,8 @@ Unimplemented/Untested.
 
 ### Editing types
 
+#### Editing type by changing properties
+
 ```javascript
 type.schema = {..};
 db.update(type).then(function(db) {
@@ -225,19 +252,11 @@ db.update(type).then(function(db) {
 
 Implemented, but not tested.
 
+#### Editing type by argument
+
 ```javascript
 db.update(type, {schema:{...}}).then(function(db) {
 	console.log("Successfully edited type: " + util.inspect(type) );
-});
-```
-
-Implemented, but not tested.
-
-### Deleting types
-
-```javascript
-db.del(type).then(function(db) {
-	console.log("Type deleted succesfully.");
 });
 ```
 
@@ -287,16 +306,6 @@ doc.getAttachment("b58e402e-6b39-11e3-99c7-0800279ca880").then(function(db) {
 ```
 
 Unimplemented/Untested.
-
-### Deleting attachments
-
-```javascript
-db.del(attachment).then(function(db) {
-	console.log("Attachment deleted succesfully.");
-});
-```
-
-Implemented, but not tested.
 
 Libs
 ----
