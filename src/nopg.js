@@ -175,16 +175,33 @@ NoPG.prototype.create = function(type) {
 /** Update object */
 NoPG.prototype.update = function(doc, data) {
 	var self = this;
-	assert_type(doc, NoPgObject, "doc is not NoPg.Object");
-	var query, params;
+	var query, params, type;
+	//assert_type(doc, NoPgObject, "doc is not NoPg.Object");
 	if(data === undefined) {
-		query = "UPDATE objects SET content = $1 RETURNING *";
-		params = [doc.valueOf().$content];
-	} else {
+		data = doc.valueOf();
+	}
+	if(doc instanceof NoPgObject) {
+		type = NoPgObject;
 		query = "UPDATE objects SET content = $1 RETURNING *";
 		params = [data];
+	} else if(doc instanceof NoPgType) {
+		type = NoPgType;
+		query = "UPDATE types SET name = $1, schema = $2, validator = $3, meta = $4 RETURNING *";
+		params = [self.$name, self.$schema, self.$validator, data];
+	} else if(doc instanceof NoPgAttachment) {
+		type = NoPgAttachment;
+		query = "UPDATE attachments SET content = $1, meta = $2 RETURNING *";
+		// FIXME: Implement binary content support
+		params = [self.$content, data];
+	} else if(doc instanceof NoPgLib) {
+		type = NoPgLib;
+		query = "UPDATE libs SET name = $1, content = $2, meta = $3 RETURNING *";
+		// FIXME: Implement binary content support
+		params = [self.$name, self.$content, data];
+	} else {
+		throw new TypeError("doc is unknown type: " + doc);
 	}
-	return do_query(self, query, params).then(get_result(NoPgObject)).then(save_object_to(doc)).then(function() { return self; });
+	return do_query(self, query, params).then(get_result(type)).then(save_object_to(doc)).then(function() { return self; });
 };
 
 /** Create type object by type: `db.createType([TYPE-NAME])([OPT(S)])`. */
