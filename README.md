@@ -17,8 +17,25 @@ Internal Database Schema
 
 ![ERS](gfx/ers.png "ERS")
 
-Transactions
-------------
+Status
+------
+
+| Name |   Description    |                   Example                   |
+| ---- | ---------------- | ------------------------------------------- |
+| NoPg | NoPg constructor | var NoPg = require('nor-nopg');             |
+| db   | NoPg instance    | NoPg.start(...).then(function(db) { ... }); |
+
+|             Description              |         Returns          |              Sample usage              |                                            Tested                                            |
+| ------------------------------------ | ------------------------ | -------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Get connection and start transaction | Promise of NoPg instance | NoPg.start(...)                        | [test-nopg.js:42](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L42)   |
+| Initialize database                  | Promise of NoPg instance | db.init()                              | [test-nopg.js:15](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L15)   |
+| Create object without type           | Promise of NoPg instance | db.create()({"hello":"world"})         | [test-nopg.js:41](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L41)   |
+| Create object with type as string    | Promise of NoPg instance | db.create("MyType")({"hello":"world"}) | [test-nopg.js:57](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L57)   |
+| Create object with type as object    | Promise of NoPg instance | db.create(type)({"hello":"world"})     | [test-nopg.js:306](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L306) |
+|                                      |                          |                                        |                                                                                              |
+
+Connections and Transactions
+----------------------------
 
 ```javascript
 nopg.start('postgres://user:pass@localhost/dbname').then(function(db) {
@@ -33,9 +50,9 @@ transaction.
 Objects
 -------
 
-### Creating objects
+### Create object
 
-#### Creating objects without specific type
+#### Create object without type
 
 ```javascript
 db.create()({"hello":"world"}).then(function(db) {
@@ -44,9 +61,7 @@ db.create()({"hello":"world"}).then(function(db) {
 });
 ```
 
-Tested at [test-nopg.js:41](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L41).
-
-#### Creating objects with type string
+#### Create object with type as string
 
 ```javascript
 db.create("MyType")({"hello":"world"}).then(function(db) {
@@ -57,7 +72,7 @@ db.create("MyType")({"hello":"world"}).then(function(db) {
 
 Tested at [test-nopg.js:57](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L57).
 
-#### Creating objects with type object
+#### Create object with type as object
 
 ```javascript
 db.create(type)({"hello":"world"}).then(function(db) {
@@ -68,9 +83,9 @@ db.create(type)({"hello":"world"}).then(function(db) {
 
 Unimplemented/Untested.
 
-### Searching objects
+### Search objects
 
-#### Searching objects by id
+#### Search objects by id
 
 ```javascript
 db.search()({"$id": "b58e402e-6b39-11e3-99c7-0800279ca880"}).then(function(db) {
@@ -81,7 +96,7 @@ db.search()({"$id": "b58e402e-6b39-11e3-99c7-0800279ca880"}).then(function(db) {
 
 Unimplemented/Untested.
 
-#### Searching objects by values
+#### Search objects by values
 
 ```javascript
 db.search()({"hello": "world"}).then(function(db) {
@@ -92,7 +107,7 @@ db.search()({"hello": "world"}).then(function(db) {
 
 Unimplemented/Untested.
 
-#### Searching objects by custom function
+#### Search objects by custom function
 
 ```javascript
 db.search()(function(doc) {
@@ -105,7 +120,7 @@ db.search()(function(doc) {
 
 Unimplemented/Untested.
 
-#### Searching objects by type string
+#### Search objects by type string
 
 ```javascript
 db.search("Foobar")().then(function(db) {
@@ -116,7 +131,7 @@ db.search("Foobar")().then(function(db) {
 
 Unimplemented/Untested.
 
-#### Searching objects by type string with values
+#### Search objects by type string with values
 
 ```javascript
 db.search("Foobar")({"name":"hello"}).then(function(db) {
@@ -127,7 +142,7 @@ db.search("Foobar")({"name":"hello"}).then(function(db) {
 
 Unimplemented/Untested.
 
-#### Searching objects by type
+#### Search objects by type
 
 ```javascript
 db.search(type)().then(function(db) {
@@ -138,9 +153,9 @@ db.search(type)().then(function(db) {
 
 Unimplemented/Untested.
 
-### Editing objects
+### Edit objects
 
-#### Editing objects by changing properties
+#### Edit object by instance of `NoPg.Object`
 
 ```javascript
 doc.hello = "world";
@@ -152,7 +167,7 @@ db.update(doc).then(function(db) {
 
 Tested at [test-nopg.js:93](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L93).
 
-#### Editing objects by argument
+#### Edit object by plain object
 
 ```javascript
 db.update(doc, {"hello": "world"}).then(function(db) {
@@ -162,7 +177,7 @@ db.update(doc, {"hello": "world"}).then(function(db) {
 
 Tested at [test-nopg.js:74](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L74).
 
-#### Editing objects by type
+#### Edit objects by type
 
 ```javascript
 /* n/a */
@@ -171,9 +186,9 @@ Tested at [test-nopg.js:74](https://github.com/Sendanor/nor-nopg/blob/master/tes
 Unimplemented/Untested.
 
 
-### Deleting objects
+### Delete objects
 
-#### Deleting objects by document object
+#### Delete object by instance of `NoPg.Object`
 
 ```javascript
 db.del(doc).then(function(db) {
@@ -183,7 +198,7 @@ db.del(doc).then(function(db) {
 
 Tested at [test-nopg.js:113](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L113).
 
-#### Deleting objects by type
+#### Delete objects by instance of `NoPg.Type`
 
 ```javascript
 // n/a
@@ -191,7 +206,7 @@ Tested at [test-nopg.js:113](https://github.com/Sendanor/nor-nopg/blob/master/te
 
 Unimplemented/Untested.
 
-#### Deleting types
+#### Delete type by instance of `NoPg.Type`
 
 ```javascript
 db.del(type).then(function(db) {
@@ -201,7 +216,7 @@ db.del(type).then(function(db) {
 
 Implemented, but not tested.
 
-#### Deleting attachments
+#### Delete attachment
 
 ```javascript
 db.del(attachment).then(function(db) {
@@ -215,9 +230,9 @@ Implemented, but not tested.
 Types
 -----
 
-### Creating types
+### Create types
 
-#### Creating types by string name
+#### Create type with name as string
 
 ```javascript
 db.createType("Product")({"schema":{"type":"object"}}).then(function(db) {
@@ -228,7 +243,7 @@ db.createType("Product")({"schema":{"type":"object"}}).then(function(db) {
 
 Tested at [test-nopg.js:57](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L57).
 
-#### Creating unnamed types
+#### Create type without name
 
 ```javascript
 db.createType()({"schema":{"type":"object"}}).then(function(db) {
@@ -239,9 +254,9 @@ db.createType()({"schema":{"type":"object"}}).then(function(db) {
 
 Unimplemented/Untested.
 
-### Editing types
+### Edit types
 
-#### Editing type by changing properties
+#### Edit type by instance of `NoPg.Type`
 
 ```javascript
 type.schema = {..};
@@ -252,7 +267,7 @@ db.update(type).then(function(db) {
 
 Implemented, but not tested.
 
-#### Editing type by argument
+#### Edit type by plain object
 
 ```javascript
 db.update(type, {schema:{...}}).then(function(db) {
@@ -262,7 +277,7 @@ db.update(type, {schema:{...}}).then(function(db) {
 
 Implemented, but not tested.
 
-### Searching types
+### Search types
 
 ```javascript
 db.searchTypes({"$id": "b58e402e-6b39-11e3-99c7-0800279ca880"}).then(function(db) {
@@ -276,7 +291,7 @@ Unimplemented/Untested.
 Attachments
 -----------
 
-### Creating attachments
+### Create attachments
 
 ```javascript
 doc.createAttachment(data, {"content-type": "image/png"}).then(function(db) {
@@ -287,7 +302,7 @@ doc.createAttachment(data, {"content-type": "image/png"}).then(function(db) {
 
 Unimplemented/Untested.
 
-### Searching attachments
+### Search attachments
 
 ```javascript
 doc.searchAttachments().then(function(db) {
@@ -310,7 +325,7 @@ Unimplemented/Untested.
 Libs
 ----
 
-### Importing/Upgrading modules into database
+### Import or upgrade module in database
 
 ```javascript
 db.import('/path/to/tv4.js', {'name': 'tv4'}).then(function(db) {
@@ -320,8 +335,8 @@ db.import('/path/to/tv4.js', {'name': 'tv4'}).then(function(db) {
 
 Unimplemented/Untested.
 
-Running tests
--------------
+Run tests
+---------
 
 ```
 PGCONFIG='pg://jhh:password@localhost/jhh' npm test
