@@ -59,6 +59,20 @@ function get_result(Type) {
 	};
 }
 
+/** Get handler for objects for Type */
+function get_results(Type) {
+	return function(rows) {
+		return rows.map(function(row, i) {
+			if(!row) { throw new TypeError("failed to parse object #" + i); }
+			var obj = {};
+			Object.keys(row).forEach(function(key) {
+				obj['$'+key] = row[key];
+			});
+			return new Type(obj);
+		});
+	};
+}
+
 /** Save object handler */
 function save_object_to(self) {
 
@@ -73,6 +87,19 @@ function save_object_to(self) {
 	if(self._values) {
 		return function(doc) {
 			self._values.push( doc );
+			return self;
+		};
+	}
+
+	throw new TypeError("Unknown target: " + (typeof self));
+}
+
+/** Save objects handler */
+function save_objects_to(self) {
+
+	if(self._values) {
+		return function(objs) {
+			self._values.push( objs );
 			return self;
 		};
 	}
@@ -176,6 +203,34 @@ NoPG.prototype.create = function(type) {
 NoPG.prototype.search = function(type) {
 	debug.log('at search(', type, ')');
 	var self = this;
+
+	/** Convert properties like {"$foo":123} -> "foo = 123" and {foo:123} -> "(meta->'foo')::numeric = 123" and {foo:"123"} -> "meta->'foo' = '123'" */
+	function parse_predicates(opts, datakey) {
+		opts = opts || {};
+		datakey = datakey || 'meta';
+		var res = {};
+		
+		// Parse meta properties
+		Object.keys(opts).filter(function(k) { return k[0] !== '$'; }).forEach(function(key) {
+			var keyreg = /^[^']+$/;
+			// FIXME: Implement escape?
+			if(!(keyreg.test(key))) { throw new TypeError("Invalid keyword: " + key); }
+			if(typeof opts[key] === 'number') {
+				res["("+datakey+"->'"+key+"')::numeric"] = opts[key];
+			} else {
+				res[""+datakey+"->>'"+key+"'"] = ''+opts[key];
+			}
+		});
+		
+		// Parse top level properties
+		Object.keys(opts).filter(function(k) { return k[0] === '$'; }).forEach(function(key) {
+			var k = key.substr(1);
+			res[k] = opts[key];
+		});
+		
+		return res;
+	}
+
 	function search2(opts) {
 		debug.log('at search2(', opts, ')');
 
@@ -183,16 +238,23 @@ NoPG.prototype.search = function(type) {
 
 		objtype = NoPgObject;
 		table = "objects";
-		keys = ["id"];
-		params = [opts.$id];
 
-		query = "SELECT * FROM "+table+" WHERE " + keys.map(function(k,n) { return k + ' = $' + n+1; }).join(' AND ');
+		debug.log('opts = ' + opts);
+		var parsed_opts = parse_predicates(opts, objtype.meta.datakey.substr(1) );
+		debug.log('parsed_opts = ' + parsed_opts);
 
-		debug.log('query = ' + query);
+		keys = Object.keys(parsed_opts);
+		debug.log('keys = ' + keys);
+
+		params = keys.map(function(key) { return parsed_opts[key]; });
 		debug.log('params = ' + params);
 
-		return do_query(self, query, params).then(get_result(type)).then(save_object_to(doc)).then(function() { return self; });
+		query = "SELECT * FROM "+table+" WHERE " + keys.map(function(k,n) { return k + ' = $' + (n+1); }).join(' AND ');
+		debug.log('query = ' + query);
+
+		return do_query(self, query, params).then(get_results(objtype)).then(save_objects_to(self)).then(function() { return self; });
 	}
+
 	return search2;
 };
 

@@ -5,6 +5,7 @@ var debug = require('nor-debug');
 function meta(opts) {
 	opts = opts || {};
 	var keys = opts.keys || [];
+	opts.datakey = opts.datakey || '$meta';
 
 	function builder(self) {
 		var obj = {};
@@ -17,30 +18,32 @@ function meta(opts) {
 				}
 			});
 			debug.log("object after set_meta_keys(", data, ") is: ", self);
+			return obj;
 		};
-	
+		
 		/** Resolve single object key into top level */
-		obj.resolve = function(metakey) {
-			metakey = metakey || '$meta';
-			if(self[metakey]) {
-				Object.keys(self[metakey]).forEach(function(key) {
-					self[key] = self[metakey][key];
+		obj.resolve = function(datakey) {
+			datakey = datakey || opts.datakey;
+			if(self[datakey]) {
+				Object.keys(self[datakey]).forEach(function(key) {
+					self[key] = self[datakey][key];
 				});
-				debug.log("object after resolve(", metakey, ") is: ", self);
+				debug.log("object after resolve(", datakey, ") is: ", self);
 			}
+			return obj;
 		};
 
 		/** Unresolve object back into internal database data */
-		obj.unresolve = function(metakey) {
-			metakey = metakey || '$meta';
+		obj.unresolve = function(datakey) {
+			datakey = datakey || opts.datakey;
 			var data = {};
 			//Object.keys(self).filter(function(key) { return key[0] === '$' ? true : false; }).forEach(function(key) {
 			//	data[key] = self[key];
 			//});
 
 			Object.keys(self).filter(function(key) { return key[0] !== '$' ? true : false; }).forEach(function(key) {
-				//if(self[metakey] === undefined) {
-				//	self[metakey] = {};
+				//if(self[datakey] === undefined) {
+				//	self[datakey] = {};
 				//}
 				data[key] = self[key];
 			});
@@ -53,6 +56,8 @@ function meta(opts) {
 	
 	/** Internal meta keys */
 	builder.keys = keys;
+
+	builder.datakey = opts.datakey;
 
 	return builder;
 }

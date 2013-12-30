@@ -1,6 +1,7 @@
 /* nor-nopg -- Lib object implementation */
 
 var meta = require('./meta.js')({
+	"datakey": '$meta',
 	"keys": ['$id', '$name', '$content', '$meta']
 });
 
@@ -9,11 +10,10 @@ function Lib(opts) {
 	var self = this;
 	var opts = opts || {};
 
-	meta(self).set_meta_keys(opts);
-	meta(self).resolve();
+	meta(self).set_meta_keys(opts).resolve();
 }
 
-Lib.metaKeys = meta.keys;
+Lib.meta = meta;
 
 /** Get internal database object */
 Lib.prototype.valueOf = function() {

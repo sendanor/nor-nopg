@@ -127,6 +127,32 @@ describe('nopg', function(){
 			}).done();
 		});
 
+		it('.search()({"hello":"world"}) works', function(done){
+			nopg.start(PGCONFIG).create()({"hello":"UAJuE5ya6m9UvUM87GUFu7GBIJWghHMT"}).then(function(db) {
+				debug.log('db is ', db);
+				var doc = db.fetch();
+				util.debug('doc = ' + util.inspect(doc));
+				assert.strictEqual(typeof doc.hello, 'string');
+				assert.strictEqual(doc.hello, 'UAJuE5ya6m9UvUM87GUFu7GBIJWghHMT');
+
+				return db.search()({"hello":"UAJuE5ya6m9UvUM87GUFu7GBIJWghHMT"});
+			}).then(function(db) {
+				var items = db.fetch();
+
+				assert.strictEqual(items.length, 1);
+				var doc = items.shift();
+				assert.strictEqual(typeof doc.hello, 'string');
+				assert.strictEqual(doc.hello, 'UAJuE5ya6m9UvUM87GUFu7GBIJWghHMT');
+
+				return db.commit();
+			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
+				done(err);
+			}).done();
+		});
+
 	});
 
 });

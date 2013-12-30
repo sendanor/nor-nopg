@@ -1,6 +1,7 @@
 /* nor-nopg -- Attachment object implementation */
 
 var meta = require('./meta.js')({
+	"datakey": '$meta',
 	"keys": ['$id', '$objects_id', '$content', '$meta']
 });
 
@@ -9,8 +10,7 @@ function Attachment(opts) {
 	var self = this;
 	var opts = opts || {};
 
-	meta(self).set_meta_keys(opts);
-	meta(self).resolve();
+	meta(self).set_meta_keys(opts).resolve();
 }
 
 /** Get internal database object */
@@ -19,7 +19,7 @@ Attachment.prototype.valueOf = function() {
 	return meta(self).unresolve();
 };
 
-Attachment.metaKeys = meta.keys;
+Attachment.meta = meta;
 
 module.exports = Attachment;
 

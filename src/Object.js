@@ -3,6 +3,7 @@
 var debug = require('nor-debug');
 
 var meta = require('./meta.js')({
+	"datakey": '$content',
 	"keys":['$id', '$content', '$types_id']
 });
 
@@ -13,27 +14,25 @@ function NoPgObject(opts) {
 
 	debug.log("NoPgObject(opts = ", opts, ")");
 
-	meta(self).set_meta_keys(opts);
-	meta(self).resolve('$content');
+	meta(self).set_meta_keys(opts).resolve();
 }
 
-NoPgObject.metaKeys = meta.keys;
+NoPgObject.meta = meta;
 
 module.exports = NoPgObject;
 
 /** Get internal database object */
 NoPgObject.prototype.valueOf = function() {
 	var self = this;
-	return meta(self).unresolve('$content');
+	return meta(self).unresolve();
 };
 
 /** Update changes to current instance */
 NoPgObject.prototype.update = function(data) {
 	var self = this;
 	debug.log("NoPgObject.prototype.update(data = ", data, ")");
-	meta(self).set_meta_keys(data);
 	// FIXME: If values are removed from the database, local copy properties are NOT removed currently!
-	meta(self).resolve('$content');
+	meta(self).set_meta_keys(data).resolve();
 	return self;
 };
 

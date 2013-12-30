@@ -1,6 +1,7 @@
 /* nor-nopg -- Type object implementation */
 
 var meta = require('./meta.js')({
+	"datakey": '$meta',
 	"keys": ['$id', '$name', '$schema', '$validator', '$meta']
 });
 
@@ -9,8 +10,7 @@ function Type(opts) {
 	var self = this;
 	var opts = opts || {};
 
-	meta(self).set_meta_keys(opts);
-	meta(self).resolve();
+	meta(self).set_meta_keys(opts).resolve();
 }
 
 /** Get internal database object */
@@ -19,7 +19,7 @@ Type.prototype.valueOf = function() {
 	return meta(self).unresolve();
 };
 
-Type.metaKeys = meta.keys;
+Type.meta = meta;
 
 module.exports = Type;
 
