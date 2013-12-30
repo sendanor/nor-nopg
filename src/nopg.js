@@ -33,6 +33,9 @@ module.exports = NoPG;
 
 // Object constructors
 NoPG.Object = NoPgObject;
+NoPG.Type = NoPgType;
+NoPG.Attachment = NoPgAttachment;
+NoPG.Lib = NoPgLib;
 
 /** Start */
 NoPG.start = function(pgconfig) {
@@ -167,25 +170,40 @@ NoPG.prototype.init = function() {
 	});
 };
 
+/** Parse type into database key and value pair */
+function parse_dbtype(type, param) {
+	var t = {};
+
+	if(typeof type === 'string') {
+		t.param = 'get_type('+param+')';
+		t.value = type;
+		return t;
+	}
+
+	if(type instanceof NoPgType) {
+		t.param = param;
+		t.value = type.$id;
+		return t;
+	}
+
+	throw new TypeError("unknown type: " + type);
+}
+
 /** Create object by type: `db.create([TYPE])([OPT(S)])`. */
 NoPG.prototype.create = function(type) {
 	debug.log('at create(', type, ')');
 	var self = this;
+
 	function create2(data) {
 		debug.log('at create2(', data, ')');
 
-		var query, params;
+		var query, params, dbtype;
 
 		if(type !== undefined) {
-			if(typeof type === 'string') {
-				query = "INSERT INTO objects (content, types_id) VALUES ($1, get_type($2)) RETURNING *";
-				params = [data, type];
-			} else if(type instanceof NoPgType) {
-				query = "INSERT INTO objects (content, types_id) VALUES ($1, $2) RETURNING *";
-				params = [data, type.id];
-			} else {
-				throw new TypeError("unknown type: " + type);
-			}
+			dbtype = parse_dbtype(type, '$2');
+			debug.log("Parsed dbtype = ", dbtype);
+			query = "INSERT INTO objects (content, types_id) VALUES ($1, "+dbtype.param+") RETURNING *";
+			params = [data, dbtype.value];
 		} else {
 			query = "INSERT INTO objects (content) VALUES ($1) RETURNING *";
 			params = [data];
@@ -239,21 +257,43 @@ NoPG.prototype.search = function(type) {
 	function search2(opts) {
 		debug.log('at search2(', opts, ')');
 
-		var query, keys, params, Type;
+		var query, keys, params, Type, dbtype;
 
 		Type = NoPgObject;
 
-		debug.log('opts = ' + opts);
+		debug.log('opts = ', opts);
 		var parsed_opts = parse_predicates(Type)(opts, Type.meta.datakey.substr(1) );
-		debug.log('parsed_opts = ' + parsed_opts);
+		debug.log('parsed_opts = ', parsed_opts);
 
 		keys = Object.keys(parsed_opts);
-		debug.log('keys = ' + keys);
+		debug.log('keys = ', keys);
 
 		params = keys.map(function(key) { return parsed_opts[key]; });
-		debug.log('params = ' + params);
+		debug.log('params = ', params);
 
-		query = "SELECT * FROM "+Type.meta.table+" WHERE " + keys.map(function(k,n) { return k + ' = $' + (n+1); }).join(' AND ');
+		var where = keys.map(function(k,n) { return k + ' = $' + (n+1); });
+		debug.log('where = ', where);
+
+		if(type !== undefined) {
+			if(typeof type === 'string') {
+				where.push("types_id = get_type($"+(where.length+1)+")");
+				params.push(type);
+			} else if(type instanceof NoPgType) {
+				where.push("types_id = $" + (where.length+1));
+				params.push(type.$id);
+			} else {
+				throw new TypeError("Unknown type: " + type);
+			}
+			debug.log('where = ', where, ' after types_id');
+			debug.log('params = ', params, ' after types_id');
+		}
+
+		query = "SELECT * FROM "+(Type.meta.table);
+
+		if(where.length >= 1) {
+			query += " WHERE " + where.join(' AND ');
+		}
+
 		debug.log('query = ' + query);
 
 		return do_query(self, query, params).then(get_results(Type)).then(save_objects_to(self)).then(function() { return self; });
