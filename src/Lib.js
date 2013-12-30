@@ -1,26 +1,27 @@
-/* nor-nopg -- Lib object implementation */
+/* nor-nopg -- NoPgLib object implementation */
 
 var meta = require('./meta.js')({
+	"table": "libs",
 	"datakey": '$meta',
 	"keys": ['$id', '$name', '$content', '$meta']
 });
 
 /** The constructor */
-function Lib(opts) {
+function NoPgLib(opts) {
 	var self = this;
 	var opts = opts || {};
 
 	meta(self).set_meta_keys(opts).resolve();
 }
 
-Lib.meta = meta;
+NoPgLib.meta = meta;
 
 /** Get internal database object */
-Lib.prototype.valueOf = function() {
+NoPgLib.prototype.valueOf = function() {
 	var self = this;
 	return meta(self).unresolve();
 };
 
-module.exports = Lib;
+module.exports = NoPgLib;
 
 /* EOF */

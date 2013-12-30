@@ -1,12 +1,13 @@
-/* nor-nopg -- Attachment object implementation */
+/* nor-nopg -- NoPgAttachment object implementation */
 
 var meta = require('./meta.js')({
+	"table": "attachments",
 	"datakey": '$meta',
 	"keys": ['$id', '$objects_id', '$content', '$meta']
 });
 
 /** The constructor */
-function Attachment(opts) {
+function NoPgAttachment(opts) {
 	var self = this;
 	var opts = opts || {};
 
@@ -14,13 +15,13 @@ function Attachment(opts) {
 }
 
 /** Get internal database object */
-Attachment.prototype.valueOf = function() {
+NoPgAttachment.prototype.valueOf = function() {
 	var self = this;
 	return meta(self).unresolve();
 };
 
-Attachment.meta = meta;
+NoPgAttachment.meta = meta;
 
-module.exports = Attachment;
+module.exports = NoPgAttachment;
 
 /* EOF */

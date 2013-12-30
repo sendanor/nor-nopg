@@ -1,12 +1,13 @@
-/* nor-nopg -- Type object implementation */
+/* nor-nopg -- NoPgType object implementation */
 
 var meta = require('./meta.js')({
+	"table": "types",
 	"datakey": '$meta',
 	"keys": ['$id', '$name', '$schema', '$validator', '$meta']
 });
 
 /** The constructor */
-function Type(opts) {
+function NoPgType(opts) {
 	var self = this;
 	var opts = opts || {};
 
@@ -14,13 +15,13 @@ function Type(opts) {
 }
 
 /** Get internal database object */
-Type.prototype.valueOf = function() {
+NoPgType.prototype.valueOf = function() {
 	var self = this;
 	return meta(self).unresolve();
 };
 
-Type.meta = meta;
+NoPgType.meta = meta;
 
-module.exports = Type;
+module.exports = NoPgType;
 
 /* EOF */
