@@ -4,10 +4,6 @@ var debug = require('nor-debug');
 var Q = require('q');
 var pg = require('nor-pg');
 var extend = require('nor-extend').setup({useFunctionPromises:true});
-var NoPgObject = require('./Object.js');
-var NoPgType = require('./Type.js');
-var NoPgAttachment = require('./Attachment.js');
-var NoPgLib = require('./Lib.js');
 
 /** */
 function assert(valid, text) {
@@ -16,7 +12,7 @@ function assert(valid, text) {
 	}
 }
 
-/** Assert that the `doc` is NoPgObject */
+/** Assert that the `doc` is NoPG.Object */
 function assert_type(doc, type, text) {
 	assert(doc instanceof type, text || "Not correct type: " + type);
 }
@@ -32,10 +28,10 @@ function NoPG(db) {
 module.exports = NoPG;
 
 // Object constructors
-NoPG.Object = NoPgObject;
-NoPG.Type = NoPgType;
-NoPG.Attachment = NoPgAttachment;
-NoPG.Lib = NoPgLib;
+NoPG.Object = require('./Object.js');
+NoPG.Type = require('./Type.js');
+NoPG.Attachment = require('./Attachment.js');
+NoPG.Lib = require('./Lib.js');
 
 /** Start */
 NoPG.start = function(pgconfig) {
@@ -78,11 +74,10 @@ function get_results(Type) {
 
 /** Save object handler */
 function save_object_to(self) {
-
-	if( (self instanceof NoPgObject)
-	 || (self instanceof NoPgType)
-	 || (self instanceof NoPgAttachment)
-	 || (self instanceof NoPgLib)
+	if( (self instanceof NoPG.Object)
+	 || (self instanceof NoPG.Type)
+	 || (self instanceof NoPG.Attachment)
+	 || (self instanceof NoPG.Lib)
 	  ) {
 		return function(doc) { return self.update(doc); };
 	}
@@ -180,7 +175,7 @@ function parse_dbtype(type, param) {
 		return t;
 	}
 
-	if(type instanceof NoPgType) {
+	if(type instanceof NoPG.Type) {
 		t.param = param;
 		t.value = type.$id;
 		return t;
@@ -212,13 +207,13 @@ NoPG.prototype.create = function(type) {
 		debug.log('query = ', query);
 		debug.log('params = ', params);
 
-		return do_query(self, query, params).then(get_result(NoPgObject)).then(save_object_to(self));
+		return do_query(self, query, params).then(get_result(NoPG.Object)).then(save_object_to(self));
 	}
 	return create2;
 };
 
 /** Convert properties like {"$foo":123} -> "foo = 123" and {foo:123} -> "(meta->'foo')::numeric = 123" and {foo:"123"} -> "meta->'foo' = '123'"
- * Usage: `var where = parse_predicates(NoPgObject)({"$foo":123})`
+ * Usage: `var where = parse_predicates(NoPG.Object)({"$foo":123})`
  */
 function parse_predicates(Type) {
 	function parse_data(opts) {
@@ -259,7 +254,7 @@ NoPG.prototype.search = function(type) {
 
 		var query, keys, params, Type, dbtype;
 
-		Type = NoPgObject;
+		Type = NoPG.Object;
 
 		debug.log('opts = ', opts);
 		var parsed_opts = parse_predicates(Type)(opts, Type.meta.datakey.substr(1) );
@@ -278,7 +273,7 @@ NoPG.prototype.search = function(type) {
 			if(typeof type === 'string') {
 				where.push("types_id = get_type($"+(where.length+1)+")");
 				params.push(type);
-			} else if(type instanceof NoPgType) {
+			} else if(type instanceof NoPG.Type) {
 				where.push("types_id = $" + (where.length+1));
 				params.push(type.$id);
 			} else {
@@ -306,25 +301,25 @@ NoPG.prototype.search = function(type) {
 NoPG.prototype.update = function(doc, data) {
 	var self = this;
 	var query, params, type;
-	//assert_type(doc, NoPgObject, "doc is not NoPg.Object");
+	//assert_type(doc, NoPG.Object, "doc is not NoPG.Object");
 	if(data === undefined) {
 		data = doc.valueOf();
 	}
-	if(doc instanceof NoPgObject) {
-		type = NoPgObject;
+	if(doc instanceof NoPG.Object) {
+		type = NoPG.Object;
 		query = "UPDATE objects SET content = $1 WHERE id = $2 RETURNING *";
 		params = [data, doc.$id];
-	} else if(doc instanceof NoPgType) {
-		type = NoPgType;
+	} else if(doc instanceof NoPG.Type) {
+		type = NoPG.Type;
 		query = "UPDATE types SET name = $1, schema = $2, validator = $3, meta = $4 WHERE id = $5 RETURNING *";
 		params = [doc.$name, doc.$schema, doc.$validator, data, doc.$id];
-	} else if(doc instanceof NoPgAttachment) {
-		type = NoPgAttachment;
+	} else if(doc instanceof NoPG.Attachment) {
+		type = NoPG.Attachment;
 		query = "UPDATE attachments SET content = $1, meta = $2 WHERE id = $3 RETURNING *";
 		// FIXME: Implement binary content support
 		params = [doc.$content, data, doc.$id];
-	} else if(doc instanceof NoPgLib) {
-		type = NoPgLib;
+	} else if(doc instanceof NoPG.Lib) {
+		type = NoPG.Lib;
 		query = "UPDATE libs SET name = $1, content = $2, meta = $3 WHERE id = $4 RETURNING *";
 		// FIXME: Implement binary content support
 		params = [doc.$name, doc.$content, data, doc.$id];
@@ -338,17 +333,17 @@ NoPG.prototype.update = function(doc, data) {
 NoPG.prototype.del = function(doc) {
 	var self = this;
 	var query, params;
-	if(doc instanceof NoPgObject) {
+	if(doc instanceof NoPG.Object) {
 		query = "DELETE FROM objects WHERE id = $1";
 		params = [doc.$id];
-	} else if(doc instanceof NoPgType) {
+	} else if(doc instanceof NoPG.Type) {
 		query = "DELETE FROM types WHERE id = $1";
 		params = [doc.$id];
-	} else if(doc instanceof NoPgAttachment) {
+	} else if(doc instanceof NoPG.Attachment) {
 		query = "DELETE FROM attachments WHERE id = $1";
 		// FIXME: Implement binary content support
 		params = [doc.$id];
-	} else if(doc instanceof NoPgLib) {
+	} else if(doc instanceof NoPG.Lib) {
 		query = "DELETE FROM libs WHERE id = $1";
 		// FIXME: Implement binary content support
 		params = [doc.$id];
@@ -374,7 +369,7 @@ NoPG.prototype.createType = function(name) {
 		var params = [name, schema, validator, meta];
 		debug.log('query = ' + query);
 		debug.log('params = ' + params);
-		return do_query(self, query, params).then(get_result(NoPgType)).then(save_object_to(self));
+		return do_query(self, query, params).then(get_result(NoPG.Type)).then(save_object_to(self));
 	}
 	return createType2;
 };
