@@ -153,7 +153,7 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('.search()({"hello":"AF82RqSsXM527S3PGK76r6H3xjWqnYgP"}) works', function(done){
+		it('.search()({"$id":"..."}) works for type AF82RqSsXM527S3PGK76r6H3xjWqnYgP', function(done){
 			var id;
 			nopg.start(PGCONFIG).create()({"hello":"AF82RqSsXM527S3PGK76r6H3xjWqnYgP"}).then(function(db) {
 				debug.log('db is ', db);
