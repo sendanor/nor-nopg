@@ -295,6 +295,48 @@ describe('nopg', function(){
 			}).done();
 		});
 
+		it('Creating unnamed types', function(done){
+			var type;
+			nopg.start(PGCONFIG)
+			  .createType()()
+			  .then(function(db) {
+				type = db.fetch();
+				debug.log("type = ", type);
+				assert.strictEqual(type instanceof nopg.Type, true);
+				return db.create(type)({"foo":1,"bar":"foobar"})
+				  .create(type)({"foo":2,"bar":"hello"})
+				  .create(type)({"foo":3})
+				  .search(type)({"bar":"hello"});
+			  }).then(function(db) {
+				var item0 = db.fetch();
+				var item1 = db.fetch();
+				var item2 = db.fetch();
+				var items = db.fetch();
+
+				debug.log("item0 = ", item0);
+				debug.log("item1 = ", item1);
+				debug.log("item2 = ", item2);
+				debug.log("items = ", items);
+
+				assert.strictEqual(item0.foo, 1);
+				assert.strictEqual(item0.bar, "foobar");
+				assert.strictEqual(item1.bar, "hello");
+				assert.strictEqual(item1.bar, "hello");
+				assert.strictEqual(item2.foo, 3);
+
+				assert.strictEqual(items.length, 1);
+				assert.strictEqual(item1.foo, items[0].foo);
+				assert.strictEqual(item1.bar, items[0].bar);
+
+				return db.commit();
+			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
+				done(err);
+			}).done();
+		});
+
 	});
 
 });
