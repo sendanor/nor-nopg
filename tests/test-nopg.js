@@ -153,6 +153,35 @@ describe('nopg', function(){
 			}).done();
 		});
 
+		it('.search()({"hello":"world"}) works', function(done){
+			var id;
+			nopg.start(PGCONFIG).create()({"hello":"AF82RqSsXM527S3PGK76r6H3xjWqnYgP"}).then(function(db) {
+				debug.log('db is ', db);
+				var doc = db.fetch();
+				util.debug('doc = ' + util.inspect(doc));
+				assert.strictEqual(typeof doc.hello, 'string');
+				assert.strictEqual(doc.hello, 'AF82RqSsXM527S3PGK76r6H3xjWqnYgP');
+
+				id = doc.$id;
+
+				return db.search()({"$id":doc.$id});
+			}).then(function(db) {
+				var items = db.fetch();
+
+				assert.strictEqual(items.length, 1);
+				var doc = items.shift();
+				assert.strictEqual(typeof doc.hello, 'string');
+				assert.strictEqual(doc.hello, 'AF82RqSsXM527S3PGK76r6H3xjWqnYgP');
+
+				return db.commit();
+			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
+				done(err);
+			}).done();
+		});
+
 	});
 
 });

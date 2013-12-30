@@ -199,15 +199,13 @@ NoPG.prototype.create = function(type) {
 	return create2;
 };
 
-/** Search objects */
-NoPG.prototype.search = function(type) {
-	debug.log('at search(', type, ')');
-	var self = this;
-
-	/** Convert properties like {"$foo":123} -> "foo = 123" and {foo:123} -> "(meta->'foo')::numeric = 123" and {foo:"123"} -> "meta->'foo' = '123'" */
-	function parse_predicates(opts, datakey) {
+/** Convert properties like {"$foo":123} -> "foo = 123" and {foo:123} -> "(meta->'foo')::numeric = 123" and {foo:"123"} -> "meta->'foo' = '123'"
+ * Usage: `var where = parse_predicates(NoPgObject)({"$foo":123})`
+ */
+function parse_predicates(Type) {
+	function parse_data(opts) {
 		opts = opts || {};
-		datakey = datakey || 'meta';
+		datakey = (Type.meta.datakey || '$meta').substr(1);
 		var res = {};
 		
 		// Parse meta properties
@@ -227,20 +225,27 @@ NoPG.prototype.search = function(type) {
 			var k = key.substr(1);
 			res[k] = opts[key];
 		});
-		
+	
 		return res;
 	}
+	return parse_data;
+}
+
+/** Search objects */
+NoPG.prototype.search = function(type) {
+	debug.log('at search(', type, ')');
+	var self = this;
 
 	function search2(opts) {
 		debug.log('at search2(', opts, ')');
 
-		var query, keys, params, objtype, table;
+		var query, keys, params, Type, table;
 
-		objtype = NoPgObject;
+		Type = NoPgObject;
 		table = "objects";
 
 		debug.log('opts = ' + opts);
-		var parsed_opts = parse_predicates(opts, objtype.meta.datakey.substr(1) );
+		var parsed_opts = parse_predicates(Type)(opts, Type.meta.datakey.substr(1) );
 		debug.log('parsed_opts = ' + parsed_opts);
 
 		keys = Object.keys(parsed_opts);
@@ -252,7 +257,7 @@ NoPG.prototype.search = function(type) {
 		query = "SELECT * FROM "+table+" WHERE " + keys.map(function(k,n) { return k + ' = $' + (n+1); }).join(' AND ');
 		debug.log('query = ' + query);
 
-		return do_query(self, query, params).then(get_results(objtype)).then(save_objects_to(self)).then(function() { return self; });
+		return do_query(self, query, params).then(get_results(Type)).then(save_objects_to(self)).then(function() { return self; });
 	}
 
 	return search2;
