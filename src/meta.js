@@ -4,15 +4,13 @@ var debug = require('nor-debug');
 
 function meta(opts) {
 	opts = opts || {};
-	var keys = opts.keys || [];
-	opts.datakey = opts.datakey || '$meta';
 
 	function builder(self) {
 		var obj = {};
 
 		/** Set meta keys */
 		obj.set_meta_keys = function(data) {
-			keys.forEach(function(key) {
+			builder.keys.forEach(function(key) {
 				if(data[key] !== undefined) {
 					self[key] = data[key];
 				}
@@ -23,7 +21,7 @@ function meta(opts) {
 		
 		/** Resolve single object key into top level */
 		obj.resolve = function(datakey) {
-			datakey = datakey || opts.datakey;
+			datakey = datakey || builder.datakey;
 			if(self[datakey]) {
 				Object.keys(self[datakey]).forEach(function(key) {
 					self[key] = self[datakey][key];
@@ -35,7 +33,7 @@ function meta(opts) {
 
 		/** Unresolve object back into internal database data */
 		obj.unresolve = function(datakey) {
-			datakey = datakey || opts.datakey;
+			datakey = datakey || builder.datakey;
 			var data = {};
 			//Object.keys(self).filter(function(key) { return key[0] === '$' ? true : false; }).forEach(function(key) {
 			//	data[key] = self[key];
@@ -54,10 +52,11 @@ function meta(opts) {
 		return obj;
 	}
 	
-	/** Internal meta keys */
-	builder.keys = keys;
+	/** Internal meta values */
 
-	builder.datakey = opts.datakey;
+	builder.keys = opts.keys || [];
+	builder.datakey = opts.datakey || '$meta';
+	builder.table = opts.table;
 
 	return builder;
 }

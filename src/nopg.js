@@ -239,10 +239,9 @@ NoPG.prototype.search = function(type) {
 	function search2(opts) {
 		debug.log('at search2(', opts, ')');
 
-		var query, keys, params, Type, table;
+		var query, keys, params, Type;
 
 		Type = NoPgObject;
-		table = "objects";
 
 		debug.log('opts = ' + opts);
 		var parsed_opts = parse_predicates(Type)(opts, Type.meta.datakey.substr(1) );
@@ -254,7 +253,7 @@ NoPG.prototype.search = function(type) {
 		params = keys.map(function(key) { return parsed_opts[key]; });
 		debug.log('params = ' + params);
 
-		query = "SELECT * FROM "+table+" WHERE " + keys.map(function(k,n) { return k + ' = $' + (n+1); }).join(' AND ');
+		query = "SELECT * FROM "+Type.meta.table+" WHERE " + keys.map(function(k,n) { return k + ' = $' + (n+1); }).join(' AND ');
 		debug.log('query = ' + query);
 
 		return do_query(self, query, params).then(get_results(Type)).then(save_objects_to(self)).then(function() { return self; });
