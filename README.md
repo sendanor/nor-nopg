@@ -3,7 +3,7 @@
 nor-nopg
 ========
 
-PostgreSQL Module for Sendanor NoSQL Schema.
+Node.js PostgreSQL Module for Sendanor NoSQL Schema.
 
 Usage
 -----
@@ -20,12 +20,13 @@ Internal Database Schema
 Summary
 -------
 
-### Summary of variable names used in this README
+### Variable names used in this document
 
-|  Name  |   Description    |                    Example                    |
-| ------ | ---------------- | --------------------------------------------- |
-| `NoPg` | NoPg constructor | `var NoPg = require('nor-nopg');`             |
-| `db`   | NoPg instance    | `NoPg.start(...).then(function(db) { ... });` |
+|  Name  |      Description       |                         Example                         |
+| ------ | ---------------------- | ------------------------------------------------------- |
+| `NoPg` | `NoPg` constructor     | `var NoPg = require('nor-nopg');`                       |
+| `db`   | `NoPg` instance        | `NoPg.start(...).then(function(db) { ... });`           |
+| `doc`  | `NoPg.Object` instance | `db.create()(...).shift().then(function(doc) { ... });` |
 
 ### Summary of available operations
 
