@@ -95,8 +95,74 @@ nopg.start(PGCONFIG).init().then(function(db) {
 });
 ```
 
+Our promise implementation
+--------------------------
+
+We use an extended promise implementation which allows chaining of 
+multiple methods together.
+
+Under the hood we are using [`q` promises](https://github.com/kriskowal/q) 
+which are extended using [`nor-extend`](https://github.com/sendanor/nor-extend). 
+
+However these extended features are not required. You may use our promises 
+just like any other q-promises.
+
+### Example of chaining multiple asynchronic calls together
+
+```javascript
+NoPg.start(...).create("Group")({"name":"Bar"}).create("User")({"name":"Foo"}).then(function(db) {
+	var group = db.fetch();
+	var user = db.fetch();
+
+	// ... do your magic at this point
+
+	return db.commit();
+}).fail(function(err) {
+	console.error(err);
+}).done();
+```
+
+About the PostgreSQL ORM Mapping
+--------------------------------
+
+The module has simple ORM mappings for all of PostgreSQL tables.
+
+| JavaScript constructor | PostgreSQL table | Default JSON column |
+| ---------------------- | ---------------- | ------------------- |
+| `NoPg.Document`        | `documents`      | `content`           |
+| `NoPg.Type`            | `types`          | `meta`              |
+| `NoPg.Attachment`      | `attachments`    | `meta`              |
+| `NoPg.Lib`             | `libs`           | `meta`              |
+| `NoPg.DBVersion`       | `dbversion`      | n/a                 |
+
+### Using database constructors
+
+These constructors will take an object and convert it to JavaScript instance 
+of that PostgreSQL table row.
+
+Example object:
+
+```javascript
+{
+	"name": "Hello",
+	"foo": "bar",
+	"age": 10
+	"$id": "8a567836-72be-11e3-be5d-0800279ca880",
+	"$created": "",
+	"$updated": ""
+}
+```
+
+The special `$` in the name makes it possible to point directly to a column 
+in PostgreSQL row.
+
+Any other property points to the column in default JSON column.
+
+So `obj.$meta.foo` in `NoPg.Type` instance has the same value as `obj.foo` 
+unless the ORM instance has been changed by user.
+
 Documents
--------
+---------
 
 ### Create document
 
