@@ -35,17 +35,9 @@ function meta(opts) {
 		obj.unresolve = function(datakey) {
 			datakey = datakey || builder.datakey;
 			var data = {};
-			//Object.keys(self).filter(function(key) { return key[0] === '$' ? true : false; }).forEach(function(key) {
-			//	data[key] = self[key];
-			//});
-
 			Object.keys(self).filter(function(key) { return key[0] !== '$' ? true : false; }).forEach(function(key) {
-				//if(self[datakey] === undefined) {
-				//	self[datakey] = {};
-				//}
 				data[key] = self[key];
 			});
-
 			return data;
 		};
 
