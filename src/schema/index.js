@@ -109,7 +109,7 @@ module.exports = [
 	},
 
 	/** #3
-	 * Type of json objects. There can be tought of like "buckets". You can e.g. fetch all stuff of type x easily.
+	 * Type of json documents. There can be tought of like "buckets". You can e.g. fetch all stuff of type x easily.
 	 * There is a manually generated "namespace" UUID for UUIDv5 generator
 	 */
 	function(db) {
@@ -132,7 +132,7 @@ module.exports = [
 	function(db) {
 
 		function check_type() {
-			// Ignore typeless objects
+			// Ignore typeless documents
 			if (types_id === null) {
 				return true;
 			}
@@ -172,12 +172,12 @@ module.exports = [
 		return db.query('CREATE OR REPLACE FUNCTION check_type(data json, types_id uuid) RETURNS boolean LANGUAGE plv8 VOLATILE AS ' + escape_function(check_type));
 	},
 
-	/** The json objects */
+	/** The json documents */
 	function(db) {
-		return db.query('CREATE SEQUENCE objects_seq')
+		return db.query('CREATE SEQUENCE documents_seq')
 			.query([
-					'CREATE TABLE IF NOT EXISTS objects (',
-					"	id uuid PRIMARY KEY NOT NULL default uuid_generate_v5('10c9e34c-1ed9-4e3d-bc58-280baf2b0648', nextval('objects_seq'::regclass)::text),",
+					'CREATE TABLE IF NOT EXISTS documents (',
+					"	id uuid PRIMARY KEY NOT NULL default uuid_generate_v5('10c9e34c-1ed9-4e3d-bc58-280baf2b0648', nextval('documents_seq'::regclass)::text),",
 					'	content json NOT NULL,',
 					'	types_id uuid REFERENCES types,',
 					'	created timestamptz NOT NULL default now(),',
@@ -185,8 +185,8 @@ module.exports = [
 					'	CHECK (check_type(content, types_id))',
 					')'
 				].join('\n'))
-			.query('ALTER SEQUENCE objects_seq OWNED BY objects.id')
-			.query('CREATE INDEX objects_type ON objects (types_id)')
+			.query('ALTER SEQUENCE documents_seq OWNED BY documents.id')
+			.query('CREATE INDEX documents_type ON documents (types_id)')
 			.query('CREATE TRIGGER types_modified BEFORE UPDATE ON types FOR EACH ROW EXECUTE PROCEDURE moddatetime (modified)');
 	},
 
@@ -196,7 +196,7 @@ module.exports = [
 			.query([
 				'CREATE TABLE IF NOT EXISTS attachments (',
 				"	id uuid PRIMARY KEY NOT NULL default uuid_generate_v5('7ff10638-7ede-4748-8732-c602754c10cc', nextval('attachments_seq'::regclass)::text),",
-				'	objects_id uuid NOT NULL REFERENCES objects ON DELETE CASCADE,',
+				'	documents_id uuid NOT NULL REFERENCES documents ON DELETE CASCADE,',
 				'	content bytea NOT NULL,',
 				'	meta json,',
 				'	created timestamptz NOT NULL default now(),',
@@ -206,7 +206,7 @@ module.exports = [
 			.query('CREATE TRIGGER attachments_modified BEFORE UPDATE ON attachments FOR EACH ROW EXECUTE PROCEDURE moddatetime (modified)');
 	},
 
-	/** #5 - Used to insert objects */
+	/** #5 - Used to insert documents */
 	function(db) {
 		return db.query([
 			'CREATE OR REPLACE FUNCTION get_type(name text) RETURNS uuid LANGUAGE SQL AS $$',

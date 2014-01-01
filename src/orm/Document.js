@@ -1,37 +1,37 @@
-/* nor-nopg -- NoPgObject object implementation */
+/* nor-nopg -- NoPg.Document implementation */
 
 var debug = require('nor-debug');
 
 var meta = require('./meta.js')({
-	"table": "objects",
+	"table": "documents",
 	"datakey": '$content',
 	"keys":['$id', '$content', '$types_id']
 });
 
 /** The constructor */
-function NoPgObject(opts) {
+function NoPgDocument(opts) {
 	var self = this;
 	var opts = opts || {};
 
-	debug.log("NoPgObject(opts = ", opts, ")");
+	debug.log("NoPg.Document(opts = ", opts, ")");
 
 	meta(self).set_meta_keys(opts).resolve();
 }
 
-NoPgObject.meta = meta;
+NoPgDocument.meta = meta;
 
-module.exports = NoPgObject;
+module.exports = NoPgDocument;
 
 /** Get internal database object */
-NoPgObject.prototype.valueOf = function() {
+NoPgDocument.prototype.valueOf = function() {
 	var self = this;
 	return meta(self).unresolve();
 };
 
 /** Update changes to current instance */
-NoPgObject.prototype.update = function(data) {
+NoPgDocument.prototype.update = function(data) {
 	var self = this;
-	debug.log("NoPgObject.prototype.update(data = ", data, ")");
+	debug.log("NoPg.Document.prototype.update(data = ", data, ")");
 	// FIXME: If values are removed from the database, local copy properties are NOT removed currently!
 	meta(self).set_meta_keys(data).resolve();
 	return self;

@@ -1,4 +1,4 @@
-/* nor-nopg -- NoPgType object implementation */
+/* nor-nopg -- NoPg.Type implementation */
 
 var meta = require('./meta.js')({
 	"table": "types",

@@ -1,4 +1,4 @@
-/* nor-nopg -- NoPgLib object implementation */
+/* nor-nopg -- NoPg.Lib implementation */
 
 var meta = require('./meta.js')({
 	"table": "libs",

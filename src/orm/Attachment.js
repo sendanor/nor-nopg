@@ -1,9 +1,9 @@
-/* nor-nopg -- NoPgAttachment object implementation */
+/* nor-nopg -- NoPg.Attachment object implementation */
 
 var meta = require('./meta.js')({
 	"table": "attachments",
 	"datakey": '$meta',
-	"keys": ['$id', '$objects_id', '$content', '$meta']
+	"keys": ['$id', '$documents_id', '$content', '$meta']
 });
 
 /** The constructor */

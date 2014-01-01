@@ -1,4 +1,4 @@
-/* nor-nopg -- Attachment object implementation */
+/* nor-nopg -- Implementation of meta objects for `NoPg.Document`, `NoPg.Type`, `NoPg.Attachment` and `NoPg.Lib`. */
 
 var debug = require('nor-debug');
 
