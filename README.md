@@ -67,7 +67,7 @@ Summary
 | `id`                                    | `obj.$id`  | Property with leading `$` is mapped to the actual database table keyword                                                                                                                                                                      |
 | `content->>'name'` or `content->'name'` | `obj.name` | Property without leading `$` is mapped to the property of the primary JSON data variable. It's `content` for `NoPg.Object`s and `meta` for other objects. The string or number operator is detected automatically from the type of the value. |
 
-Connections and connections-and-transactions
+Connections and transactions
 ----------------------------
 
 ```javascript
@@ -77,8 +77,10 @@ nopg.start('postgres://user:pass@localhost/dbname').then(function(db) {
 });
 ```
 
-You must call `db.commit()` to actually save any changes to the database or 
-`db.rollback()` to cancel the transaction.
+You must call
+
+* `db.commit()` to actually save any changes to the database; or 
+* `db.rollback()` to cancel the transaction
 
 Initialize database
 -------------------
