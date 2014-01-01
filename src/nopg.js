@@ -24,6 +24,7 @@ function NoPg(db) {
 	var self = this;
 	self._db = db;
 	self._values = [];
+	self._tr_state = 'open';
 }
 
 module.exports = NoPg;
@@ -131,7 +132,18 @@ function do_query(self, query, values) {
 
 /** Commit transaction */
 NoPg.prototype.commit = function() {
-	return extend.promise( [NoPg], this._db.commit() );
+	var self = this;
+	return extend.promise( [NoPg], this._db.commit().then(function() {
+		self._tr_state = 'commit';
+	}) );
+};
+
+/** Rollback transaction */
+NoPg.prototype.rollback = function() {
+	var self = this;
+	return extend.promise( [NoPg], this._db.rollback().then(function() {
+		self._tr_state = 'rollback';
+	}) );
 };
 
 /** Checks if server has compatible version */
