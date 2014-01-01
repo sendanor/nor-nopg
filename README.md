@@ -129,8 +129,6 @@ db.create(type)({"hello":"world"}).then(function(db) {
 });
 ```
 
-Unimplemented/Untested.
-
 ### Search objects
 
 #### Search objects by id
@@ -142,8 +140,6 @@ db.search()({"$id": "b58e402e-6b39-11e3-99c7-0800279ca880"}).then(function(db) {
 });
 ```
 
-Unimplemented/Untested.
-
 #### Search objects by values
 
 ```javascript
@@ -152,8 +148,6 @@ db.search()({"hello": "world"}).then(function(db) {
 	console.log("Found objects: " + util.inspect(list) );
 });
 ```
-
-Unimplemented/Untested.
 
 #### Search objects by custom function
 
@@ -166,8 +160,6 @@ db.search()(function(doc) {
 });
 ```
 
-Unimplemented/Untested.
-
 #### Search objects by type string
 
 ```javascript
@@ -176,8 +168,6 @@ db.search("Foobar")().then(function(db) {
 	console.log("Found objects: " + util.inspect(list) );
 });
 ```
-
-Unimplemented/Untested.
 
 #### Search objects by type string with values
 
@@ -188,8 +178,6 @@ db.search("Foobar")({"name":"hello"}).then(function(db) {
 });
 ```
 
-Unimplemented/Untested.
-
 #### Search objects by type
 
 ```javascript
@@ -198,8 +186,6 @@ db.search(type)().then(function(db) {
 	console.log("Found objects: " + util.inspect(list) );
 });
 ```
-
-Unimplemented/Untested.
 
 ### Edit objects
 
@@ -231,9 +217,6 @@ Tested at [test-nopg.js:74](https://github.com/Sendanor/nor-nopg/blob/master/tes
 /* n/a */
 ```
 
-Unimplemented/Untested.
-
-
 ### Delete objects
 
 #### Delete object by instance of `NoPg.Object`
@@ -252,8 +235,6 @@ Tested at [test-nopg.js:113](https://github.com/Sendanor/nor-nopg/blob/master/te
 // n/a
 ```
 
-Unimplemented/Untested.
-
 #### Delete type by instance of `NoPg.Type`
 
 ```javascript
@@ -262,8 +243,6 @@ db.del(type).then(function(db) {
 });
 ```
 
-Implemented, but not tested.
-
 #### Delete attachment
 
 ```javascript
@@ -271,9 +250,6 @@ db.del(attachment).then(function(db) {
 	console.log("Attachment deleted succesfully.");
 });
 ```
-
-Implemented, but not tested.
-
 
 Types
 -----
@@ -300,8 +276,6 @@ db.createType()({"schema":{"type":"object"}}).then(function(db) {
 });
 ```
 
-Unimplemented/Untested.
-
 ### Edit types
 
 #### Edit type by instance of `NoPg.Type`
@@ -313,8 +287,6 @@ db.update(type).then(function(db) {
 });
 ```
 
-Implemented, but not tested.
-
 #### Edit type by plain object
 
 ```javascript
@@ -322,8 +294,6 @@ db.update(type, {schema:{...}}).then(function(db) {
 	console.log("Successfully edited type: " + util.inspect(type) );
 });
 ```
-
-Implemented, but not tested.
 
 ### Search types
 
@@ -333,8 +303,6 @@ db.searchTypes({"$id": "b58e402e-6b39-11e3-99c7-0800279ca880"}).then(function(db
 	console.log("Found types: " + util.inspect(list) );
 });
 ```
-
-Unimplemented/Untested.
 
 Attachments
 -----------
@@ -348,9 +316,9 @@ doc.createAttachment(data, {"content-type": "image/png"}).then(function(db) {
 });
 ```
 
-Unimplemented/Untested.
-
 ### Search attachments
+
+#### Search all attachments
 
 ```javascript
 doc.searchAttachments().then(function(db) {
@@ -359,7 +327,7 @@ doc.searchAttachments().then(function(db) {
 });
 ```
 
-Unimplemented/Untested.
+#### Get attachment by ID
 
 ```javascript
 doc.getAttachment("b58e402e-6b39-11e3-99c7-0800279ca880").then(function(db) {
@@ -368,12 +336,10 @@ doc.getAttachment("b58e402e-6b39-11e3-99c7-0800279ca880").then(function(db) {
 });
 ```
 
-Unimplemented/Untested.
-
 Libs
 ----
 
-### Import or upgrade module in database
+### Import or upgrade module in the database
 
 ```javascript
 db.import('/path/to/tv4.js', {'name': 'tv4'}).then(function(db) {
@@ -381,11 +347,9 @@ db.import('/path/to/tv4.js', {'name': 'tv4'}).then(function(db) {
 });
 ```
 
-Unimplemented/Untested.
-
 Run tests
 ---------
 
 ```
-PGCONFIG='pg://jhh:password@localhost/jhh' npm test
+PGCONFIG='pg://user:password@localhost/db' npm test
 ```
