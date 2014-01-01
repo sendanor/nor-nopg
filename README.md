@@ -65,7 +65,7 @@ Summary
 
 |                PostgreSQL               | JavaScript |                                                                                                                  Description                                                                                                                  |
 | --------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                                    | `obj.$id`  | Property with leading `$` is mapped to the actual database table keyword                                                                                                                                                                      |
+| `id`                                    | `obj.$id`  | Property with leading `$` is mapped to the actual database table column                                                                                                                                                                      |
 | `content->>'name'` or `content->'name'` | `obj.name` | Property without leading `$` is mapped to the property of the primary JSON data variable. It's `content` for `NoPg.Document`s and `meta` for other objects. The string or number operator is detected automatically from the type of the value. |
 
 Connections and transactions
@@ -125,7 +125,7 @@ NoPg.start(...).create("Group")({"name":"Bar"}).create("User")({"name":"Foo"}).t
 About the PostgreSQL ORM Mapping
 --------------------------------
 
-The module has simple ORM mappings for all of PostgreSQL tables.
+The module has simple ORM mappings for all of our PostgreSQL tables.
 
 | JavaScript constructor | PostgreSQL table | Default JSON column |
 | ---------------------- | ---------------- | ------------------- |
@@ -159,7 +159,7 @@ in PostgreSQL row.
 Any other property points to the column in default JSON column.
 
 So `obj.$meta.foo` in `NoPg.Type` instance has the same value as `obj.foo` 
-unless the ORM instance has been changed by user.
+unless the ORM instance has been changed by the user.
 
 Documents
 ---------
