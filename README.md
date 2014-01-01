@@ -158,8 +158,8 @@ in PostgreSQL row.
 
 Any other property points to the column in default JSON column.
 
-So `obj.$meta.foo` in `NoPg.Type` instance has the same value as `obj.foo` 
-unless the ORM instance has been changed by the user.
+For example a `obj.$meta.foo` in `NoPg.Type` instance has the same value as 
+`obj.foo` unless the ORM instance has been changed by the user.
 
 Documents
 ---------
