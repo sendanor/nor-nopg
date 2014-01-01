@@ -5,7 +5,7 @@ var debug = require('nor-debug');
 var meta = require('./meta.js')({
 	"table": "documents",
 	"datakey": '$content',
-	"keys":['$id', '$content', '$types_id']
+	"keys":['$id', '$content', '$types_id', '$created', '$updated']
 });
 
 /** The constructor */

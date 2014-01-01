@@ -3,7 +3,7 @@
 var meta = require('./meta.js')({
 	"table": "libs",
 	"datakey": '$meta',
-	"keys": ['$id', '$name', '$content', '$meta']
+	"keys": ['$id', '$name', '$content', '$meta', '$created', '$updated']
 });
 
 /** The constructor */
