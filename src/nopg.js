@@ -34,6 +34,20 @@ NoPg.Type = orm.Type;
 NoPg.Attachment = orm.Attachment;
 NoPg.Lib = orm.Lib;
 
+/** Returns the NoPg constructor type of `doc`, otherwise throws an exception of `TypeError`. */
+NoPg.getObjectType = function(doc) {
+	if(doc instanceof NoPg.Document) {
+		return NoPg.Document;
+	} else if(doc instanceof NoPg.Type) {
+		return NoPg.Type;
+	} else if(doc instanceof NoPg.Attachment) {
+		return NoPg.Attachment;
+	} else if(doc instanceof NoPg.Lib) {
+		return NoPg.Lib;
+	}
+	throw new TypeError("doc is unknown type: " + doc);
+};
+
 /** Start */
 NoPg.start = function(pgconfig) {
 	return extend.promise( [NoPg], pg.start(pgconfig).then(function(db) {
@@ -199,13 +213,15 @@ NoPg.prototype.create = function(type) {
 
 		var query, params, dbtype;
 
+		var ObjType = NoPg.Document;
+
 		if(type !== undefined) {
 			dbtype = parse_dbtype(type, '$2');
 			debug.log("Parsed dbtype = ", dbtype);
-			query = "INSERT INTO documents (content, types_id) VALUES ($1, "+dbtype.param+") RETURNING *";
+			query = "INSERT INTO " + (ObjType.meta.table) + " (content, types_id) VALUES ($1, "+dbtype.param+") RETURNING *";
 			params = [data, dbtype.value];
 		} else {
-			query = "INSERT INTO documents (content) VALUES ($1) RETURNING *";
+			query = "INSERT INTO " + (ObjType.meta.table) + " (content) VALUES ($1) RETURNING *";
 			params = [data];
 		}
 
@@ -257,12 +273,12 @@ NoPg.prototype.search = function(type) {
 	function search2(opts) {
 		debug.log('at search2(', opts, ')');
 
-		var query, keys, params, Type, dbtype;
+		var query, keys, params, ObjType, dbtype;
 
-		Type = NoPg.Document;
+		ObjType = NoPg.Document;
 
 		debug.log('opts = ', opts);
-		var parsed_opts = parse_predicates(Type)(opts, Type.meta.datakey.substr(1) );
+		var parsed_opts = parse_predicates(ObjType)(opts, ObjType.meta.datakey.substr(1) );
 		debug.log('parsed_opts = ', parsed_opts);
 
 		keys = Object.keys(parsed_opts);
@@ -288,7 +304,7 @@ NoPg.prototype.search = function(type) {
 			debug.log('params = ', params, ' after types_id');
 		}
 
-		query = "SELECT * FROM "+(Type.meta.table);
+		query = "SELECT * FROM "+(ObjType.meta.table);
 
 		if(where.length >= 1) {
 			query += " WHERE " + where.join(' AND ');
@@ -296,7 +312,7 @@ NoPg.prototype.search = function(type) {
 
 		debug.log('query = ' + query);
 
-		return do_query(self, query, params).then(get_results(Type)).then(save_result_to_queue(self)).then(function() { return self; });
+		return do_query(self, query, params).then(get_results(ObjType)).then(save_result_to_queue(self)).then(function() { return self; });
 	}
 
 	return search2;
@@ -312,40 +328,26 @@ NoPg.prototype.update = function(doc, data) {
 	}
 	if(doc instanceof NoPg.Document) {
 		type = NoPg.Document;
-		query = "UPDATE documents SET content = $1 WHERE id = $2 RETURNING *";
+		query = "UPDATE " + (NoPg.Document.meta.table) + " SET content = $1 WHERE id = $2 RETURNING *";
 		params = [data, doc.$id];
 	} else if(doc instanceof NoPg.Type) {
 		type = NoPg.Type;
-		query = "UPDATE types SET name = $1, schema = $2, validator = $3, meta = $4 WHERE id = $5 RETURNING *";
+		query = "UPDATE " + (NoPg.Type.meta.table) + " SET name = $1, schema = $2, validator = $3, meta = $4 WHERE id = $5 RETURNING *";
 		params = [doc.$name, doc.$schema, doc.$validator, data, doc.$id];
 	} else if(doc instanceof NoPg.Attachment) {
 		type = NoPg.Attachment;
-		query = "UPDATE attachments SET content = $1, meta = $2 WHERE id = $3 RETURNING *";
+		query = "UPDATE " + (NoPg.Attachment.meta.table) + " SET content = $1, meta = $2 WHERE id = $3 RETURNING *";
 		// FIXME: Implement binary content support
 		params = [doc.$content, data, doc.$id];
 	} else if(doc instanceof NoPg.Lib) {
 		type = NoPg.Lib;
-		query = "UPDATE libs SET name = $1, content = $2, meta = $3 WHERE id = $4 RETURNING *";
+		query = "UPDATE " + (NoPg.Lib.meta.table) + " SET name = $1, content = $2, meta = $3 WHERE id = $4 RETURNING *";
 		// FIXME: Implement binary content support
 		params = [doc.$name, doc.$content, data, doc.$id];
 	} else {
 		throw new TypeError("doc is unknown type: " + doc);
 	}
 	return do_query(self, query, params).then(get_result(type)).then(save_result_to(doc)).then(function() { return self; });
-};
-
-/** Returns the NoPg constructor type of `doc`, otherwise throws an exception of `TypeError`. */
-NoPg.getObjectType = function(doc) {
-	if(doc instanceof NoPg.Document) {
-		return NoPg.Document;
-	} else if(doc instanceof NoPg.Type) {
-		return NoPg.Type;
-	} else if(doc instanceof NoPg.Attachment) {
-		return NoPg.Attachment;
-	} else if(doc instanceof NoPg.Lib) {
-		return NoPg.Lib;
-	}
-	throw new TypeError("doc is unknown type: " + doc);
 };
 
 /** Delete resource */
@@ -370,7 +372,7 @@ NoPg.prototype.createType = function(name) {
 		var schema = opts.schema || {};
 		var validator = opts.validator ? (''+opts.validator) : null;
 		var meta = opts.meta || {};
-		var query = "INSERT INTO types (name, schema, validator, meta) VALUES ($1, $2, $3, $4) RETURNING *";
+		var query = "INSERT INTO " + (NoPg.Type.meta.table) + " (name, schema, validator, meta) VALUES ($1, $2, $3, $4) RETURNING *";
 		var params = [name, schema, validator, meta];
 		debug.log('query = ' + query);
 		debug.log('params = ' + params);
