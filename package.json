@@ -1,6 +1,6 @@
 {
   "name": "nor-nopg",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "NoPostgreSQL Client Module for Sendanor NoSQL Server",
   "main": "src/index.js",
   "scripts": {
