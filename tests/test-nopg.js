@@ -363,6 +363,23 @@ describe('nopg', function(){
 			}).done();
 		});
 
+		it('.createOrReplaceType("Type4UJHIRRiCc")({"hello":"world"}) works', function(done){
+			nopg.start(PGCONFIG).createOrReplaceType("Type4UJHIRRiCc")({"hello":"world"}).then(function(db) {
+				debug.log('db is ', db);
+				var type1 = db.fetch();
+				util.debug('type1 = ', util.inspect(type1));
+				assert.strictEqual(typeof type1, 'object');
+				assert.strictEqual(typeof type1.hello, 'string');
+				assert.strictEqual(type1.hello, 'world');
+				return db.commit();
+			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
+				done(err);
+			}).done();
+		});
+
 	});
 
 });
