@@ -1,27 +1,19 @@
 /* nor-nopg */
 
 var debug = require('nor-debug');
+var util = require('util');
 var Q = require('q');
 var pg = require('nor-pg');
 var extend = require('nor-extend').setup({useFunctionPromises:true});
 var orm = require('./orm');
 
-/** */
-function assert(valid, text) {
-	if(!valid) {
-		throw new TypeError(text);
-	}
-}
-
-/** Assert that the `doc` is NoPg.Document */
-function assert_type(doc, type, text) {
-	assert(doc instanceof type, text || "Not correct type: " + type);
-}
+/* ------------- PUBLIC FUNCTIONS --------------- */
 
 
 /** The constructor */
 function NoPg(db) {
 	var self = this;
+	if(!db) { throw new TypeError("db invalid: " + util.inspect(db) ); }
 	self._db = db;
 	self._values = [];
 	self._tr_state = 'open';
@@ -52,6 +44,7 @@ NoPg.getObjectType = function(doc) {
 /** Start */
 NoPg.start = function(pgconfig) {
 	return extend.promise( [NoPg], pg.start(pgconfig).then(function(db) {
+		if(!db) { throw new TypeError("invalid db: " + util.inspect(db) ); }
 		return new NoPg(db);
 	}));
 };
@@ -60,6 +53,240 @@ NoPg.start = function(pgconfig) {
 NoPg.prototype.fetch = function() {
 	return this._values.shift();
 };
+
+/** Commit transaction */
+NoPg.prototype.commit = function() {
+	var self = this;
+	return extend.promise( [NoPg], this._db.commit().then(function() {
+		self._tr_state = 'commit';
+	}) );
+};
+
+/** Rollback transaction */
+NoPg.prototype.rollback = function() {
+	var self = this;
+	return extend.promise( [NoPg], this._db.rollback().then(function() {
+		self._tr_state = 'rollback';
+	}) );
+};
+
+/** Checks if server has compatible version */
+NoPg.prototype.testServerVersion = function() {
+	var self = this;
+	return do_query.call(self, 'show server_version_num').then(function(rows) {
+		debug.log('PostgreSQL server version (before parse): ', rows);
+		var num = rows.shift().server_version_num;
+		num = parseInt(num, 10);
+		debug.log('PostgreSQL server version: ', num);
+		if(num >= 90300) {
+			return self;
+		} else {
+			throw new TypeError("PostgreSQL server must be v9.3 or newer (detected "+ num +")");
+		}
+	});
+};
+
+/** Checks if server has compatible version */
+NoPg.prototype.testExtension = function(name) {
+	var self = this;
+	return do_query.call(self, 'SELECT COUNT(*) AS count FROM pg_catalog.pg_extension WHERE extname = $1', [name]).then(function(rows) {
+		var row = rows.shift();
+		var count = parseInt(row.count, 10);
+		debug.log('Count of extensions by ' + name + ': ', count);
+		if(count === 1) {
+			return self;
+		} else {
+			throw new TypeError("PostgreSQL server does not have extension: " + name);
+		}
+	});
+};
+
+/** Tests if the server is compatible */
+NoPg.prototype.test = function() {
+	return this.testServerVersion().testExtension('plv8').testExtension('uuid-ossp').testExtension('moddatetime').testExtension('tcn');
+};
+
+/** Initialize the database */
+NoPg.prototype.init = function() {
+	var self = this;
+	return self.test().then(function() {
+		var builders = require('./schema/');
+		return builders.reduce(function(so_far, f) {
+		    return so_far.then(function(db) {
+				db.fetchAll();
+				return db;
+			}).then(f);
+		}, Q(self._db)).then(function() { return self; });
+	});
+};
+
+/** Create document by type: `db.create([TYPE])([OPT(S)])`. */
+NoPg.prototype.create = function(type) {
+	debug.log('at NoPg::create(', type, ')');
+	var self = this;
+
+	function create2(data) {
+		debug.log('at NoPg::create2(', data, ')');
+
+		if(type && (type instanceof NoPg.Type)) {
+			data.$types_id = type.$id;
+		} else if(type) {
+			return self._getType(type).then(function(t) {
+				if(!(t instanceof NoPg.Type)) {
+					throw new TypeError("invalid type received: " + util.inspect(t) );
+				}
+				type = t;
+				return create2(data);
+			});
+		}
+
+		return do_insert.call(self, NoPg.Document, data);
+	}
+
+	return create2;
+};
+
+/** Search documents */
+NoPg.prototype.search = function(type) {
+	debug.log('at search(', type, ')');
+	var self = this;
+
+	function search2(opts) {
+		debug.log('at search2(', opts, ')');
+
+		var query, keys, params, ObjType, dbtype;
+
+		ObjType = NoPg.Document;
+
+		debug.log('opts = ', opts);
+		var parsed_opts = parse_predicates(ObjType)(opts, ObjType.meta.datakey.substr(1) );
+		debug.log('parsed_opts = ', parsed_opts);
+
+		keys = Object.keys(parsed_opts);
+		debug.log('keys = ', keys);
+
+		params = keys.map(function(key) { return parsed_opts[key]; });
+		debug.log('params = ', params);
+
+		var where = keys.map(function(k,n) { return k + ' = $' + (n+1); });
+		debug.log('where = ', where);
+
+		if(type !== undefined) {
+			if(typeof type === 'string') {
+				where.push("types_id = get_type($"+(where.length+1)+")");
+				params.push(type);
+			} else if(type instanceof NoPg.Type) {
+				where.push("types_id = $" + (where.length+1));
+				params.push(type.$id);
+			} else {
+				throw new TypeError("Unknown type: " + type);
+			}
+			debug.log('where = ', where, ' after types_id');
+			debug.log('params = ', params, ' after types_id');
+		}
+
+		query = "SELECT * FROM "+(ObjType.meta.table);
+
+		if(where.length >= 1) {
+			query += " WHERE " + where.join(' AND ');
+		}
+
+		debug.log('query = ' + query);
+
+		return do_query.call(self, query, params).then(get_results(ObjType)).then(save_result_to_queue(self)).then(function() { return self; });
+	}
+
+	return search2;
+};
+
+/** Update document */
+NoPg.prototype.update = function(doc, data) {
+	var self = this;
+	var query, params, type;
+	//assert_type(doc, NoPg.Document, "doc is not NoPg.Document");
+	if(data === undefined) {
+		data = doc.valueOf();
+	}
+	if(doc instanceof NoPg.Document) {
+		type = NoPg.Document;
+		query = "UPDATE " + (NoPg.Document.meta.table) + " SET content = $1 WHERE id = $2 RETURNING *";
+		params = [data, doc.$id];
+	} else if(doc instanceof NoPg.Type) {
+		type = NoPg.Type;
+		query = "UPDATE " + (NoPg.Type.meta.table) + " SET name = $1, schema = $2, validator = $3, meta = $4 WHERE id = $5 RETURNING *";
+		params = [doc.$name, doc.$schema, doc.$validator, data, doc.$id];
+	} else if(doc instanceof NoPg.Attachment) {
+		type = NoPg.Attachment;
+		query = "UPDATE " + (NoPg.Attachment.meta.table) + " SET content = $1, meta = $2 WHERE id = $3 RETURNING *";
+		// FIXME: Implement binary content support
+		params = [doc.$content, data, doc.$id];
+	} else if(doc instanceof NoPg.Lib) {
+		type = NoPg.Lib;
+		query = "UPDATE " + (NoPg.Lib.meta.table) + " SET name = $1, content = $2, meta = $3 WHERE id = $4 RETURNING *";
+		// FIXME: Implement binary content support
+		params = [doc.$name, doc.$content, data, doc.$id];
+	} else {
+		throw new TypeError("doc is unknown type: " + doc);
+	}
+	return do_query.call(self, query, params).then(get_result(type)).then(save_result_to(doc)).then(function() { return self; });
+};
+
+/** Delete resource */
+NoPg.prototype.del = function(doc) {
+	var self = this;
+	var query, params;
+	var ObjType = NoPg.getObjectType(doc);
+	query = "DELETE FROM " + (ObjType.meta.table) + " WHERE id = $1";
+	params = [doc.$id];
+	return do_query.call(self, query, params).then(function() { return self; });
+};
+
+NoPg.prototype['delete'] = NoPg.prototype.del;
+
+/** Create type: `db.createType([TYPE-NAME])([OPT(S)])`. */
+NoPg.prototype.createType = function(name) {
+	debug.log('at createType(', name, ')');
+	var self = this;
+	function createType2(data) {
+		data = data || {};
+		debug.log('at createType2(', data, ')');
+		if(name !== undefined) {
+			data.$name = ''+name;
+		}
+		return do_insert.call(self, NoPg.Type, data);
+	}
+	return createType2;
+};
+
+/** Get type directly */
+NoPg.prototype._getType = function(name) {
+	debug.log('at _getType(', name, ')');
+	var self = this;
+	return do_select.call(self, NoPg.Type, name).then(get_result(NoPg.Type));
+};
+
+/** Get type and save it to result queue. */
+NoPg.prototype.getType = function(name) {
+	debug.log('at getType(', name, ')');
+	var self = this;
+	return self._getType(name).then(save_result_to(self));
+};
+
+
+/* ------------- HELPER FUNCTIONS --------------- */
+
+
+/** */
+function assert(valid, text) {
+	if(!valid) {
+		throw new TypeError(text);
+	}
+}
+
+/** Assert that the `doc` is NoPg.Document */
+function assert_type(doc, type, text) {
+	assert(doc instanceof type, text || "Not correct type: " + type);
+}
 
 /** Take first result from the database query and returns new instance of `Type` */
 function get_result(Type) {
@@ -125,126 +352,6 @@ function save_result_to_queue(self) {
 	throw new TypeError("Unknown target: " + (typeof self));
 }
 
-/** Perform query */
-function do_query(self, query, values) {
-	return extend.promise( [NoPg], self._db._query(query, values) );
-}
-
-/** Commit transaction */
-NoPg.prototype.commit = function() {
-	var self = this;
-	return extend.promise( [NoPg], this._db.commit().then(function() {
-		self._tr_state = 'commit';
-	}) );
-};
-
-/** Rollback transaction */
-NoPg.prototype.rollback = function() {
-	var self = this;
-	return extend.promise( [NoPg], this._db.rollback().then(function() {
-		self._tr_state = 'rollback';
-	}) );
-};
-
-/** Checks if server has compatible version */
-NoPg.prototype.testServerVersion = function() {
-	var self = this;
-	return do_query(self, 'show server_version_num').then(function(rows) {
-		debug.log('PostgreSQL server version (before parse): ', rows);
-		var num = rows.shift().server_version_num;
-		num = parseInt(num, 10);
-		debug.log('PostgreSQL server version: ', num);
-		if(num >= 90300) {
-			return self;
-		} else {
-			throw new TypeError("PostgreSQL server must be v9.3 or newer (detected "+ num +")");
-		}
-	});
-};
-
-/** Checks if server has compatible version */
-NoPg.prototype.testExtension = function(name) {
-	var self = this;
-	return do_query(self, 'select COUNT(*) AS count from pg_catalog.pg_extension where extname = $1', [name]).then(function(rows) {
-		var row = rows.shift();
-		var count = parseInt(row.count, 10);
-		debug.log('Count of extensions by ' + name + ': ', count);
-		if(count === 1) {
-			return self;
-		} else {
-			throw new TypeError("PostgreSQL server does not have extension: " + name);
-		}
-	});
-};
-
-/** Tests if the server is compatible */
-NoPg.prototype.test = function() {
-	return this.testServerVersion().testExtension('plv8').testExtension('uuid-ossp').testExtension('moddatetime').testExtension('tcn');
-};
-
-/** Initialize the database */
-NoPg.prototype.init = function() {
-	var self = this;
-	return self.test().then(function() {
-		var builders = require('./schema/');
-		return builders.reduce(function(so_far, f) {
-		    return so_far.then(function(db) {
-				db.fetchAll();
-				return db;
-			}).then(f);
-		}, Q(self._db)).then(function() { return self; });
-	});
-};
-
-/** Parse type into database key and value pair */
-function parse_dbtype(type, param) {
-	var t = {};
-
-	if(typeof type === 'string') {
-		t.param = 'get_type('+param+')';
-		t.value = type;
-		return t;
-	}
-
-	if(type instanceof NoPg.Type) {
-		t.param = param;
-		t.value = type.$id;
-		return t;
-	}
-
-	throw new TypeError("unknown type: " + type);
-}
-
-/** Create document by type: `db.create([TYPE])([OPT(S)])`. */
-NoPg.prototype.create = function(type) {
-	debug.log('at create(', type, ')');
-	var self = this;
-
-	function create2(data) {
-		debug.log('at create2(', data, ')');
-
-		var query, params, dbtype;
-
-		var ObjType = NoPg.Document;
-
-		if(type !== undefined) {
-			dbtype = parse_dbtype(type, '$2');
-			debug.log("Parsed dbtype = ", dbtype);
-			query = "INSERT INTO " + (ObjType.meta.table) + " (content, types_id) VALUES ($1, "+dbtype.param+") RETURNING *";
-			params = [data, dbtype.value];
-		} else {
-			query = "INSERT INTO " + (ObjType.meta.table) + " (content) VALUES ($1) RETURNING *";
-			params = [data];
-		}
-
-		debug.log('query = ', query);
-		debug.log('params = ', params);
-
-		return do_query(self, query, params).then(get_result(NoPg.Document)).then(save_result_to(self));
-	}
-	return create2;
-};
-
 /** Convert properties like {"$foo":123} -> "foo = 123" and {foo:123} -> "(meta->'foo')::numeric = 123" and {foo:"123"} -> "meta->'foo' = '123'"
  * Usage: `var where = parse_predicates(NoPg.Document)({"$foo":123})`
  */
@@ -277,120 +384,82 @@ function parse_predicates(Type) {
 	return parse_data;
 }
 
-/** Search documents */
-NoPg.prototype.search = function(type) {
-	debug.log('at search(', type, ')');
+
+/* ------------- PRIVATE FUNCTIONS --------------- */
+
+
+/** Perform generic query */
+function do_query(query, values) {
 	var self = this;
+	if(!self) { throw new TypeError("do_query() invalid: self: " + util.inspect(self)); }
+	if(!self._db) { throw new TypeError("do_query() invalid: self._db: " + util.inspect(self._db)); }
+	if(!query) { throw new TypeError("do_query() invalid: query: " + util.inspect(query)); }
+	return extend.promise( [NoPg], self._db._query(query, values) );
+}
 
-	function search2(opts) {
-		debug.log('at search2(', opts, ')');
-
-		var query, keys, params, ObjType, dbtype;
-
-		ObjType = NoPg.Document;
-
-		debug.log('opts = ', opts);
-		var parsed_opts = parse_predicates(ObjType)(opts, ObjType.meta.datakey.substr(1) );
-		debug.log('parsed_opts = ', parsed_opts);
-
-		keys = Object.keys(parsed_opts);
-		debug.log('keys = ', keys);
-
-		params = keys.map(function(key) { return parsed_opts[key]; });
-		debug.log('params = ', params);
-
-		var where = keys.map(function(k,n) { return k + ' = $' + (n+1); });
-		debug.log('where = ', where);
-
-		if(type !== undefined) {
-			if(typeof type === 'string') {
-				where.push("types_id = get_type($"+(where.length+1)+")");
-				params.push(type);
-			} else if(type instanceof NoPg.Type) {
-				where.push("types_id = $" + (where.length+1));
-				params.push(type.$id);
-			} else {
-				throw new TypeError("Unknown type: " + type);
-			}
-			debug.log('where = ', where, ' after types_id');
-			debug.log('params = ', params, ' after types_id');
-		}
-
-		query = "SELECT * FROM "+(ObjType.meta.table);
-
-		if(where.length >= 1) {
-			query += " WHERE " + where.join(' AND ');
-		}
-
-		debug.log('query = ' + query);
-
-		return do_query(self, query, params).then(get_results(ObjType)).then(save_result_to_queue(self)).then(function() { return self; });
-	}
-
-	return search2;
-};
-
-/** Update document */
-NoPg.prototype.update = function(doc, data) {
+/** Generic SELECT query */
+function do_select(ObjType, opts) {
+	debug.log('at do_select(self, ObjType, opts=', opts, ')');
 	var self = this;
-	var query, params, type;
-	//assert_type(doc, NoPg.Document, "doc is not NoPg.Document");
-	if(data === undefined) {
-		data = doc.valueOf();
-	}
-	if(doc instanceof NoPg.Document) {
-		type = NoPg.Document;
-		query = "UPDATE " + (NoPg.Document.meta.table) + " SET content = $1 WHERE id = $2 RETURNING *";
-		params = [data, doc.$id];
-	} else if(doc instanceof NoPg.Type) {
-		type = NoPg.Type;
-		query = "UPDATE " + (NoPg.Type.meta.table) + " SET name = $1, schema = $2, validator = $3, meta = $4 WHERE id = $5 RETURNING *";
-		params = [doc.$name, doc.$schema, doc.$validator, data, doc.$id];
-	} else if(doc instanceof NoPg.Attachment) {
-		type = NoPg.Attachment;
-		query = "UPDATE " + (NoPg.Attachment.meta.table) + " SET content = $1, meta = $2 WHERE id = $3 RETURNING *";
-		// FIXME: Implement binary content support
-		params = [doc.$content, data, doc.$id];
-	} else if(doc instanceof NoPg.Lib) {
-		type = NoPg.Lib;
-		query = "UPDATE " + (NoPg.Lib.meta.table) + " SET name = $1, content = $2, meta = $3 WHERE id = $4 RETURNING *";
-		// FIXME: Implement binary content support
-		params = [doc.$name, doc.$content, data, doc.$id];
+	var query, keys, params;
+	var where = {};
+
+	if(opts instanceof NoPg.Type) {
+		where.id = opts.$id;
+	} else if(typeof opts === 'object') {
+		Object.keys(opts).filter(function(key) {
+			return key[0] === '$' ? true : false;
+		}).forEach(function(key) {
+			where[key.substr(1)] = opts[key];
+		});
 	} else {
-		throw new TypeError("doc is unknown type: " + doc);
+		where.name = ''+opts;
 	}
-	return do_query(self, query, params).then(get_result(type)).then(save_result_to(doc)).then(function() { return self; });
-};
 
-/** Delete resource */
-NoPg.prototype.del = function(doc) {
+	keys = Object.keys(where);
+
+	query = "SELECT * FROM " + (ObjType.meta.table) + " WHERE " + keys.map(function(key, i) { return key + ' = $' + (i+1); }).join(' AND ');
+	debug.log('query = ', query);
+
+	params = keys.map(function(key) {
+		return where[key];
+	});
+	debug.log('params = ', params);
+
+	return do_query.call(self, query, params);
+}
+
+/** Internal INSERT query */
+function do_insert(ObjType, data) {
 	var self = this;
+	debug.log('at NoPg::do_insert(ObjType=', ObjType, ", data=", data, ')');
+
+	data = (new ObjType(data)).valueOf();
+	debug.log("at NoPg::do_insert: after parsing, data = ", data);
+
 	var query, params;
-	var ObjType = NoPg.getObjectType(doc);
-	query = "DELETE FROM " + (ObjType.meta.table) + " WHERE id = $1";
-	params = [doc.$id];
-	return do_query(self, query, params).then(function() { return self; });
-};
 
-NoPg.prototype['delete'] = NoPg.prototype.del;
+	// Filter only $-keys which are not the datakey
+	var keys = ObjType.meta.keys.filter(function(key) {
+		return (key[0] === '$') ? true : false;
+	}).map(function(key) {
+		return key.substr(1);
+	}).filter(function(key) {
+		return data[key] ? true : false;
+	});
 
-/** Create type: `db.createType([TYPE-NAME])([OPT(S)])`. */
-NoPg.prototype.createType = function(name) {
-	debug.log('at createType(', name, ')');
-	var self = this;
-	function createType2(opts) {
-		opts = opts || {};
-		debug.log('at createType2(', opts, ')');
-		var schema = opts.schema || {};
-		var validator = opts.validator ? (''+opts.validator) : null;
-		var meta = opts.meta || {};
-		var query = "INSERT INTO " + (NoPg.Type.meta.table) + " (name, schema, validator, meta) VALUES ($1, $2, $3, $4) RETURNING *";
-		var params = [name, schema, validator, meta];
-		debug.log('query = ' + query);
-		debug.log('params = ' + params);
-		return do_query(self, query, params).then(get_result(NoPg.Type)).then(save_result_to(self));
-	}
-	return createType2;
-};
+	if(keys.length === 0) { throw new TypeError("No data to submit: keys array is empty."); }
+
+	query = "INSERT INTO " + (ObjType.meta.table) + " ("+ keys.join(', ') +") VALUES ("+ keys.map(function(k, i) { return '$' + (i+1); }).join(', ') +") RETURNING *";
+	debug.log('query = ', query);
+
+	params = keys.map(function(key) {
+		return data[key];
+	});
+	debug.log('params = ', params);
+
+	return do_query.call(self, query, params).then(get_result(ObjType)).then(save_result_to(self));
+}
+
 
 /* EOF */
