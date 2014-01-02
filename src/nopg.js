@@ -59,6 +59,7 @@ NoPg.prototype.commit = function() {
 	var self = this;
 	return extend.promise( [NoPg], this._db.commit().then(function() {
 		self._tr_state = 'commit';
+		return self;
 	}) );
 };
 
@@ -67,6 +68,7 @@ NoPg.prototype.rollback = function() {
 	var self = this;
 	return extend.promise( [NoPg], this._db.rollback().then(function() {
 		self._tr_state = 'rollback';
+		return self;
 	}) );
 };
 
