@@ -380,6 +380,23 @@ describe('nopg', function(){
 			}).done();
 		});
 
+		it('.createOrReplaceType("TypeSession4UJHIRRiCc")({"$schema":{"type":"object"}}) works', function(done){
+			nopg.start(PGCONFIG).createOrReplaceType("TypeSession4UJHIRRiCc")({"$schema":{"type":"object"}}).then(function(db) {
+				debug.log('db is ', db);
+				var type1 = db.fetch();
+				util.debug('type1 = ', util.inspect(type1));
+				assert.strictEqual(typeof type1, 'object');
+				assert.strictEqual(typeof type1.$schema, 'object');
+				assert.strictEqual(type1.$schema.type, 'object');
+				return db.commit();
+			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
+				done(err);
+			}).done();
+		});
+
 	});
 
 });
