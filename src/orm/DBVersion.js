@@ -1,5 +1,7 @@
 /* nor-nopg -- NoPg.DBVersion implementation */
 
+var debug = require('nor-debug');
+
 var meta = require('./meta.js')({
 	"table": "dbversion",
 	"keys": ['$version', '$updated']
@@ -22,5 +24,14 @@ NoPgDBVersion.prototype.valueOf = function() {
 };
 
 module.exports = NoPgDBVersion;
+
+/** Update changes to current instance */
+NoPgDBVersion.prototype.update = function(data) {
+	var self = this;
+	debug.log("NoPg.DBVersion.prototype.update(data = ", data, ")");
+	// FIXME: If values are removed from the database, local copy properties are NOT removed currently!
+	meta(self).set_meta_keys(data).resolve();
+	return self;
+};
 
 /* EOF */

@@ -140,7 +140,7 @@ NoPg.prototype.create = function(type) {
 			});
 		}
 
-		return do_insert.call(self, NoPg.Document, data);
+		return do_insert.call(self, NoPg.Document, data).then(get_result(NoPg.Document)).then(save_result_to(self));
 	}
 
 	return create2;
@@ -200,8 +200,12 @@ NoPg.prototype.search = function(type) {
 };
 
 /** Update document */
-NoPg.prototype.update = function(doc, data) {
+NoPg.prototype.update = function(obj, data) {
 	var self = this;
+	var ObjType = NoPg.getObjectType(obj);
+	return do_update.call(self, ObjType, obj, data).then(get_result(ObjType)).then(save_result_to(self));
+
+	/*
 	var query, params, type;
 	//assert_type(doc, NoPg.Document, "doc is not NoPg.Document");
 	if(data === undefined) {
@@ -229,6 +233,7 @@ NoPg.prototype.update = function(doc, data) {
 		throw new TypeError("doc is unknown type: " + doc);
 	}
 	return do_query.call(self, query, params).then(get_result(type)).then(save_result_to(doc)).then(function() { return self; });
+	*/
 };
 
 /** Delete resource */
@@ -253,21 +258,63 @@ NoPg.prototype.createType = function(name) {
 		if(name !== undefined) {
 			data.$name = ''+name;
 		}
-		return do_insert.call(self, NoPg.Type, data);
+		return do_insert.call(self, NoPg.Type, data).then(get_result(NoPg.Type)).then(save_result_to(self));
 	}
 	return createType2;
 };
 
+/** Create type: `db.createType([TYPE-NAME])([OPT(S)])`. */
+NoPg.prototype.createOrReplaceType = function(name) {
+	debug.log('at createOrReplaceType(', name, ')');
+	var self = this;
+	function createOrReplaceType2(data) {
+		data = data || {};
+		debug.log('at createOrReplaceType2(', data, ')');
+		var where = {};
+		if(name !== undefined) {
+			if(name instanceof NoPg.Type) {
+				where.$types_id = name.$id;
+			} else {
+				where.$name = ''+name;
+			}
+		}
+		return self._getType(where).then(function(type) {
+			if(type) {
+				return self.update(type, data);
+			} else {
+				return self.createType(name)(data);
+			}
+		});
+	}
+	return createOrReplaceType2;
+};
+
+/** Tests if type exists */
+NoPg.prototype._typeExists = function(name) {
+	debug.log('at NoPg::_typeExists(', name, ')');
+	var self = this;
+	return do_select.call(self, NoPg.Type, name).then(function(types) {
+		return (types.length >= 1) ? true : false;
+	});
+};
+
+/** Get type and save it to result queue. */
+NoPg.prototype.typeExists = function(name) {
+	debug.log('at NoPg::typeExists(', name, ')');
+	var self = this;
+	return self._typeExists(name).then(save_result_to(self));
+};
+
 /** Get type directly */
 NoPg.prototype._getType = function(name) {
-	debug.log('at _getType(', name, ')');
+	debug.log('at NoPg::_getType(', name, ')');
 	var self = this;
 	return do_select.call(self, NoPg.Type, name).then(get_result(NoPg.Type));
 };
 
 /** Get type and save it to result queue. */
 NoPg.prototype.getType = function(name) {
-	debug.log('at getType(', name, ')');
+	debug.log('at NoPg::getType(', name, ')');
 	var self = this;
 	return self._getType(name).then(save_result_to(self));
 };
@@ -291,8 +338,9 @@ function assert_type(doc, type, text) {
 /** Take first result from the database query and returns new instance of `Type` */
 function get_result(Type) {
 	return function(rows) {
+		if(!rows) { throw new TypeError("failed to parse result"); }
 		var doc = rows.shift();
-		if(!doc) { throw new TypeError("failed to parse result"); }
+		if(!doc) { return; }
 		var obj = {};
 		Object.keys(doc).forEach(function(key) {
 			obj['$'+key] = doc[key];
@@ -451,14 +499,53 @@ function do_insert(ObjType, data) {
 	if(keys.length === 0) { throw new TypeError("No data to submit: keys array is empty."); }
 
 	query = "INSERT INTO " + (ObjType.meta.table) + " ("+ keys.join(', ') +") VALUES ("+ keys.map(function(k, i) { return '$' + (i+1); }).join(', ') +") RETURNING *";
-	debug.log('query = ', query);
+	debug.log('at NoPg::do_insert: query = ', query);
 
 	params = keys.map(function(key) {
 		return data[key];
 	});
-	debug.log('params = ', params);
+	debug.log('at NoPg::do_insert: params = ', params);
 
-	return do_query.call(self, query, params).then(get_result(ObjType)).then(save_result_to(self));
+	return do_query.call(self, query, params); //.then(get_result(ObjType)).then(save_result_to(self));
+}
+
+
+/** Internal UPDATE query */
+function do_update(ObjType, obj, data) {
+	debug.log('at NoPg::do_update(ObjType=', ObjType,'obj=', obj, ", data=", data, ')');
+
+	var self = this;
+	data = (new ObjType(data)).valueOf();
+	debug.log("at NoPg::do_update: after parsing, data = ", data);
+
+	var query, params;
+	if(data === undefined) {
+		data = obj.valueOf();
+	}
+
+	// Filter only $-keys which are not the datakey
+	var keys = ObjType.meta.keys.filter(function(key) {
+		return (key[0] === '$') ? true : false;
+	}).map(function(key) {
+		return key.substr(1);
+	}).filter(function(key) {
+		return data[key] ? true : false;
+	});
+
+	if(keys.length === 0) { throw new TypeError("No data to submit: keys array is empty."); }
+
+	// FIXME: Implement binary content support
+
+	query = "UPDATE " + (ObjType.meta.table) + " SET "+ keys.map(function(k, i) { return k + ' = $' + (i+1); }).join(', ') +" WHERE id = $"+ (keys.length+1) +" RETURNING *";
+	debug.log('at NoPg::do_update: query = ', query);
+
+	params = keys.map(function(key) {
+		return data[key];
+	});
+	params.push(obj.$id);
+	debug.log('at NoPg::do_update: params = ', params);
+
+	return do_query.call(self, query, params);
 }
 
 

@@ -76,11 +76,14 @@ describe('nopg', function(){
 			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
 				doc = db.fetch();
 				util.debug('before doc = ' + util.inspect(doc));
+				assert.strictEqual(doc.hello, 'world');
 				return db.update(doc, {"hello": "another"});
 			}).then(function(db) {
-				util.debug('updated doc = ' + util.inspect(doc));
-				assert.strictEqual(typeof doc.hello, 'string');
-				assert.strictEqual(doc.hello, 'another');
+				var doc2 = db.fetch();
+				util.debug('updated doc2 = ' + util.inspect(doc2));
+				assert.strictEqual(typeof doc2.hello, 'string');
+				assert.strictEqual(doc2.hello, 'another');
+				assert.strictEqual(doc.$id, doc2.$id);
 				return db.commit();
 			}).then(function(db) {
 				done();
@@ -328,6 +331,29 @@ describe('nopg', function(){
 				assert.strictEqual(item1.foo, items[0].foo);
 				assert.strictEqual(item1.bar, items[0].bar);
 
+				return db.commit();
+			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
+				done(err);
+			}).done();
+		});
+
+		it('.createType("TypeXvsMtxJyWE")({"hello":"world1"}) and .createOrReplaceType("TypeXvsMtxJyWE")({"hello":"world2"}) works', function(done){
+			nopg.start(PGCONFIG).createType("TypeXvsMtxJyWE")({"hello":"world1"}).createOrReplaceType("TypeXvsMtxJyWE")({"hello":"world2"}).then(function(db) {
+				debug.log('db is ', db);
+				var type1 = db.fetch();
+				var type2 = db.fetch();
+				util.debug('type1 = ', util.inspect(type1));
+				util.debug('type2 = ', util.inspect(type2));
+				assert.strictEqual(typeof type1, 'object');
+				assert.strictEqual(typeof type2, 'object');
+				assert.strictEqual(typeof type1.hello, 'string');
+				assert.strictEqual(typeof type2.hello, 'string');
+				assert.strictEqual(type1.hello, 'world1');
+				assert.strictEqual(type2.hello, 'world2');
+				assert.strictEqual(type1.$id, type2.$id);
 				return db.commit();
 			}).then(function(db) {
 				done();
