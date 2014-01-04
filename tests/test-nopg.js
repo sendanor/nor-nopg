@@ -397,6 +397,28 @@ describe('nopg', function(){
 			}).done();
 		});
 
+		it('.createType("DeleteTypeTestsxWH8QiBYc")({"hello":"world"}) and .del(doc) works', function(done){
+			var type, exists;
+			nopg.start(PGCONFIG).createType("DeleteTypeTestsxWH8QiBYc")({"hello":"world"}).then(function(db) {
+				type = db.fetch();
+				util.debug('type = ' + util.inspect(type));
+				return db.del(type).commit().typeExists("DeleteTypeTestsxWH8QiBYc");
+			}).then(function(db) {
+				exists = db.fetch();
+				assert.strictEqual(typeof exists, 'boolean');
+				assert.strictEqual(exists, false);
+				return db;
+			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
+				done(err);
+			}).done();
+		});
+
+
+// End of tests
+
 	});
 
 });
