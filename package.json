@@ -1,7 +1,10 @@
 {
   "name": "nor-nopg",
   "version": "0.1.1",
-  "description": "NoPostgreSQL Client Module for Sendanor NoSQL Server",
+  "description": "NoPostgreSQL Client Module",
+  "bin": {
+    "nor-nopg-import": "./tools/import.js"
+  },
   "main": "src/index.js",
   "scripts": {
     "test": "mocha -R spec tests/test-*.js"
@@ -22,6 +25,8 @@
     "nor-extend": ">= 0.1.11",
     "nor-pg": "*",
     "nor-debug": "*"
+    "optimist": "*",
+    "nor-fs": "*"
   },
   "devDependencies": {
     "lint": "*",
