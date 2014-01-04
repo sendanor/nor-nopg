@@ -24,7 +24,7 @@
     "q": "*",
     "nor-extend": ">= 0.1.11",
     "nor-pg": "*",
-    "nor-debug": "*"
+    "nor-debug": "*",
     "optimist": "*",
     "nor-fs": "*"
   },
