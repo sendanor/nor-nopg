@@ -240,6 +240,7 @@ NoPg.prototype.update = function(obj, data) {
 
 /** Delete resource */
 NoPg.prototype.del = function(doc) {
+	if(!doc.$id) { throw new TypeError("opts.$id invalid: " + util.inspect(doc) ); }
 	var self = this;
 	var query, params;
 	var ObjType = NoPg.getObjectType(doc);

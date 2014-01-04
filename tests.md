@@ -1,3 +1,7 @@
+
+> nor-nopg@0.1.1 test-markdown /home/jhh/git/nor-nopg
+> mocha -u bdd -c -R markdown tests/test-*.js
+
 # TOC
    - [nopg](#nopg)
      - [.start](#nopg-start)
@@ -371,6 +375,29 @@ nopg.start(PGCONFIG).createOrReplaceType("TypeSession4UJHIRRiCc")({"$schema":{"t
 	assert.strictEqual(typeof type1.$schema, 'object');
 	assert.strictEqual(type1.$schema.type, 'object');
 	return db.commit();
+}).then(function(db) {
+	done();
+}).fail(function(err) {
+	debug.log('Database query failed: ' + err);
+	done(err);
+}).done();
+```
+
+.createType("DeleteTypeTestsxWH8QiBYc")({"hello":"world"}) and .del(doc) works.
+
+```js
+var type, exists;
+nopg.start(PGCONFIG).createType("DeleteTypeTestsxWH8QiBYc")({"hello":"world"}).then(function(db) {
+	type = db.fetch();
+	util.debug('type = ' + util.inspect(type));
+	return db.del(type).commit();
+}).then(function() {
+	return nopg.start(PGCONFIG).typeExists("DeleteTypeTestsxWH8QiBYc");
+}).then(function(db) {
+	exists = db.fetch();
+	assert.strictEqual(typeof exists, 'boolean');
+	assert.strictEqual(exists, false);
+	return db;
 }).then(function(db) {
 	done();
 }).fail(function(err) {

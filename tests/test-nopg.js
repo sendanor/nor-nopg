@@ -402,7 +402,9 @@ describe('nopg', function(){
 			nopg.start(PGCONFIG).createType("DeleteTypeTestsxWH8QiBYc")({"hello":"world"}).then(function(db) {
 				type = db.fetch();
 				util.debug('type = ' + util.inspect(type));
-				return db.del(type).commit().typeExists("DeleteTypeTestsxWH8QiBYc");
+				return db.del(type).commit();
+			}).then(function() {
+				return nopg.start(PGCONFIG).typeExists("DeleteTypeTestsxWH8QiBYc");
 			}).then(function(db) {
 				exists = db.fetch();
 				assert.strictEqual(typeof exists, 'boolean');

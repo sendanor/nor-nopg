@@ -7,7 +7,14 @@
   },
   "main": "src/index.js",
   "scripts": {
-    "test": "mocha -R spec tests/test-*.js"
+    "test": "npm run test-spec",
+    "test-dot": "mocha -u bdd -c -R dot tests/test-*.js",
+    "test-list": "mocha -u bdd -c -R list tests/test-*.js",
+    "test-spec": "mocha -u bdd -c -R spec tests/test-*.js",
+    "test-progress": "mocha -u bdd -c -R progress tests/test-*.js",
+    "test-min": "mocha -u bdd -c -R min tests/test-*.js",
+    "test-markdown": "mocha -u bdd -c -R markdown tests/test-*.js",
+    "build-tests.md": "npm run test-markdown > tests.md"
   },
   "repository": {
     "type": "git",
