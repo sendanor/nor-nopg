@@ -206,47 +206,14 @@ NoPg.prototype.update = function(obj, data) {
 	var self = this;
 	var ObjType = NoPg.getObjectType(obj);
 	return do_update.call(self, ObjType, obj, data).then(get_result(ObjType)).then(save_result_to(self));
-
-	/*
-	var query, params, type;
-	//assert_type(doc, NoPg.Document, "doc is not NoPg.Document");
-	if(data === undefined) {
-		data = doc.valueOf();
-	}
-	if(doc instanceof NoPg.Document) {
-		type = NoPg.Document;
-		query = "UPDATE " + (NoPg.Document.meta.table) + " SET content = $1 WHERE id = $2 RETURNING *";
-		params = [data, doc.$id];
-	} else if(doc instanceof NoPg.Type) {
-		type = NoPg.Type;
-		query = "UPDATE " + (NoPg.Type.meta.table) + " SET name = $1, schema = $2, validator = $3, meta = $4 WHERE id = $5 RETURNING *";
-		params = [doc.$name, doc.$schema, doc.$validator, data, doc.$id];
-	} else if(doc instanceof NoPg.Attachment) {
-		type = NoPg.Attachment;
-		query = "UPDATE " + (NoPg.Attachment.meta.table) + " SET content = $1, meta = $2 WHERE id = $3 RETURNING *";
-		// FIXME: Implement binary content support
-		params = [doc.$content, data, doc.$id];
-	} else if(doc instanceof NoPg.Lib) {
-		type = NoPg.Lib;
-		query = "UPDATE " + (NoPg.Lib.meta.table) + " SET name = $1, content = $2, meta = $3 WHERE id = $4 RETURNING *";
-		// FIXME: Implement binary content support
-		params = [doc.$name, doc.$content, data, doc.$id];
-	} else {
-		throw new TypeError("doc is unknown type: " + doc);
-	}
-	return do_query.call(self, query, params).then(get_result(type)).then(save_result_to(doc)).then(function() { return self; });
-	*/
 };
 
 /** Delete resource */
 NoPg.prototype.del = function(doc) {
 	if(!doc.$id) { throw new TypeError("opts.$id invalid: " + util.inspect(doc) ); }
 	var self = this;
-	var query, params;
-	var ObjType = NoPg.getObjectType(doc);
-	query = "DELETE FROM " + (ObjType.meta.table) + " WHERE id = $1";
-	params = [doc.$id];
-	return do_query.call(self, query, params).then(function() { return self; });
+	var ObjType = NoPg.getObjectType(obj);
+	return do_delete.call(self, ObjType, doc).then(function() { return self; });
 };
 
 NoPg.prototype['delete'] = NoPg.prototype.del;
@@ -552,5 +519,18 @@ function do_update(ObjType, obj, data) {
 	return do_query.call(self, query, params);
 }
 
+/** Internal DELETE query */
+function do_delete(ObjType, obj) {
+	debug.log('at NoPg::do_delete(ObjType=', ObjType,'obj=', obj, ')');
+	if(!obj.$id) { throw new TypeError("opts.$id invalid: " + util.inspect(obj) ); }
+	var self = this;
+	var query, params;
+	var ObjType = NoPg.getObjectType(obj);
+	query = "DELETE FROM " + (ObjType.meta.table) + " WHERE id = $1";
+	debug.log('at NoPg::do_delete: query = ', query);
+	params = [obj.$id];
+	debug.log('at NoPg::do_delete: params = ', params);
+	return do_query.call(self, query, params);
+}
 
 /* EOF */
