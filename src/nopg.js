@@ -393,7 +393,7 @@ function parse_predicates(Type) {
 			// FIXME: Implement escape?
 			if(!(keyreg.test(key))) { throw new TypeError("Invalid keyword: " + key); }
 			if(typeof opts[key] === 'number') {
-				res["("+datakey+"->'"+key+"')::numeric"] = opts[key];
+				res["("+datakey+"->>'"+key+"')::numeric"] = opts[key];
 			} else {
 				res[""+datakey+"->>'"+key+"'"] = ''+opts[key];
 			}
