@@ -6,7 +6,6 @@ var Q = require('q');
 var pg = require('nor-pg');
 var extend = require('nor-extend').setup({useFunctionPromises:true});
 var orm = require('./orm');
-var mori = require('mori');
 
 /* ------------- PUBLIC FUNCTIONS --------------- */
 
