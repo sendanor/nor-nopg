@@ -25,6 +25,7 @@ NoPg.Document = orm.Document;
 NoPg.Type = orm.Type;
 NoPg.Attachment = orm.Attachment;
 NoPg.Lib = orm.Lib;
+NoPg.DBVersion = orm.DBVersion;
 
 /** Returns the NoPg constructor type of `doc`, otherwise throws an exception of `TypeError`. */
 NoPg.getObjectType = function(doc) {
@@ -36,6 +37,8 @@ NoPg.getObjectType = function(doc) {
 		return NoPg.Attachment;
 	} else if(doc instanceof NoPg.Lib) {
 		return NoPg.Lib;
+	} else if(doc instanceof NoPg.DBVersion) {
+		return NoPg.DBVersion;
 	}
 	throw new TypeError("doc is unknown type: " + doc);
 };
@@ -109,15 +112,46 @@ NoPg.prototype.test = function() {
 
 /** Initialize the database */
 NoPg.prototype.init = function() {
+
+	function pad(num, size) {
+		var s = num+"";
+		while (s.length < size) s = "0" + s;
+		return s;
+	}
+
 	var self = this;
-	return self.test().then(function() {
-		var builders = require('./schema/');
+	return self.test().latestDBVersion().then(function(db) {
+		var code_version = require('./schema/latest.js');
+		var db_version = db.fetch();
+		if(! ((db_version >= -1) && (db_version<=code_version)) ) { 
+			throw new TypeError("Database version " + db_version + " is not between accepted range (-1 .. " + code_version + ")");
+		}
+		var builders = [];
+
+		var i = db_version, file;
+		while(i < code_version) {
+			i++;
+			file = './schema/v' + pad(i, 4) + '.js';
+			try {
+				debug.log('Loading database version ', i, " from ", file);
+				builders.push.apply(builders, require(file) );
+			} catch(err) {
+				debug.log("Exception: ", err);
+				throw new TypeError("Failed to load: "+ file + ": " + err);
+			}
+		}
+
 		return builders.reduce(function(so_far, f) {
 		    return so_far.then(function(db) {
 				db.fetchAll();
 				return db;
 			}).then(f);
-		}, Q(self._db)).then(function() { return self; });
+		}, Q(self._db)).then(function() {
+			return db._addDBVersion({'$version': code_version});
+		}).then(function() {
+			debug.log('Successfully upgraded database from v' + db_version + ' to v' + code_version); 
+			return self;
+		});
 	});
 };
 
@@ -145,6 +179,13 @@ NoPg.prototype.create = function(type) {
 	}
 
 	return create2;
+};
+
+/** Add new DBVersion record */
+NoPg.prototype._addDBVersion = function(data) {
+	var self = this;
+	debug.log('at NoPg.prototype._addDBVersion(', data, ')');
+	return do_insert.call(self, NoPg.DBVersion, data).then(get_result(NoPg.DBVersion));
 };
 
 /** Search documents */
@@ -298,6 +339,35 @@ NoPg._escapeFunction = function escape_function(f) {
 	return '$js$\nreturn (' + f + ')()\n$js$';
 };
 
+/** Returns the latest database server version */
+function _latestDBVersion() {
+	var self = this;
+	var table = NoPg.DBVersion.meta.table;
+	return pg_table_exists.call(self, table).then(function(exists) {
+		if(!exists) {
+			return -1;
+		}
+		var query = 'SELECT MAX(version) AS version FROM ' + table;
+		return do_query.call(self, query).then(function(rows) {
+			if(!(rows instanceof Array)) { throw new TypeError("Unexpected result from rows: " + util.inspect(rows) ); }
+			var obj = rows.shift();
+			debug.log('Latest database version: ', obj.version);
+			return parseInt(obj.version, 10);
+		});
+	}).then(function(db_version) {
+		if(! (db_version >= -1) ) { 
+			throw new TypeError("Database version " + db_version + " is not between accepted range (-1 ..)");
+		}
+		return db_version;
+	});
+};
+
+/** Returns the latest database server version */
+NoPg.prototype.latestDBVersion = function() {
+	var self = this;
+	return _latestDBVersion.call(self).then(save_result_to(self));
+};
+
 /* ------------- HELPER FUNCTIONS --------------- */
 
 
@@ -351,6 +421,7 @@ function save_result_to(self) {
 	 || (self instanceof NoPg.Type)
 	 || (self instanceof NoPg.Attachment)
 	 || (self instanceof NoPg.Lib)
+	 || (self instanceof NoPg.DBVersion)
 	  ) {
 		return function(doc) { return self.update(doc); };
 	}
@@ -539,5 +610,21 @@ function do_delete(ObjType, obj) {
 	debug.log('at NoPg::do_delete: params = ', params);
 	return do_query.call(self, query, params);
 }
+
+/**
+ * Returns `true` if PostgreSQL database table exists.
+ * @todo Implement this in nor-pg and use here.
+ */
+function pg_table_exists(name) {
+	var self = this;
+	return do_query.call(self, 'SELECT * FROM information_schema.tables WHERE table_name = $1', [name]).then(function(rows) {
+		if(!rows) { throw new TypeError("Unexpected result from query: " + util.inspect(rows)); }
+		if(rows.length === 0) {
+			return false;
+		} else {
+			return true;
+		}
+	});
+};
 
 /* EOF */
