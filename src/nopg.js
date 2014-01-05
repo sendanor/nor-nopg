@@ -6,9 +6,9 @@ var Q = require('q');
 var pg = require('nor-pg');
 var extend = require('nor-extend').setup({useFunctionPromises:true});
 var orm = require('./orm');
+var mori = require('mori');
 
 /* ------------- PUBLIC FUNCTIONS --------------- */
-
 
 /** The constructor */
 function NoPg(db) {
@@ -175,7 +175,7 @@ NoPg.prototype.search = function(type) {
 
 		if(type !== undefined) {
 			if(typeof type === 'string') {
-				where.push("types_id = get_type($"+(where.length+1)+")");
+				where.push("types_id = get_type_id($"+(where.length+1)+")");
 				params.push(type);
 			} else if(type instanceof NoPg.Type) {
 				where.push("types_id = $" + (where.length+1));
