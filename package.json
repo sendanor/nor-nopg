@@ -33,7 +33,8 @@
     "nor-pg": "*",
     "nor-debug": "*",
     "optimist": "*",
-    "nor-fs": "*"
+    "nor-fs": "*",
+    "Sendanor/nor-pgrunner": "*"
   },
   "devDependencies": {
     "lint": "*",
