@@ -134,7 +134,7 @@ The module has simple ORM mappings for all of our PostgreSQL tables.
 | `NoPg.Type`            | `types`          | `meta`              |
 | `NoPg.Attachment`      | `attachments`    | `meta`              |
 | `NoPg.Lib`             | `libs`           | `meta`              |
-| `NoPg.DBVersion`       | `dbversion`      | n/a                 |
+| `NoPg.DBVersion`       | `dbversions`     | n/a                 |
 
 ### Using database constructors
 

@@ -3,7 +3,7 @@
 var debug = require('nor-debug');
 
 var meta = require('./meta.js')({
-	"table": "dbversion",
+	"table": "dbversions",
 	"keys": ['$version', '$updated']
 });
 

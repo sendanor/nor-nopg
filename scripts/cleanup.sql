@@ -2,7 +2,7 @@
 -- Deletes everything, do not use in production!
 -- 
 
-DROP TABLE IF EXISTS dbversion;
+DROP TABLE IF EXISTS dbversions;
 DROP TABLE IF EXISTS attachments;
 DROP TABLE IF EXISTS libs;
 DROP TABLE IF EXISTS documents;
