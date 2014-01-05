@@ -14,7 +14,8 @@
     "test-progress": "mocha -u bdd -c -R progress tests/test-*.js",
     "test-min": "mocha -u bdd -c -R min tests/test-*.js",
     "test-markdown": "mocha -u bdd -c -R markdown tests/test-*.js",
-    "build-tests.md": "npm run test-markdown > tests.md"
+    "build-tests.md": "npm run test-markdown > tests.md",
+	"lint": "node-lint src/ --config=lint.json"
   },
   "repository": {
     "type": "git",
