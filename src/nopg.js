@@ -201,7 +201,7 @@ NoPg.prototype.search = function(type) {
 
 		if(type !== undefined) {
 			if(typeof type === 'string') {
-				where.push("types_id = get_type($"+(where.length+1)+")");
+				where.push("types_id = get_type_id($"+(where.length+1)+")");
 				params.push(type);
 			} else if(type instanceof NoPg.Type) {
 				where.push("types_id = $" + (where.length+1));
