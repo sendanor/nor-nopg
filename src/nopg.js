@@ -288,7 +288,15 @@ NoPg.prototype.getType = function(name) {
 	return self._getType(name).then(save_result_to(self));
 };
 
-
+/** Escape JavaScript function into PostgreSQL block.
+ * @param f {string|function} A string of javascript code or a JS function 
+ *                            which must not contain any native code or libs. 
+ *                            Use `require("mod")` to require dependencies, 
+ *                            which must be loaded on the database server.
+ */
+NoPg._escapeFunction = function escape_function(f) {
+	return '$js$\nreturn (' + f + ')()\n$js$';
+};
 
 /* ------------- HELPER FUNCTIONS --------------- */
 
