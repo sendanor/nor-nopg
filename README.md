@@ -417,6 +417,18 @@ db.import('/path/to/tv4.js', {'name': 'tv4'}).then(function(db) {
 Run tests
 ---------
 
+Database configurations can be set using PGCONFIG:
+
 ```
-PGCONFIG='pg://user:password@localhost/db' npm test
+export PGCONFIG='pg://user:password@localhost/db'
 ```
+
+The actual test can be run: `npm test`
+
+You must delete the data if you need to run the test suite again for the same database:
+
+```
+psql -q db < scripts/cleanup.sql
+```
+
+***Please note:*** psql does not follow `PGCONFIG` environment variable!
