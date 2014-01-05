@@ -5,34 +5,8 @@ var util = require('util');
 var Q = require('q');
 var pg = require('nor-pg');
 var extend = require('nor-extend').setup({useFunctionPromises:true});
-<<<<<<< HEAD
 var orm = require('./orm');
-=======
 var mori = require('mori');
-var NoPgObject = require('./Object.js');
-var NoPgType = require('./Type.js');
-var NoPgAttachment = require('./Attachment.js');
-var NoPgLib = require('./Lib.js');
-
-/** */
-function assert(valid, text) {
-	if(!valid) {
-		throw new TypeError(text);
-	}
-}
-
-/** */
-function complement(func) {
-	return function() {
-		return !func.apply(null, arguments);
-	};
-}
-
-/** Assert that the `doc` is NoPgObject */
-function assert_type(doc, type, text) {
-	assert(doc instanceof type, text || "Not correct type: " + type);
-}
->>>>>>> didnt compile
 
 /* ------------- PUBLIC FUNCTIONS --------------- */
 
