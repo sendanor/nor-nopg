@@ -208,11 +208,11 @@ NoPg.prototype.update = function(obj, data) {
 };
 
 /** Delete resource */
-NoPg.prototype.del = function(doc) {
-	if(!doc.$id) { throw new TypeError("opts.$id invalid: " + util.inspect(doc) ); }
+NoPg.prototype.del = function(obj) {
+	if(!obj.$id) { throw new TypeError("opts.$id invalid: " + util.inspect(obj) ); }
 	var self = this;
 	var ObjType = NoPg.getObjectType(obj);
-	return do_delete.call(self, ObjType, doc).then(function() { return self; });
+	return do_delete.call(self, ObjType, obj).then(function() { return self; });
 };
 
 NoPg.prototype['delete'] = NoPg.prototype.del;
@@ -300,9 +300,9 @@ function assert(valid, text) {
 	}
 }
 
-/** Assert that the `doc` is NoPg.Document */
-function assert_type(doc, type, text) {
-	assert(doc instanceof type, text || "Not correct type: " + type);
+/** Assert that the `obj` is NoPg.Document */
+function assert_type(obj, type, text) {
+	assert(obj instanceof type, text || "Not correct type: " + type);
 }
 
 /** Take first result from the database query and returns new instance of `Type` */
