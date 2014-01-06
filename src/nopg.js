@@ -246,13 +246,29 @@ function do_update(ObjType, obj, data) {
 
 	// FIXME: Implement binary content support
 
-	query = "UPDATE " + (ObjType.meta.table) + " SET "+ keys.map(function(k, i) { return k + ' = $' + (i+1); }).join(', ') +" WHERE id = $"+ (keys.length+1) +" RETURNING *";
+	query = "UPDATE " + (ObjType.meta.table) + " SET "+ keys.map(function(k, i) { return k + ' = $' + (i+1); }).join(', ') +" WHERE ";
+
+	if(obj.$id) {
+		query += "id = $"+ (keys.length+1);
+	} else if(obj.$name) {
+		query += "name = $"+ (keys.length+1);
+	} else {
+		throw new TypeError("Cannot know what to update!");
+	}
+
+	query += " RETURNING *";
 	debug.log('at NoPg::do_update: query = ', query);
 
 	params = keys.map(function(key) {
 		return data[key];
 	});
-	params.push(obj.$id);
+
+	if(obj.$id) {
+		params.push(obj.$id);
+	} else if(obj.$name){
+		params.push(obj.$name);
+	}
+
 	debug.log('at NoPg::do_update: params = ', params);
 
 	return do_query.call(self, query, params);
@@ -405,6 +421,12 @@ NoPg.prototype.init = function() {
 			}
 		}
 
+		// Skip upgrade if we have nothing to do
+		if(builders.length === 0) {
+			return self;
+		}
+
+		// Call upgrade steps
 		return builders.reduce(function(so_far, f) {
 		    return so_far.then(function(db) {
 				db.fetchAll();
@@ -416,6 +438,8 @@ NoPg.prototype.init = function() {
 			debug.log('Successfully upgraded database from v' + db_version + ' to v' + code_version); 
 			return self;
 		});
+	}).then(function() {
+		return self._importLib(__dirname + "/../libs/tv4/tv4.js").then(function() { return self; });
 	});
 };
 
@@ -578,6 +602,15 @@ NoPg.prototype._typeExists = function(name) {
 	});
 };
 
+/** Tests if lib exists */
+NoPg.prototype._libExists = function(name) {
+	debug.log('at NoPg::_libExists(', name, ')');
+	var self = this;
+	return do_select.call(self, NoPg.Lib, name).then(function(types) {
+		return (types.length >= 1) ? true : false;
+	});
+};
+
 /** Get type and save it to result queue. */
 NoPg.prototype.typeExists = function(name) {
 	debug.log('at NoPg::typeExists(', name, ')');
@@ -640,9 +673,9 @@ NoPg.prototype.latestDBVersion = function() {
 };
 
 /** Import javascript file into database as a library by calling `.importLib(FILE, [OPT(S)])` or `.importLib(OPT(S))` with `$content` property. */
-NoPg.prototype.importLib = function(file, opts) {
+NoPg.prototype._importLib = function(file, opts) {
 	var self = this;
-	opts = opts || {};
+	opts = JSON.parse( JSON.stringify( opts || {} ));
 
 	if( (typeof file === 'object') && (opts === undefined) ) {
 		opts = file;
@@ -659,13 +692,29 @@ NoPg.prototype.importLib = function(file, opts) {
 		throw new TypeError("NoPg.prototype.importLib() called without content or file");
 	}).then(function importLib2(data) {
 		opts.$name = opts.$name || require('path').basename(file, '.js');
+		var name = '' + opts.$name;
+
 		opts['content-type'] = '' + (opts['content-type'] || 'application/javascript');
 		if(data) {
 			opts.$content = ''+data;
 		}
-		return do_insert.call(self, NoPg.Lib, opts).then(get_result(NoPg.Lib)).then(save_result_to(self));
+
+		return self._libExists(opts.$name).then(function(exists) {
+			if(exists) {
+				delete opts.$name;
+				return do_update.call(self, NoPg.Lib, {"$name":name}, opts);
+			} else {
+				return do_insert.call(self, NoPg.Lib, opts);
+			}
+		});
 	});
 
+};
+
+/** Import javascript file into database as a library by calling `.importLib(FILE, [OPT(S)])` or `.importLib(OPT(S))` with `$content` property. */
+NoPg.prototype.importLib = function(file, opts) {
+	var self = this;
+	return self._importLib(file, opts).then(get_result(NoPg.Lib)).then(save_result_to(self));
 };
 
 /* EOF */
