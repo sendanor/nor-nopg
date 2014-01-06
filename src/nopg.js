@@ -3,6 +3,7 @@
 var debug = require('nor-debug');
 var util = require('util');
 var Q = require('q');
+var fs = require('nor-fs');
 var pg = require('nor-pg');
 var extend = require('nor-extend').setup({useFunctionPromises:true});
 var orm = require('./orm');
@@ -632,10 +633,39 @@ function _latestDBVersion() {
 	});
 }
 
-/** Returns the latest database server version */
+/** Returns the latest database server version as a integer number */
 NoPg.prototype.latestDBVersion = function() {
 	var self = this;
 	return _latestDBVersion.call(self).then(save_result_to(self));
+};
+
+/** Import javascript file into database as a library by calling `.importLib(FILE, [OPT(S)])` or `.importLib(OPT(S))` with `$content` property. */
+NoPg.prototype.importLib = function(file, opts) {
+	var self = this;
+	opts = opts || {};
+
+	if( (typeof file === 'object') && (opts === undefined) ) {
+		opts = file;
+		file = undefined;
+	}
+
+	return Q.fcall(function() {
+		if(file) {
+			return fs.readFile(file, {'encoding':'utf8'});
+		}
+		if(opts.$content) {
+			return;
+		}
+		throw new TypeError("NoPg.prototype.importLib() called without content or file");
+	}).then(function importLib2(data) {
+		opts.$name = opts.$name || require('path').basename(file, '.js');
+		opts['content-type'] = '' + (opts['content-type'] || 'application/javascript');
+		if(data) {
+			opts.$content = ''+data;
+		}
+		return do_insert.call(self, NoPg.Lib, opts).then(get_result(NoPg.Lib)).then(save_result_to(self));
+	});
+
 };
 
 /* EOF */
