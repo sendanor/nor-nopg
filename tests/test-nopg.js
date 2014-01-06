@@ -397,7 +397,7 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('.createType("DeleteTypeTestsxWH8QiBYc")({"hello":"world"}) and .del(doc) works', function(done){
+		it('.createType("DeleteTypeTestsxWH8QiBYc")({"hello":"world"}) and .del(type) works', function(done){
 			var type, exists;
 			nopg.start(PGCONFIG).createType("DeleteTypeTestsxWH8QiBYc")({"hello":"world"}).then(function(db) {
 				type = db.fetch();
