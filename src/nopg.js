@@ -27,7 +27,6 @@ NoPg.Attachment = orm.Attachment;
 NoPg.Lib = orm.Lib;
 NoPg.DBVersion = orm.DBVersion;
 
-
 /** */
 function assert(valid, text) {
 	if(!valid) {
@@ -522,7 +521,7 @@ NoPg.prototype.del = function(obj) {
 
 NoPg.prototype['delete'] = NoPg.prototype.del;
 
-/** Create type: `db.createType([TYPE-NAME])([OPT(S)])`. */
+/** Create a new type. We recommend using `.declareType()` instead unless you want an error if the type exists already. Use like `db.createType([TYPE-NAME])([OPT(S)])`. */
 NoPg.prototype.createType = function(name) {
 	debug.log('at createType(', name, ')');
 	var self = this;
@@ -537,8 +536,8 @@ NoPg.prototype.createType = function(name) {
 	return createType2;
 };
 
-/** Create type: `db.createType([TYPE-NAME])([OPT(S)])`. */
-NoPg.prototype.createOrReplaceType = function(name) {
+/** Create a new type or replace existing type with the new values. Use like `db.declareType([TYPE-NAME])([OPT(S)])`. */
+NoPg.prototype.declareType = function(name) {
 	debug.log('at createOrReplaceType(', name, ')');
 	var self = this;
 	function createOrReplaceType2(data) {
@@ -561,6 +560,12 @@ NoPg.prototype.createOrReplaceType = function(name) {
 		});
 	}
 	return createOrReplaceType2;
+};
+
+/** This is an alias for `.declareType()`. */
+NoPg.prototype.createOrReplaceType = function(name) {
+	debug.log('NoPg.prototype.createOrReplaceType() is obsolete, use .declareType() instead.');
+	return this.declareType(name);
 };
 
 /** Tests if type exists */

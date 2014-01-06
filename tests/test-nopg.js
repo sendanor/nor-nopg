@@ -340,8 +340,8 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('.createType("TypeXvsMtxJyWE")({"hello":"world1"}) and .createOrReplaceType("TypeXvsMtxJyWE")({"hello":"world2"}) works', function(done){
-			nopg.start(PGCONFIG).createType("TypeXvsMtxJyWE")({"hello":"world1"}).createOrReplaceType("TypeXvsMtxJyWE")({"hello":"world2"}).then(function(db) {
+		it('.createType("TypeXvsMtxJyWE")({"hello":"world1"}) and .declareType("TypeXvsMtxJyWE")({"hello":"world2"}) works', function(done){
+			nopg.start(PGCONFIG).createType("TypeXvsMtxJyWE")({"hello":"world1"}).declareType("TypeXvsMtxJyWE")({"hello":"world2"}).then(function(db) {
 				debug.log('db is ', db);
 				var type1 = db.fetch();
 				var type2 = db.fetch();
@@ -363,8 +363,8 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('.createOrReplaceType("Type4UJHIRRiCc")({"hello":"world"}) works', function(done){
-			nopg.start(PGCONFIG).createOrReplaceType("Type4UJHIRRiCc")({"hello":"world"}).then(function(db) {
+		it('.declareType("Type4UJHIRRiCc")({"hello":"world"}) works', function(done){
+			nopg.start(PGCONFIG).declareType("Type4UJHIRRiCc")({"hello":"world"}).then(function(db) {
 				debug.log('db is ', db);
 				var type1 = db.fetch();
 				util.debug('type1 = ', util.inspect(type1));
@@ -380,8 +380,8 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('.createOrReplaceType("TypeSession4UJHIRRiCc")({"$schema":{"type":"object"}}) works', function(done){
-			nopg.start(PGCONFIG).createOrReplaceType("TypeSession4UJHIRRiCc")({"$schema":{"type":"object"}}).then(function(db) {
+		it('.declareType("TypeSession4UJHIRRiCc")({"$schema":{"type":"object"}}) works', function(done){
+			nopg.start(PGCONFIG).declareType("TypeSession4UJHIRRiCc")({"$schema":{"type":"object"}}).then(function(db) {
 				debug.log('db is ', db);
 				var type1 = db.fetch();
 				util.debug('type1 = ', util.inspect(type1));

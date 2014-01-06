@@ -27,7 +27,7 @@ Summary
 | `NoPg` | `NoPg` module            | `var NoPg = require('nor-nopg');`                               |
 | `db`   | `NoPg` instance          | `NoPg.start(...).then(function(db) { ... });`                   |
 | `doc`  | `NoPg.Document` instance | `db.create()(...).shift().then(function(doc) { ... });`         |
-| `type` | `NoPg.Type` instance     | `db.createType("name")().shift().then(function(type) { ... });` |
+| `type` | `NoPg.Type` instance     | `db.declareType("name")().shift().then(function(type) { ... });` |
 
 ### Summary of available operations
 
@@ -52,6 +52,7 @@ Summary
 | n/a                                                               | [Delete documents by instance of NoPg.Type](https://github.com/Sendanor/nor-nopg#delete-documents-by-instance-of-nopgtype)       |                                                                                  |
 | `db.del(type)`                                                    | [Delete type by instance of NoPg.Type](https://github.com/Sendanor/nor-nopg#delete-type-by-instance-of-nopgtype)                 | [L400](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L400) |
 | `db.del(attachment)`                                              | [Delete attachment](https://github.com/Sendanor/nor-nopg#delete-attachment)                                                      |                                                                                  |
+| `db.declareType("Product")({"$schema":{"type":"object"}})`        | [Create or replace type with name as string](https://github.com/Sendanor/nor-nopg#create-or-replace-type-with-name-as-string)                          |                                                                                  |
 | `db.createType("Product")({"$schema":{"type":"object"}})`         | [Create type with name as string](https://github.com/Sendanor/nor-nopg#create-type-with-name-as-string)                          |                                                                                  |
 | `db.createType()({"$schema":{"type":"object"}})`                  | [Create type without name](https://github.com/Sendanor/nor-nopg#create-type-without-name)                                        |                                                                                  |
 | `db.update(type)`                                                 | [Edit type by instance of NoPg.Type](https://github.com/Sendanor/nor-nopg#edit-type-by-instance-of-nopgtype)                     |                                                                                  |
@@ -87,8 +88,8 @@ You must call
 Initialize database
 -------------------
 
-The required table structures and initial settings and data can be created by 
-calling `db.init()`:
+The required table structures and initial settings and data can be created or upgraded 
+by calling `db.init()`:
 
 ```javascript
 nopg.start(PGCONFIG).init().then(function(db) {
@@ -323,7 +324,16 @@ Types
 
 ### Create types
 
-#### Create type with name as string
+#### Create or replace type with name as string
+
+```javascript
+db.declareType("Product")({"schema":{"type":"object"}}).then(function(db) {
+	var type = db.fetch();
+	console.log("Successfully fetched a type: " + util.inspect(type) );
+});
+```
+
+#### Create a new type with name as string
 
 ```javascript
 db.createType("Product")({"schema":{"type":"object"}}).then(function(db) {
@@ -331,8 +341,6 @@ db.createType("Product")({"schema":{"type":"object"}}).then(function(db) {
 	console.log("Successfully created new type: " + util.inspect(type) );
 });
 ```
-
-Tested at [test-nopg.js:57](https://github.com/Sendanor/nor-nopg/blob/master/tests/test-nopg.js#L57).
 
 #### Create type without name
 
