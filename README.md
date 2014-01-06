@@ -432,3 +432,8 @@ psql -q db < scripts/cleanup.sql
 ```
 
 ***Please note:*** psql does not follow `PGCONFIG` environment variable!
+
+Run lint test
+-------------
+
+`npm run lint`
