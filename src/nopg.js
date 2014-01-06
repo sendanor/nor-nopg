@@ -7,7 +7,7 @@ var pg = require('nor-pg');
 var extend = require('nor-extend').setup({useFunctionPromises:true});
 var orm = require('./orm');
 
-/* ------------- PUBLIC FUNCTIONS --------------- */
+/* ------------- HELPER FUNCTIONS --------------- */
 
 /** The constructor */
 function NoPg(db) {
@@ -26,6 +26,268 @@ NoPg.Type = orm.Type;
 NoPg.Attachment = orm.Attachment;
 NoPg.Lib = orm.Lib;
 NoPg.DBVersion = orm.DBVersion;
+
+
+/** */
+function assert(valid, text) {
+	if(!valid) {
+		throw new TypeError(text);
+	}
+}
+
+/** Assert that the `obj` is NoPg.Document */
+function assert_type(obj, type, text) {
+	assert(obj instanceof type, text || "Not correct type: " + type);
+}
+
+/** Take first result from the database query and returns new instance of `Type` */
+function get_result(Type) {
+	return function(rows) {
+		if(!rows) { throw new TypeError("failed to parse result"); }
+		var doc = rows.shift();
+		if(!doc) { return; }
+		var obj = {};
+		Object.keys(doc).forEach(function(key) {
+			obj['$'+key] = doc[key];
+		});
+		return new Type(obj);
+	};
+}
+
+/** Take all results from the database query and return an array of new instances of `Type` */
+function get_results(Type) {
+	return function(rows) {
+		return rows.map(function(row, i) {
+			if(!row) { throw new TypeError("failed to parse result #" + i + " in an array"); }
+			var obj = {};
+			Object.keys(row).forEach(function(key) {
+				obj['$'+key] = row[key];
+			});
+			return new Type(obj);
+		});
+	};
+}
+
+/** Takes the result and saves it into `self`. If `self` is one of `NoPg.Document`, 
+ * `NoPg.Type`, `NoPg.Attachment` or `NoPg.Lib`, then the content is updated into 
+ * that instance. If the `doc` is an instance of `NoPg` then the result can be 
+ * fetched using `self.fetch()`.
+ */
+function save_result_to(self) {
+	if( (self instanceof NoPg.Document) ||
+	    (self instanceof NoPg.Type) || 
+	    (self instanceof NoPg.Attachment) || 
+	    (self instanceof NoPg.Lib) || 
+	    (self instanceof NoPg.DBVersion)
+	  ) {
+		return function(doc) { return self.update(doc); };
+	}
+
+	if(self._values) {
+		return function(doc) {
+			self._values.push( doc );
+			return self;
+		};
+	}
+
+	throw new TypeError("Unknown target: " + (typeof self));
+}
+
+/** Takes the result and saves it into `self`. If the `self` is an instance of `NoPg` then the result can be fetched using `self.fetch()`. */
+function save_result_to_queue(self) {
+
+	if(self._values) {
+		return function(objs) {
+			self._values.push( objs );
+			return self;
+		};
+	}
+
+	throw new TypeError("Unknown target: " + (typeof self));
+}
+
+/** Convert properties like {"$foo":123} -> "foo = 123" and {foo:123} -> "(meta->'foo')::numeric = 123" and {foo:"123"} -> "meta->'foo' = '123'"
+ * Usage: `var where = parse_predicates(NoPg.Document)({"$foo":123})`
+ */
+function parse_predicates(Type) {
+	function parse_data(opts) {
+		opts = opts || {};
+		var datakey = (Type.meta.datakey || '$meta').substr(1);
+		var res = {};
+		
+		// Parse meta properties
+		Object.keys(opts).filter(function(k) { return k[0] !== '$'; }).forEach(function(key) {
+
+			/*jslint regexp: false*/
+			var keyreg = /^[^']+$/;
+			/*jslint regexp: true*/
+
+			// FIXME: Implement escape?
+			if(!(keyreg.test(key))) { throw new TypeError("Invalid keyword: " + key); }
+			if(typeof opts[key] === 'number') {
+				res["("+datakey+"->>'"+key+"')::numeric"] = opts[key];
+			} else {
+				res[""+datakey+"->>'"+key+"'"] = ''+opts[key];
+			}
+		});
+		
+		// Parse top level properties
+		Object.keys(opts).filter(function(k) { return k[0] === '$'; }).forEach(function(key) {
+			var k = key.substr(1);
+			res[k] = opts[key];
+		});
+	
+		return res;
+	}
+	return parse_data;
+}
+
+
+/* ------------- PRIVATE FUNCTIONS --------------- */
+
+
+/** Perform generic query */
+function do_query(query, values) {
+	var self = this;
+	if(!self) { throw new TypeError("do_query() invalid: self: " + util.inspect(self)); }
+	if(!self._db) { throw new TypeError("do_query() invalid: self._db: " + util.inspect(self._db)); }
+	if(!query) { throw new TypeError("do_query() invalid: query: " + util.inspect(query)); }
+	return extend.promise( [NoPg], self._db._query(query, values) );
+}
+
+/** Generic SELECT query */
+function do_select(ObjType, opts) {
+	debug.log('at do_select(self, ObjType, opts=', opts, ')');
+	var self = this;
+	var query, keys, params;
+	var where = {};
+
+	if(opts instanceof NoPg.Type) {
+		where.id = opts.$id;
+	} else if(typeof opts === 'object') {
+		Object.keys(opts).filter(function(key) {
+			return key[0] === '$' ? true : false;
+		}).forEach(function(key) {
+			where[key.substr(1)] = opts[key];
+		});
+	} else {
+		where.name = ''+opts;
+	}
+
+	keys = Object.keys(where);
+
+	query = "SELECT * FROM " + (ObjType.meta.table) + " WHERE " + keys.map(function(key, i) { return key + ' = $' + (i+1); }).join(' AND ');
+	debug.log('query = ', query);
+
+	params = keys.map(function(key) {
+		return where[key];
+	});
+	debug.log('params = ', params);
+
+	return do_query.call(self, query, params);
+}
+
+/** Internal INSERT query */
+function do_insert(ObjType, data) {
+	var self = this;
+	debug.log('at NoPg::do_insert(ObjType=', ObjType, ", data=", data, ')');
+
+	data = (new ObjType(data)).valueOf();
+	debug.log("at NoPg::do_insert: after parsing, data = ", data);
+
+	var query, params;
+
+	// Filter only $-keys which are not the datakey
+	var keys = ObjType.meta.keys.filter(function(key) {
+		return (key[0] === '$') ? true : false;
+	}).map(function(key) {
+		return key.substr(1);
+	}).filter(function(key) {
+		return data[key] ? true : false;
+	});
+
+	if(keys.length === 0) { throw new TypeError("No data to submit: keys array is empty."); }
+
+	query = "INSERT INTO " + (ObjType.meta.table) + " ("+ keys.join(', ') +") VALUES ("+ keys.map(function(k, i) { return '$' + (i+1); }).join(', ') +") RETURNING *";
+	debug.log('at NoPg::do_insert: query = ', query);
+
+	params = keys.map(function(key) {
+		return data[key];
+	});
+	debug.log('at NoPg::do_insert: params = ', params);
+
+	return do_query.call(self, query, params); //.then(get_result(ObjType)).then(save_result_to(self));
+}
+
+
+/** Internal UPDATE query */
+function do_update(ObjType, obj, data) {
+	debug.log('at NoPg::do_update(ObjType=', ObjType,'obj=', obj, ", data=", data, ')');
+
+	var self = this;
+	data = (new ObjType(data)).valueOf();
+	debug.log("at NoPg::do_update: after parsing, data = ", data);
+
+	var query, params;
+	if(data === undefined) {
+		data = obj.valueOf();
+	}
+
+	// Filter only $-keys which are not the datakey
+	var keys = ObjType.meta.keys.filter(function(key) {
+		return (key[0] === '$') ? true : false;
+	}).map(function(key) {
+		return key.substr(1);
+	}).filter(function(key) {
+		return data[key] ? true : false;
+	});
+
+	if(keys.length === 0) { throw new TypeError("No data to submit: keys array is empty."); }
+
+	// FIXME: Implement binary content support
+
+	query = "UPDATE " + (ObjType.meta.table) + " SET "+ keys.map(function(k, i) { return k + ' = $' + (i+1); }).join(', ') +" WHERE id = $"+ (keys.length+1) +" RETURNING *";
+	debug.log('at NoPg::do_update: query = ', query);
+
+	params = keys.map(function(key) {
+		return data[key];
+	});
+	params.push(obj.$id);
+	debug.log('at NoPg::do_update: params = ', params);
+
+	return do_query.call(self, query, params);
+}
+
+/** Internal DELETE query */
+function do_delete(ObjType, obj) {
+	debug.log('at NoPg::do_delete(ObjType=', ObjType,'obj=', obj, ')');
+	if(!obj.$id) { throw new TypeError("opts.$id invalid: " + util.inspect(obj) ); }
+	var self = this;
+	var query, params;
+	query = "DELETE FROM " + (ObjType.meta.table) + " WHERE id = $1";
+	debug.log('at NoPg::do_delete: query = ', query);
+	params = [obj.$id];
+	debug.log('at NoPg::do_delete: params = ', params);
+	return do_query.call(self, query, params);
+}
+
+/**
+ * Returns `true` if PostgreSQL database table exists.
+ * @todo Implement this in nor-pg and use here.
+ */
+function pg_table_exists(name) {
+	var self = this;
+	return do_query.call(self, 'SELECT * FROM information_schema.tables WHERE table_name = $1', [name]).then(function(rows) {
+		if(!rows) { throw new TypeError("Unexpected result from query: " + util.inspect(rows)); }
+		if(rows.length === 0) {
+			return false;
+		} else {
+			return true;
+		}
+	});
+}
+
+/* ------------- PUBLIC FUNCTIONS --------------- */
 
 /** Returns the NoPg constructor type of `doc`, otherwise throws an exception of `TypeError`. */
 NoPg.getObjectType = function(doc) {
@@ -115,7 +377,9 @@ NoPg.prototype.init = function() {
 
 	function pad(num, size) {
 		var s = num+"";
-		while (s.length < size) s = "0" + s;
+		while (s.length < size) {
+			s = "0" + s;
+		}
 		return s;
 	}
 
@@ -130,7 +394,7 @@ NoPg.prototype.init = function() {
 
 		var i = db_version, file;
 		while(i < code_version) {
-			i++;
+			i += 1;
 			file = './schema/v' + pad(i, 4) + '.js';
 			try {
 				debug.log('Loading database version ', i, " from ", file);
@@ -335,8 +599,9 @@ NoPg.prototype.getType = function(name) {
  *                            Use `require("mod")` to require dependencies, 
  *                            which must be loaded on the database server.
  */
-NoPg._escapeFunction = function escape_function(f) {
-	return '$js$\nreturn (' + f + ')()\n$js$';
+NoPg._escapeFunction = function escape_function(f, args) {
+	args = args || [];
+	return '$js$\nreturn (' + f + ')(' + args.join(', ') + ')\n$js$';
 };
 
 /** Returns the latest database server version */
@@ -355,276 +620,17 @@ function _latestDBVersion() {
 			return parseInt(obj.version, 10);
 		});
 	}).then(function(db_version) {
-		if(! (db_version >= -1) ) { 
+		if(db_version < -1 ) { 
 			throw new TypeError("Database version " + db_version + " is not between accepted range (-1 ..)");
 		}
 		return db_version;
 	});
-};
+}
 
 /** Returns the latest database server version */
 NoPg.prototype.latestDBVersion = function() {
 	var self = this;
 	return _latestDBVersion.call(self).then(save_result_to(self));
-};
-
-/* ------------- HELPER FUNCTIONS --------------- */
-
-
-/** */
-function assert(valid, text) {
-	if(!valid) {
-		throw new TypeError(text);
-	}
-}
-
-/** Assert that the `obj` is NoPg.Document */
-function assert_type(obj, type, text) {
-	assert(obj instanceof type, text || "Not correct type: " + type);
-}
-
-/** Take first result from the database query and returns new instance of `Type` */
-function get_result(Type) {
-	return function(rows) {
-		if(!rows) { throw new TypeError("failed to parse result"); }
-		var doc = rows.shift();
-		if(!doc) { return; }
-		var obj = {};
-		Object.keys(doc).forEach(function(key) {
-			obj['$'+key] = doc[key];
-		});
-		return new Type(obj);
-	};
-}
-
-/** Take all results from the database query and return an array of new instances of `Type` */
-function get_results(Type) {
-	return function(rows) {
-		return rows.map(function(row, i) {
-			if(!row) { throw new TypeError("failed to parse result #" + i + " in an array"); }
-			var obj = {};
-			Object.keys(row).forEach(function(key) {
-				obj['$'+key] = row[key];
-			});
-			return new Type(obj);
-		});
-	};
-}
-
-/** Takes the result and saves it into `self`. If `self` is one of `NoPg.Document`, 
- * `NoPg.Type`, `NoPg.Attachment` or `NoPg.Lib`, then the content is updated into 
- * that instance. If the `doc` is an instance of `NoPg` then the result can be 
- * fetched using `self.fetch()`.
- */
-function save_result_to(self) {
-	if( (self instanceof NoPg.Document)
-	 || (self instanceof NoPg.Type)
-	 || (self instanceof NoPg.Attachment)
-	 || (self instanceof NoPg.Lib)
-	 || (self instanceof NoPg.DBVersion)
-	  ) {
-		return function(doc) { return self.update(doc); };
-	}
-
-	if(self._values) {
-		return function(doc) {
-			self._values.push( doc );
-			return self;
-		};
-	}
-
-	throw new TypeError("Unknown target: " + (typeof self));
-}
-
-/** Takes the result and saves it into `self`. If the `self` is an instance of `NoPg` then the result can be fetched using `self.fetch()`. */
-function save_result_to_queue(self) {
-
-	if(self._values) {
-		return function(objs) {
-			self._values.push( objs );
-			return self;
-		};
-	}
-
-	throw new TypeError("Unknown target: " + (typeof self));
-}
-
-/** Convert properties like {"$foo":123} -> "foo = 123" and {foo:123} -> "(meta->'foo')::numeric = 123" and {foo:"123"} -> "meta->'foo' = '123'"
- * Usage: `var where = parse_predicates(NoPg.Document)({"$foo":123})`
- */
-function parse_predicates(Type) {
-	function parse_data(opts) {
-		opts = opts || {};
-		datakey = (Type.meta.datakey || '$meta').substr(1);
-		var res = {};
-		
-		// Parse meta properties
-		Object.keys(opts).filter(function(k) { return k[0] !== '$'; }).forEach(function(key) {
-			var keyreg = /^[^']+$/;
-			// FIXME: Implement escape?
-			if(!(keyreg.test(key))) { throw new TypeError("Invalid keyword: " + key); }
-			if(typeof opts[key] === 'number') {
-				res["("+datakey+"->>'"+key+"')::numeric"] = opts[key];
-			} else {
-				res[""+datakey+"->>'"+key+"'"] = ''+opts[key];
-			}
-		});
-		
-		// Parse top level properties
-		Object.keys(opts).filter(function(k) { return k[0] === '$'; }).forEach(function(key) {
-			var k = key.substr(1);
-			res[k] = opts[key];
-		});
-	
-		return res;
-	}
-	return parse_data;
-}
-
-
-/* ------------- PRIVATE FUNCTIONS --------------- */
-
-
-/** Perform generic query */
-function do_query(query, values) {
-	var self = this;
-	if(!self) { throw new TypeError("do_query() invalid: self: " + util.inspect(self)); }
-	if(!self._db) { throw new TypeError("do_query() invalid: self._db: " + util.inspect(self._db)); }
-	if(!query) { throw new TypeError("do_query() invalid: query: " + util.inspect(query)); }
-	return extend.promise( [NoPg], self._db._query(query, values) );
-}
-
-/** Generic SELECT query */
-function do_select(ObjType, opts) {
-	debug.log('at do_select(self, ObjType, opts=', opts, ')');
-	var self = this;
-	var query, keys, params;
-	var where = {};
-
-	if(opts instanceof NoPg.Type) {
-		where.id = opts.$id;
-	} else if(typeof opts === 'object') {
-		Object.keys(opts).filter(function(key) {
-			return key[0] === '$' ? true : false;
-		}).forEach(function(key) {
-			where[key.substr(1)] = opts[key];
-		});
-	} else {
-		where.name = ''+opts;
-	}
-
-	keys = Object.keys(where);
-
-	query = "SELECT * FROM " + (ObjType.meta.table) + " WHERE " + keys.map(function(key, i) { return key + ' = $' + (i+1); }).join(' AND ');
-	debug.log('query = ', query);
-
-	params = keys.map(function(key) {
-		return where[key];
-	});
-	debug.log('params = ', params);
-
-	return do_query.call(self, query, params);
-}
-
-/** Internal INSERT query */
-function do_insert(ObjType, data) {
-	var self = this;
-	debug.log('at NoPg::do_insert(ObjType=', ObjType, ", data=", data, ')');
-
-	data = (new ObjType(data)).valueOf();
-	debug.log("at NoPg::do_insert: after parsing, data = ", data);
-
-	var query, params;
-
-	// Filter only $-keys which are not the datakey
-	var keys = ObjType.meta.keys.filter(function(key) {
-		return (key[0] === '$') ? true : false;
-	}).map(function(key) {
-		return key.substr(1);
-	}).filter(function(key) {
-		return data[key] ? true : false;
-	});
-
-	if(keys.length === 0) { throw new TypeError("No data to submit: keys array is empty."); }
-
-	query = "INSERT INTO " + (ObjType.meta.table) + " ("+ keys.join(', ') +") VALUES ("+ keys.map(function(k, i) { return '$' + (i+1); }).join(', ') +") RETURNING *";
-	debug.log('at NoPg::do_insert: query = ', query);
-
-	params = keys.map(function(key) {
-		return data[key];
-	});
-	debug.log('at NoPg::do_insert: params = ', params);
-
-	return do_query.call(self, query, params); //.then(get_result(ObjType)).then(save_result_to(self));
-}
-
-
-/** Internal UPDATE query */
-function do_update(ObjType, obj, data) {
-	debug.log('at NoPg::do_update(ObjType=', ObjType,'obj=', obj, ", data=", data, ')');
-
-	var self = this;
-	data = (new ObjType(data)).valueOf();
-	debug.log("at NoPg::do_update: after parsing, data = ", data);
-
-	var query, params;
-	if(data === undefined) {
-		data = obj.valueOf();
-	}
-
-	// Filter only $-keys which are not the datakey
-	var keys = ObjType.meta.keys.filter(function(key) {
-		return (key[0] === '$') ? true : false;
-	}).map(function(key) {
-		return key.substr(1);
-	}).filter(function(key) {
-		return data[key] ? true : false;
-	});
-
-	if(keys.length === 0) { throw new TypeError("No data to submit: keys array is empty."); }
-
-	// FIXME: Implement binary content support
-
-	query = "UPDATE " + (ObjType.meta.table) + " SET "+ keys.map(function(k, i) { return k + ' = $' + (i+1); }).join(', ') +" WHERE id = $"+ (keys.length+1) +" RETURNING *";
-	debug.log('at NoPg::do_update: query = ', query);
-
-	params = keys.map(function(key) {
-		return data[key];
-	});
-	params.push(obj.$id);
-	debug.log('at NoPg::do_update: params = ', params);
-
-	return do_query.call(self, query, params);
-}
-
-/** Internal DELETE query */
-function do_delete(ObjType, obj) {
-	debug.log('at NoPg::do_delete(ObjType=', ObjType,'obj=', obj, ')');
-	if(!obj.$id) { throw new TypeError("opts.$id invalid: " + util.inspect(obj) ); }
-	var self = this;
-	var query, params;
-	var ObjType = NoPg.getObjectType(obj);
-	query = "DELETE FROM " + (ObjType.meta.table) + " WHERE id = $1";
-	debug.log('at NoPg::do_delete: query = ', query);
-	params = [obj.$id];
-	debug.log('at NoPg::do_delete: params = ', params);
-	return do_query.call(self, query, params);
-}
-
-/**
- * Returns `true` if PostgreSQL database table exists.
- * @todo Implement this in nor-pg and use here.
- */
-function pg_table_exists(name) {
-	var self = this;
-	return do_query.call(self, 'SELECT * FROM information_schema.tables WHERE table_name = $1', [name]).then(function(rows) {
-		if(!rows) { throw new TypeError("Unexpected result from query: " + util.inspect(rows)); }
-		if(rows.length === 0) {
-			return false;
-		} else {
-			return true;
-		}
-	});
 };
 
 /* EOF */

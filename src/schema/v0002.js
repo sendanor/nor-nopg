@@ -26,7 +26,7 @@ module.exports = [
 	 * Don't forget to set plv8.start_proc = 'plv8_init' in postgresql.conf
 	 */
 	function(db) {
-		function plv8_init() {
+		function plv8_init(plv8, LOG, INFO, WARNING, ERROR) {
 			plv8._modules = {};
 
 			// Require function for loading libs
@@ -58,17 +58,17 @@ module.exports = [
 			return true;
 		} // plv8_init
 
-		return db.query('CREATE OR REPLACE FUNCTION plv8_init() RETURNS boolean LANGUAGE plv8 VOLATILE AS ' + NoPg._escapeFunction(plv8_init));
+		return db.query('CREATE OR REPLACE FUNCTION plv8_init() RETURNS boolean LANGUAGE plv8 VOLATILE AS ' + NoPg._escapeFunction(plv8_init, ["plv8", "LOG", "INFO", "WARNING", "ERROR"]));
 	},
 
 	/** #2 - Namespace and sql function wrapper for tv4 */
 	function(db) {
-		function tv4_validateResult() {
+		function tv4_validateResult(data, schema) {
 			var tv4 = require('tv4');
 			return tv4.validateResult(data, schema);
 		}
 		return db.query('CREATE SCHEMA IF NOT EXISTS tv4')
-			.query('CREATE OR REPLACE FUNCTION tv4.validateResult(data json, schema json) RETURNS json LANGUAGE plv8 VOLATILE AS ' + NoPg._escapeFunction(tv4_validateResult) );
+			.query('CREATE OR REPLACE FUNCTION tv4.validateResult(data json, schema json) RETURNS json LANGUAGE plv8 VOLATILE AS ' + NoPg._escapeFunction(tv4_validateResult, ["data", "schema"]) );
 	}
 
 ];

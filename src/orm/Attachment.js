@@ -11,7 +11,7 @@ var meta = require('./meta.js')({
 /** The constructor */
 function NoPgAttachment(opts) {
 	var self = this;
-	var opts = opts || {};
+	opts = opts || {};
 
 	meta(self).set_meta_keys(opts).resolve();
 }

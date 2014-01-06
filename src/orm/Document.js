@@ -11,7 +11,7 @@ var meta = require('./meta.js')({
 /** The constructor */
 function NoPgDocument(opts) {
 	var self = this;
-	var opts = opts || {};
+	opts = opts || {};
 
 	debug.log("NoPg.Document(opts = ", opts, ")");
 

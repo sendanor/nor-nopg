@@ -3,7 +3,7 @@ var NoPg = require('../index.js');
 module.exports = [
 	/** #1 Function for checking that only valid javascript goes into libs table (01_js_library_environment.sql) */
 	function(db) {
-		function check_javascript() {
+		function check_javascript(js, plv8, ERROR) {
 			var module = {'exports':{}};
 			try {
 				var fun = new Function("module", "exports", js);
@@ -14,7 +14,7 @@ module.exports = [
 			}
 			return true;
 		}
-		return db.query('CREATE OR REPLACE FUNCTION check_javascript(js text) RETURNS boolean LANGUAGE plv8 VOLATILE AS ' + NoPg._escapeFunction(check_javascript));
+		return db.query('CREATE OR REPLACE FUNCTION check_javascript(js text) RETURNS boolean LANGUAGE plv8 VOLATILE AS ' + NoPg._escapeFunction(check_javascript, ['js', 'plv8', 'ERROR']));
 	}
 ];
 /* EOF */

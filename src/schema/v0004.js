@@ -9,7 +9,7 @@ module.exports = [
 	/* #4 - CHECK constraint helper for tv4. Acceps json data column and types table id as arguments. */
 	function(db) {
 
-		function check_type() {
+		function check_type(data, types_id, plv8, ERROR) {
 			// Ignore typeless documents
 			if (types_id === null) {
 				return true;
@@ -47,7 +47,7 @@ module.exports = [
 			return true;
 		}
 
-		return db.query('CREATE OR REPLACE FUNCTION check_type(data json, types_id uuid) RETURNS boolean LANGUAGE plv8 VOLATILE AS ' + NoPg._escapeFunction(check_type));
+		return db.query('CREATE OR REPLACE FUNCTION check_type(data json, types_id uuid) RETURNS boolean LANGUAGE plv8 VOLATILE AS ' + NoPg._escapeFunction(check_type, ["data", "types_id", "plv8", "ERROR"]));
 	},
 
 	/** The json documents */

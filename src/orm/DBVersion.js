@@ -10,7 +10,7 @@ var meta = require('./meta.js')({
 /** The constructor */
 function NoPgDBVersion(opts) {
 	var self = this;
-	var opts = opts || {};
+	opts = opts || {};
 
 	meta(self).set_meta_keys(opts).resolve();
 }
