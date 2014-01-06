@@ -640,7 +640,7 @@ NoPg.prototype.getType = function(name) {
  */
 NoPg._escapeFunction = function escape_function(f, args) {
 	args = args || [];
-	return '$js$\nreturn (' + f + ')(' + args.join(', ') + ')\n$js$';
+	return '$js$\nreturn (' + f + ').call(this, ' + args.join(', ') + ')\n$js$';
 };
 
 /** Returns the latest database server version */
