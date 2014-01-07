@@ -7,6 +7,7 @@ var fs = require('nor-fs');
 var pg = require('nor-pg');
 var extend = require('nor-extend').setup({useFunctionPromises:true});
 var orm = require('./orm');
+var pghelpers = require('./pghelpers.js');
 
 /* ------------- HELPER FUNCTIONS --------------- */
 
@@ -321,12 +322,19 @@ NoPg.getObjectType = function(doc) {
 	throw new TypeError("doc is unknown type: " + doc);
 };
 
+/** Run query `SET $key = $value` on the PostgreSQL server */
+function pg_query(query, params) {
+	return function(db) {
+		return do_query.call(db, query, params).then(function() { return db; });
+	};
+}
+
 /** Start */
 NoPg.start = function(pgconfig) {
 	return extend.promise( [NoPg], pg.start(pgconfig).then(function(db) {
 		if(!db) { throw new TypeError("invalid db: " + util.inspect(db) ); }
 		return new NoPg(db);
-	}));
+	})).then(pg_query("SET plv8.start_proc = 'plv8_init'"));
 };
 
 /** Fetch next value from queue */
@@ -632,16 +640,8 @@ NoPg.prototype.getType = function(name) {
 	return self._getType(name).then(save_result_to(self));
 };
 
-/** Escape JavaScript function into PostgreSQL block.
- * @param f {string|function} A string of javascript code or a JS function 
- *                            which must not contain any native code or libs. 
- *                            Use `require("mod")` to require dependencies, 
- *                            which must be loaded on the database server.
- */
-NoPg._escapeFunction = function escape_function(f, args) {
-	args = args || [];
-	return '$js$\nreturn (' + f + ').call(this, ' + args.join(', ') + ')\n$js$';
-};
+/** Alias for `pghelpers.escapeFunction()` */
+NoPg._escapeFunction = pghelpers.escapeFunction;
 
 /** Returns the latest database server version */
 function _latestDBVersion() {

@@ -1,5 +1,6 @@
 /* nor-nopg -- Implementation of meta objects for `NoPg.Document`, `NoPg.Type`, `NoPg.Attachment` and `NoPg.Lib`. */
 
+var pghelpers = require('../pghelpers.js');
 var debug = require('nor-debug');
 
 function meta(opts) {
@@ -72,9 +73,19 @@ function meta(opts) {
 			}).map(function(key) {
 				return key.substr(1);
 			}).forEach(function(key) {
-				if(self['$'+key] !== undefined) {
-					data[key] = self['$'+key];
+				if(self['$'+key] === undefined) {
+					return;
 				}
+				
+				//if(self['$'+key] instanceof Function) {
+				//	self['$'+key] = pghelpers.escapeFunction(self['$'+key]);
+				//}
+				
+				if(self['$'+key] instanceof Function) {
+					self['$'+key] = ''+self['$'+key];
+				}
+				
+				data[key] = self['$'+key];
 			});
 
 			// Copy plain data

@@ -418,6 +418,98 @@ describe('nopg', function(){
 			}).done();
 		});
 
+		it('can .createType("SchemaTest_2y78")({"$schema":"object", ...}) and schema check works', function(done){
+			var type;
+			nopg.start(PGCONFIG).createType("SchemaTest_2y78")({
+				"$schema": {
+					"title": "Point Object",
+					"type": "object",
+					"properties": {
+						"x": {"type": "number"},
+						"y": {"type": "number"}
+					},
+					"required": ["x", "y"]
+				}
+			}).then(function(db) {
+				type = db.fetch();
+				util.debug('type = ' + util.inspect(type));
+				return db.create(type)({"x":10, "y":20});
+			}).then(function(db) {
+				var point = db.fetch();
+				assert.strictEqual(typeof point.x, 'number');
+				assert.strictEqual(typeof point.y, 'number');
+				assert.strictEqual(point.x, 10);
+				assert.strictEqual(point.y, 20);
+				
+				var failed;
+				return db.create(type)({"x":10}).fail(function(err) {
+					debug.log("Expected error was: " + err);
+					failed = true;
+				}).fin(function() {
+					assert.strictEqual(failed, true);
+				}).then(function() {
+					return db;
+				});
+			}).then(function(db) {
+				return db.commit();
+			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
+				done(err);
+			}).done();
+		});
+
+		/* */
+		it('can .createType("SchemaTest_3esH")({"$validator":...}) and it works', function(done){
+			var type;
+			nopg.start(PGCONFIG).createType("SchemaTest_3esH")({
+				"$schema": {
+					"title": "Point Object",
+					"type": "object",
+					"properties": {
+						"x": {"type": "number"},
+						"y": {"type": "number"}
+					},
+					"required": ["x", "y"]
+				},
+				"$validator": function(o) {
+					if( (o.x >= 0) && (o.x < 100) &&
+					    (o.y >= 0) && (o.y < 100) ) {
+						return true;
+					}
+					return false;
+				}
+			}).then(function(db) {
+				type = db.fetch();
+				util.debug('type = ' + util.inspect(type));
+				return db.create(type)({"x":10, "y":20});
+			}).then(function(db) {
+				var point = db.fetch();
+				assert.strictEqual(typeof point.x, 'number');
+				assert.strictEqual(typeof point.y, 'number');
+				assert.strictEqual(point.x, 10);
+				assert.strictEqual(point.y, 20);
+				
+				var failed;
+				return db.create(type)({"x":200, "y":200}).fail(function(err) {
+					debug.log("Expected error was: " + err);
+					failed = true;
+				}).fin(function() {
+					assert.strictEqual(failed, true);
+				}).then(function() {
+					return db;
+				});
+			}).then(function(db) {
+				return db.commit();
+			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
+				done(err);
+			}).done();
+		});
+
 
 // End of tests
 
