@@ -17,4 +17,4 @@ before_script:
   - psql -c 'CREATE DATABASE nopg_test;' -U postgres
 after_failure:
   - psql -c '\d' -U postgres
-  - sudo cat /var/log/postgresql/*.log
+  - sudo cat /var/log/postgresql/postgresql-9.3-main.log
