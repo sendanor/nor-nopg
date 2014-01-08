@@ -1,6 +1,6 @@
 {
   "name": "nor-nopg",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "NoPostgreSQL Client Module",
   "bin": {
     "nor-nopg-import": "./tools/import.js"
