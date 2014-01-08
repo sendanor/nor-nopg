@@ -538,6 +538,33 @@ describe('nopg', function(){
 			}).done();
 		});
 
+		it('.createType("EditTypeTest2_5Vmf")({"hello":"world"}) and .update(type, {...}) works', function(done){
+			var type, type2;
+			nopg.start(PGCONFIG).createType("EditTypeTest2_5Vmf")({"hello":"world"}).then(function(db) {
+				type = db.fetch();
+				util.debug('type = ' + util.inspect(type));
+
+				assert.strictEqual(typeof type, 'object');
+				assert.strictEqual(type instanceof nopg.Type, true);
+				assert.strictEqual(type.hello, 'world');
+				
+				return db.update(type, {'hello':'something else'}).commit();
+			}).then(function() {
+				return nopg.start(PGCONFIG).getType("EditTypeTest2_5Vmf").commit();
+			}).then(function(db) {
+				type2 = db.fetch();
+				assert.strictEqual(typeof type2, 'object');
+				assert.strictEqual(type2 instanceof nopg.Type, true);
+				assert.strictEqual(type2.$id, type.$id);
+				assert.strictEqual(type2.hello, 'something else');
+			}).then(function() {
+				done();
+			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
+				done(err);
+			}).done();
+		});
+
 
 // End of tests
 
