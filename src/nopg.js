@@ -226,12 +226,14 @@ function do_update(ObjType, obj, data) {
 	debug.log('at NoPg::do_update(ObjType=', ObjType,'obj=', obj, ", data=", data, ')');
 
 	var self = this;
-	data = (new ObjType(data)).valueOf();
-	debug.log("at NoPg::do_update: after parsing, data = ", data);
 
 	var query, params;
 	if(data === undefined) {
 		data = obj.valueOf();
+		debug.log("at NoPg::do_update: Since data was undefined we initialized data from obj: ", data);
+	} else {
+		data = (new ObjType(data)).valueOf();
+		debug.log("at NoPg::do_update: after parsing, data = ", data);
 	}
 
 	// Filter only $-keys which are not the datakey

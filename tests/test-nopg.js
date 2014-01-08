@@ -404,7 +404,7 @@ describe('nopg', function(){
 				util.debug('type = ' + util.inspect(type));
 				return db.del(type).commit();
 			}).then(function() {
-				return nopg.start(PGCONFIG).typeExists("DeleteTypeTestsxWH8QiBYc");
+				return nopg.start(PGCONFIG).typeExists("DeleteTypeTestsxWH8QiBYc").commit();
 			}).then(function(db) {
 				exists = db.fetch();
 				assert.strictEqual(typeof exists, 'boolean');
@@ -502,6 +502,35 @@ describe('nopg', function(){
 			}).then(function(db) {
 				return db.commit();
 			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
+				done(err);
+			}).done();
+		});
+
+		it('.createType("EditTypeTest_VGM3")({"hello":"world"}) and .update(type) works', function(done){
+			var type, type2;
+			nopg.start(PGCONFIG).createType("EditTypeTest_VGM3")({"hello":"world"}).then(function(db) {
+				type = db.fetch();
+				util.debug('type = ' + util.inspect(type));
+
+				assert.strictEqual(typeof type, 'object');
+				assert.strictEqual(type instanceof nopg.Type, true);
+				assert.strictEqual(type.hello, 'world');
+				
+				type.hello = 'something else';
+
+				return db.update(type).commit();
+			}).then(function() {
+				return nopg.start(PGCONFIG).getType("EditTypeTest_VGM3").commit();
+			}).then(function(db) {
+				type2 = db.fetch();
+				assert.strictEqual(typeof type2, 'object');
+				assert.strictEqual(type2 instanceof nopg.Type, true);
+				assert.strictEqual(type2.$id, type.$id);
+				assert.strictEqual(type2.hello, 'something else');
+			}).then(function() {
 				done();
 			}).fail(function(err) {
 				debug.log('Database query failed: ' + err);
