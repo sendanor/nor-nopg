@@ -2,6 +2,36 @@
 var NoPg = require('../index.js');
 module.exports = [
 
+	/** Function for checking that only valid javascript goes into types.validator column */
+	function(db) {
+		function check_javascript_function(js, plv8, ERROR) {
+			var fun;
+			try {
+				// We'll check only positive input
+				if(js) {
+					fun = (new Function('return (' + js + ')'))();
+					if(! (fun && (fun instanceof Function)) ) {
+						throw TypeError("Input is not valid JavaScript function: " + (typeof fun) + ": " + fun);
+					}
+				}
+			} catch (e) {
+				plv8.elog(ERROR, e);
+				return false;
+			}
+			return true;
+		}
+		return db.query('CREATE OR REPLACE FUNCTION check_javascript_function(js text) RETURNS boolean LANGUAGE plv8 VOLATILE AS ' + NoPg._escapeFunction(check_javascript_function, ['js', 'plv8', 'ERROR']));
+	},
+
+	/**
+	 * Type of json documents. There can be tought of like "buckets". You can e.g. fetch all stuff of type x easily.
+	 * There is a manually generated "namespace" UUID for UUIDv5 generator
+	 */
+	function(db) {
+		return db.query('ALTER TABLE types DROP CONSTRAINT IF EXISTS types_validator_check')
+		         .query('ALTER TABLE types ADD CONSTRAINT types_validator_check CHECK (check_javascript_function(validator))');
+	},
+
 	/* CHECK constraint helper for tv4. Acceps json data column and types table id as arguments. */
 	function(db) {
 
@@ -29,7 +59,7 @@ module.exports = [
 					return false;
 				}
 			}
-	
+
 			// Run the validator
 			if (validator_code) {
 				//plv8.elog(NOTICE, "validator_code is " + JSON.stringify(validator_code) );

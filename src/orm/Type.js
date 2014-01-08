@@ -5,7 +5,10 @@ var debug = require('nor-debug');
 var meta = require('./meta.js')({
 	"table": "types",
 	"datakey": '$meta',
-	"keys": ['$id', '$name', '$schema', '$validator', '$meta', '$created', '$updated']
+	"keys": ['$id', '$name', '$schema', '$validator', '$meta', '$created', '$updated'],
+	"parsers": {
+		"$validator": "function"
+	}
 });
 
 /** The constructor */

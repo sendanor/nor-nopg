@@ -461,9 +461,9 @@ describe('nopg', function(){
 		});
 
 		/* */
-		it('can .createType("SchemaTest_3esH")({"$validator":...}) and it works', function(done){
+		it('can .createType("ValidatorTest_3esH")({"$validator":...}) and it works', function(done){
 			var type;
-			nopg.start(PGCONFIG).createType("SchemaTest_3esH")({
+			nopg.start(PGCONFIG).createType("ValidatorTest_3esH")({
 				"$schema": {
 					"title": "Point Object",
 					"type": "object",
@@ -474,8 +474,7 @@ describe('nopg', function(){
 					"required": ["x", "y"]
 				},
 				"$validator": function(o) {
-					if( (o.x >= 0) && (o.x < 100) &&
-					    (o.y >= 0) && (o.y < 100) ) {
+					if( o && o.x && o.y && (o.x >= 0) && (o.x < 100) && (o.y >= 0) && (o.y < 100) ) {
 						return true;
 					}
 					return false;

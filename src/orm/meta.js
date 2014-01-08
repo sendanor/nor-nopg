@@ -6,6 +6,8 @@ var debug = require('nor-debug');
 function meta(opts) {
 	opts = opts || {};
 
+	if(!opts.parsers) { opts.parsers = {}; }
+
 	function builder(self) {
 		debug.log("meta::builder(self=", self, ")");
 		var obj = {};
@@ -20,7 +22,13 @@ function meta(opts) {
 			// Search initial meta keys
 			builder.keys.forEach(function(key) {
 				if(data[key] !== undefined) {
-					self[key] = data[key];
+					if(opts.parsers[key] === 'function') {
+						if(data[key]) {
+							self[key] = require('../fun.js').toFunction(data[key]);
+						}
+					} else {
+						self[key] = data[key];
+					}
 				}
 			});
 
@@ -82,7 +90,7 @@ function meta(opts) {
 				//}
 				
 				if(self['$'+key] instanceof Function) {
-					self['$'+key] = ''+self['$'+key];
+					self['$'+key] = require('../fun.js').toString(self['$'+key]);
 				}
 				
 				data[key] = self['$'+key];
