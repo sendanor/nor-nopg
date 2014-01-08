@@ -17,3 +17,4 @@ before_script:
   - psql -c 'CREATE DATABASE nopg_test;' -U postgres
 after_failure:
   - psql -c '\d' -U postgres
+  - cat /var/log/postgresql/*.log
