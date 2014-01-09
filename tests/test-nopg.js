@@ -38,7 +38,7 @@ describe('nopg', function(){
 
 	describe('tests', function() {
 
-		it('.create()({"hello":"world"}) works', function(done){
+		it('typeless document creation', function(done){
 			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
 				debug.log('db is ', db);
 				var doc = db.fetch();
@@ -54,7 +54,7 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('.createType("Test") and .create("Test")({"hello":"world"}) works', function(done){
+		it('typed document creation', function(done){
 			nopg.start(PGCONFIG).createType("Test")({"schema":{"type":"object"}}).create("Test")({"hello":"world"}).then(function(db) {
 				debug.log('db is ', db);
 				var type = db.fetch();
@@ -71,7 +71,7 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('.create()({"hello":"world"}) and .update(doc, {"hello": "another"}) works', function(done){
+		it('typeless document partial update by document object', function(done){
 			var doc;
 			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
 				doc = db.fetch();
@@ -93,7 +93,7 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('.create()({"hello":"world"}) and .update(doc) works', function(done){
+		it('typeless document update by chaining object', function(done){
 			var doc;
 			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
 				doc = db.fetch();
@@ -113,7 +113,7 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('.create()({"hello":"world"}) and .del(doc) works', function(done){
+		it('typeless document deletion', function(done){
 			var doc;
 			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
 				doc = db.fetch();
@@ -130,7 +130,7 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('.search()({"hello":"UAJuE5ya6m9UvUM87GUFu7GBIJWghHMT"}) works', function(done){
+		it('typeless document search by property', function(done){
 			nopg.start(PGCONFIG).create()({"hello":"UAJuE5ya6m9UvUM87GUFu7GBIJWghHMT"}).then(function(db) {
 				debug.log('db is ', db);
 				var doc = db.fetch();
@@ -156,7 +156,7 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('.search()({"$id":"..."}) works for type AF82RqSsXM527S3PGK76r6H3xjWqnYgP', function(done){
+		it('typeless document search by document ID', function(done){
 			var id;
 			nopg.start(PGCONFIG).create()({"hello":"AF82RqSsXM527S3PGK76r6H3xjWqnYgP"}).then(function(db) {
 				debug.log('db is ', db);
@@ -185,7 +185,7 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('.search("TestYmMGe0M6")() works', function(done){
+		it('typed document search', function(done){
 			nopg.start(PGCONFIG)
 			  .createType("TestYmMGe0M6")()
 			  .create("TestYmMGe0M6")({"foo":1})
@@ -219,7 +219,7 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('.search("TestMxvLtb3x")({"foo":2}) works', function(done){
+		it('typed document search by property', function(done){
 			nopg.start(PGCONFIG)
 			  .createType("TestMxvLtb3x")()
 			  .create("TestMxvLtb3x")({"foo":1,"bar":"foobar"})
@@ -254,7 +254,7 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('.search("Testg1KrHD2a")({"foo":"2"}) works by type object', function(done){
+		it('typed document search by selected property', function(done){
 			var type;
 			nopg.start(PGCONFIG)
 			  .createType("Testg1KrHD2a")()
@@ -340,7 +340,7 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('.createType("TypeXvsMtxJyWE")({"hello":"world1"}) and .declareType("TypeXvsMtxJyWE")({"hello":"world2"}) works', function(done){
+		it('Declare type works over existing type', function(done){
 			nopg.start(PGCONFIG).createType("TypeXvsMtxJyWE")({"hello":"world1"}).declareType("TypeXvsMtxJyWE")({"hello":"world2"}).then(function(db) {
 				debug.log('db is ', db);
 				var type1 = db.fetch();
@@ -363,7 +363,7 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('.declareType("Type4UJHIRRiCc")({"hello":"world"}) works', function(done){
+		it('Declare type works even if type does not exist', function(done){
 			nopg.start(PGCONFIG).declareType("Type4UJHIRRiCc")({"hello":"world"}).then(function(db) {
 				debug.log('db is ', db);
 				var type1 = db.fetch();
@@ -380,7 +380,7 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('.declareType("TypeSession4UJHIRRiCc")({"$schema":{"type":"object"}}) works', function(done){
+		it('Types with schema', function(done){
 			nopg.start(PGCONFIG).declareType("TypeSession4UJHIRRiCc")({"$schema":{"type":"object"}}).then(function(db) {
 				debug.log('db is ', db);
 				var type1 = db.fetch();
@@ -397,7 +397,7 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('.createType("DeleteTypeTestsxWH8QiBYc")({"hello":"world"}) and .del(type) works', function(done){
+		it('Deleting types', function(done){
 			var type, exists;
 			nopg.start(PGCONFIG).createType("DeleteTypeTestsxWH8QiBYc")({"hello":"world"}).then(function(db) {
 				type = db.fetch();
@@ -418,7 +418,7 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('can .createType("SchemaTest_2y78")({"$schema":"object", ...}) and schema check works', function(done){
+		it('Types with schema do not allow bad data', function(done){
 			var type;
 			nopg.start(PGCONFIG).createType("SchemaTest_2y78")({
 				"$schema": {
@@ -461,7 +461,7 @@ describe('nopg', function(){
 		});
 
 		/* */
-		it('can .createType("ValidatorTest_3esH")({"$validator":...}) and it works', function(done){
+		it('Types with validator do not allow wrong data', function(done){
 			var type;
 			nopg.start(PGCONFIG).createType("ValidatorTest_3esH")({
 				"$schema": {
@@ -509,7 +509,7 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('.createType("EditTypeTest_VGM3")({"hello":"world"}) and .update(type) works', function(done){
+		it('Editing types by changing object', function(done){
 			var type, type2;
 			nopg.start(PGCONFIG).createType("EditTypeTest_VGM3")({"hello":"world"}).then(function(db) {
 				type = db.fetch();
@@ -538,7 +538,7 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('.createType("EditTypeTest2_5Vmf")({"hello":"world"}) and .update(type, {...}) works', function(done){
+		it('Partial updating of types', function(done){
 			var type, type2;
 			nopg.start(PGCONFIG).createType("EditTypeTest2_5Vmf")({"hello":"world"}).then(function(db) {
 				type = db.fetch();
@@ -565,6 +565,36 @@ describe('nopg', function(){
 			}).done();
 		});
 
+		it('partial edit of document', function(done){
+			var doc;
+			nopg.start(PGCONFIG).createType("Test-mtm8")({"$schema":{"type":"object"}}).create("Test-mtm8")({"hello":"world"}).then(function(db) {
+				debug.log('db is ', db);
+				var type = db.fetch();
+				doc = db.fetch();
+				util.debug('doc = ' + util.inspect(doc));
+				assert.strictEqual(typeof doc.hello, 'string');
+				assert.strictEqual(doc.hello, 'world');
+				return db.update(doc, {"hello2": "world2"});
+			}).then(function(db) {
+				return db.getDocument({'$id':doc.$id});
+			}).then(function(db) {
+				var doc2 = db.fetch();
+				util.debug('doc2 = ' + util.inspect(doc2));
+
+				assert.strictEqual(typeof doc2.hello, 'string');
+				assert.strictEqual(doc2.hello, 'world');
+
+				assert.strictEqual(typeof doc2.hello2, 'string');
+				assert.strictEqual(doc2.hello2, 'world2');
+
+				return db.commit();
+			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
+				done(err);
+			}).done();
+		});
 
 // End of tests
 

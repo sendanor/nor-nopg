@@ -719,4 +719,18 @@ NoPg.prototype.importLib = function(file, opts) {
 	return self._importLib(file, opts).then(get_result(NoPg.Lib)).then(save_result_to(self));
 };
 
+/** Get document directly */
+NoPg.prototype._getDocument = function(opts) {
+	debug.log('at NoPg::_getDocument(', opts, ')');
+	var self = this;
+	return do_select.call(self, NoPg.Document, opts).then(get_result(NoPg.Document));
+};
+
+/** Get document and save it to result queue. */
+NoPg.prototype.getDocument = function(opts) {
+	debug.log('at NoPg::getDocument(', opts, ')');
+	var self = this;
+	return self._getDocument(opts).then(save_result_to(self));
+};
+
 /* EOF */
