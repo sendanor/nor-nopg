@@ -55,7 +55,7 @@ describe('nopg', function(){
 		});
 
 		it('typed document creation', function(done){
-			nopg.start(PGCONFIG).createType("Test")({"schema":{"type":"object"}}).create("Test")({"hello":"world"}).then(function(db) {
+			nopg.start(PGCONFIG).createType("Test")({"$schema":{"type":"object"}}).create("Test")({"hello":"world"}).then(function(db) {
 				debug.log('db is ', db);
 				var type = db.fetch();
 				var doc = db.fetch();
