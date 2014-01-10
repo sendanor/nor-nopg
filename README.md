@@ -12,6 +12,8 @@ Usage
 var nopg = require('nor-nopg');
 ```
 
+Before using the database you should initialize it by calling: `nor-nopg --pg=psql://localhost:5432/test init`
+
 Internal Database Schema
 ------------------------
 
