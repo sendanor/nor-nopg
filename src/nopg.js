@@ -150,9 +150,13 @@ function parse_predicates(Type) {
 /** Perform generic query */
 function do_query(query, values) {
 	var self = this;
-	if(!self) { throw new TypeError("do_query() invalid: self: " + util.inspect(self)); }
-	if(!self._db) { throw new TypeError("do_query() invalid: self._db: " + util.inspect(self._db)); }
-	if(!query) { throw new TypeError("do_query() invalid: query: " + util.inspect(query)); }
+	if(!self) { throw new TypeError("invalid: self: " + util.inspect(self)); }
+	if(!self._db) { throw new TypeError("invalid: self._db: " + util.inspect(self._db)); }
+	if(!query) { throw new TypeError("invalid: query: " + util.inspect(query)); }
+
+	debug.log('query = ', query);
+	debug.log('values = ', values);
+
 	return extend.promise( [NoPg], self._db._query(query, values) );
 }
 
