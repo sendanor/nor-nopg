@@ -243,7 +243,17 @@ function do_update(ObjType, obj, orig_data) {
 	debug.log("orig_data = ", orig_data);
 
 	var self = this;
-	var query, params, data;
+	var query, params, data, where = {};
+
+	if(obj.$id) {
+		where.$id = obj.$id;
+	} else if(obj.$name) {
+		where.$name = obj.$name;
+	} else {
+		debug.log('obj = ', obj);
+		throw new TypeError("Cannot know what to update!");
+	}
+	debug.log('where = ', where);
 
 	if(orig_data === undefined) {
 		debug.log("orig_data was undefined, building it from obj=", obj);
@@ -274,16 +284,19 @@ function do_update(ObjType, obj, orig_data) {
 
 	debug.log('keys = ', keys);
 
-	// Throw an exception if there is no keys to update
-	if(keys.length === 0) { throw new TypeError("No data to submit: keys array is empty."); }
+	// Return with the current object if there is no keys to update
+	if(keys.length === 0) { 
+		debug.log("Warning! No data to update! Fetching current object from database.");
+		return do_select.call(self, ObjType, where);
+	}
 
 	// FIXME: Implement binary content support
 
 	query = "UPDATE " + (ObjType.meta.table) + " SET "+ keys.map(function(k, i) { return k + ' = $' + (i+1); }).join(', ') +" WHERE ";
 
-	if(obj.$id) {
+	if(where.$id) {
 		query += "id = $"+ (keys.length+1);
-	} else if(obj.$name) {
+	} else if(where.$name) {
 		query += "name = $"+ (keys.length+1);
 	} else {
 		throw new TypeError("Cannot know what to update!");
@@ -296,10 +309,10 @@ function do_update(ObjType, obj, orig_data) {
 		return data[key];
 	});
 
-	if(obj.$id) {
-		params.push(obj.$id);
-	} else if(obj.$name){
-		params.push(obj.$name);
+	if(where.$id) {
+		params.push(where.$id);
+	} else if(where.$name){
+		params.push(where.$name);
 	}
 
 	debug.log('params = ', params);
@@ -758,11 +771,21 @@ NoPg.prototype.importLib = function(file, opts) {
 	return self._importLib(file, opts).then(get_result(NoPg.Lib)).then(save_result_to(self));
 };
 
+/** Get specified object directly */
+NoPg.prototype._getObject = function(ObjType) {
+	var self = this;
+	debug.log('ObjType = ', ObjType);
+	return function(opts) {
+		debug.log('opts = ', opts);
+		return do_select.call(self, ObjType, opts).then(get_result(ObjType));
+	};
+};
+
 /** Get document directly */
 NoPg.prototype._getDocument = function(opts) {
 	debug.log('opts = ', opts);
 	var self = this;
-	return do_select.call(self, NoPg.Document, opts).then(get_result(NoPg.Document));
+	return self._getObject(NoPg.Document)(opts);
 };
 
 /** Get document and save it to result queue. */
