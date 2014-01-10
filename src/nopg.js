@@ -366,7 +366,16 @@ NoPg.start = function(pgconfig) {
 	return extend.promise( [NoPg], pg.start(pgconfig).then(function(db) {
 		if(!db) { throw new TypeError("invalid db: " + util.inspect(db) ); }
 		return new NoPg(db);
-	})).then(pg_query("SET plv8.start_proc = 'plv8_init'"));
+	})).then(function(db) {
+		return pg_table_exists.call(db, NoPg.DBVersion.meta.table).then(function(exists) {
+			if(exists) {
+				debug.log('OK. Detected already initialized database.');
+				return pg_query("SET plv8.start_proc = 'plv8_init'")(db);
+			}
+			debug.log('Warning! Detected uninitialized database.');
+			return db;
+		}).then(function() { return db; });
+	});
 };
 
 /** Fetch next value from queue */
@@ -480,7 +489,7 @@ NoPg.prototype.init = function() {
 		});
 	}).then(function() {
 		return self._importLib(__dirname + "/../libs/tv4/tv4.js").then(function() { return self; });
-	});
+	}).then(pg_query("SET plv8.start_proc = 'plv8_init'"));
 };
 
 /** Create document by type: `db.create([TYPE])([OPT(S)])`. */
