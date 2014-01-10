@@ -158,7 +158,7 @@ function do_query(query, values) {
 
 /** Generic SELECT query */
 function do_select(ObjType, opts) {
-	debug.log('at do_select(self, ObjType, opts=', opts, ')');
+	debug.log('ObjType=', ObjType, ', opts=', opts);
 	var self = this;
 	var query, keys, params;
 	var where = {};
@@ -191,10 +191,10 @@ function do_select(ObjType, opts) {
 /** Internal INSERT query */
 function do_insert(ObjType, data) {
 	var self = this;
-	debug.log('at NoPg::do_insert(ObjType=', ObjType, ", data=", data, ')');
+	debug.log('ObjType=', ObjType, ", data=", data);
 
 	data = (new ObjType(data)).valueOf();
-	debug.log("at NoPg::do_insert: after parsing, data = ", data);
+	debug.log("after parsing, data = ", data);
 
 	var query, params;
 
@@ -210,12 +210,12 @@ function do_insert(ObjType, data) {
 	if(keys.length === 0) { throw new TypeError("No data to submit: keys array is empty."); }
 
 	query = "INSERT INTO " + (ObjType.meta.table) + " ("+ keys.join(', ') +") VALUES ("+ keys.map(function(k, i) { return '$' + (i+1); }).join(', ') +") RETURNING *";
-	debug.log('at NoPg::do_insert: query = ', query);
+	debug.log('query = ', query);
 
 	params = keys.map(function(key) {
 		return data[key];
 	});
-	debug.log('at NoPg::do_insert: params = ', params);
+	debug.log('params = ', params);
 
 	return do_query.call(self, query, params); //.then(get_result(ObjType)).then(save_result_to(self));
 }
@@ -223,18 +223,20 @@ function do_insert(ObjType, data) {
 
 /** Internal UPDATE query */
 function do_update(ObjType, obj, data) {
-	debug.log('at NoPg::do_update(ObjType=', ObjType,'obj=', obj, ", data=", data, ')');
+	debug.log('args = (ObjType=', ObjType, ', obj=', obj, ", data=", data, ')');
 
 	var self = this;
-
 	var query, params;
+
 	if(data === undefined) {
+		debug.log("data was undefined, building it from obj=", obj);
+		// FIXME: Check that `obj` is an ORM object
 		data = obj.valueOf();
-		debug.log("at NoPg::do_update: Since data was undefined we initialized data from obj: ", data);
 	} else {
+		debug.log("data was not undefined: ", data);
 		data = (new ObjType(data)).valueOf();
-		debug.log("at NoPg::do_update: after parsing, data = ", data);
 	}
+	debug.log('data = ', data);
 
 	// Filter only $-keys which are not the datakey
 	var keys = ObjType.meta.keys.filter(function(key) {
@@ -244,7 +246,12 @@ function do_update(ObjType, obj, data) {
 	}).filter(function(key) {
 		return data[key] ? true : false;
 	});
+	debug.log('keys = ', keys);
 
+	// Convert meta object into direct JSON references for UPDATE query
+
+
+	// Throw an exception if there is no keys to update
 	if(keys.length === 0) { throw new TypeError("No data to submit: keys array is empty."); }
 
 	// FIXME: Implement binary content support
@@ -260,7 +267,7 @@ function do_update(ObjType, obj, data) {
 	}
 
 	query += " RETURNING *";
-	debug.log('at NoPg::do_update: query = ', query);
+	debug.log('query = ', query);
 
 	params = keys.map(function(key) {
 		return data[key];
@@ -272,21 +279,21 @@ function do_update(ObjType, obj, data) {
 		params.push(obj.$name);
 	}
 
-	debug.log('at NoPg::do_update: params = ', params);
+	debug.log('params = ', params);
 
 	return do_query.call(self, query, params);
 }
 
 /** Internal DELETE query */
 function do_delete(ObjType, obj) {
-	debug.log('at NoPg::do_delete(ObjType=', ObjType,'obj=', obj, ')');
+	debug.log('args = (ObjType=', ObjType,'obj=', obj, ')');
 	if(!obj.$id) { throw new TypeError("opts.$id invalid: " + util.inspect(obj) ); }
 	var self = this;
 	var query, params;
 	query = "DELETE FROM " + (ObjType.meta.table) + " WHERE id = $1";
-	debug.log('at NoPg::do_delete: query = ', query);
+	debug.log('query = ', query);
 	params = [obj.$id];
-	debug.log('at NoPg::do_delete: params = ', params);
+	debug.log('params = ', params);
 	return do_query.call(self, query, params);
 }
 
@@ -455,11 +462,11 @@ NoPg.prototype.init = function() {
 
 /** Create document by type: `db.create([TYPE])([OPT(S)])`. */
 NoPg.prototype.create = function(type) {
-	debug.log('at NoPg::create(', type, ')');
+	debug.log('args = (', type, ')');
 	var self = this;
 
 	function create2(data) {
-		debug.log('at NoPg::create2(', data, ')');
+		debug.log('args = (', data, ')');
 
 		if(type && (type instanceof NoPg.Type)) {
 			data.$types_id = type.$id;
@@ -482,17 +489,17 @@ NoPg.prototype.create = function(type) {
 /** Add new DBVersion record */
 NoPg.prototype._addDBVersion = function(data) {
 	var self = this;
-	debug.log('at NoPg.prototype._addDBVersion(', data, ')');
+	debug.log('data = ', data);
 	return do_insert.call(self, NoPg.DBVersion, data).then(get_result(NoPg.DBVersion));
 };
 
 /** Search documents */
 NoPg.prototype.search = function(type) {
-	debug.log('at search(', type, ')');
+	debug.log('type = ', type);
 	var self = this;
 
 	function search2(opts) {
-		debug.log('at search2(', opts, ')');
+		debug.log('opts=', opts);
 
 		var query, keys, params, ObjType, dbtype;
 
@@ -558,11 +565,11 @@ NoPg.prototype['delete'] = NoPg.prototype.del;
 
 /** Create a new type. We recommend using `.declareType()` instead unless you want an error if the type exists already. Use like `db.createType([TYPE-NAME])([OPT(S)])`. */
 NoPg.prototype.createType = function(name) {
-	debug.log('at createType(', name, ')');
+	debug.log('name = ', name);
 	var self = this;
 	function createType2(data) {
 		data = data || {};
-		debug.log('at createType2(', data, ')');
+		debug.log('data = ', data);
 		if(name !== undefined) {
 			data.$name = ''+name;
 		}
@@ -573,11 +580,11 @@ NoPg.prototype.createType = function(name) {
 
 /** Create a new type or replace existing type with the new values. Use like `db.declareType([TYPE-NAME])([OPT(S)])`. */
 NoPg.prototype.declareType = function(name) {
-	debug.log('at createOrReplaceType(', name, ')');
+	debug.log('name = ', name);
 	var self = this;
 	function createOrReplaceType2(data) {
 		data = data || {};
-		debug.log('at createOrReplaceType2(', data, ')');
+		debug.log('data = ', data);
 		var where = {};
 		if(name !== undefined) {
 			if(name instanceof NoPg.Type) {
@@ -605,7 +612,7 @@ NoPg.prototype.createOrReplaceType = function(name) {
 
 /** Tests if type exists */
 NoPg.prototype._typeExists = function(name) {
-	debug.log('at NoPg::_typeExists(', name, ')');
+	debug.log('name = ', name);
 	var self = this;
 	return do_select.call(self, NoPg.Type, name).then(function(types) {
 		return (types.length >= 1) ? true : false;
@@ -614,7 +621,7 @@ NoPg.prototype._typeExists = function(name) {
 
 /** Tests if lib exists */
 NoPg.prototype._libExists = function(name) {
-	debug.log('at NoPg::_libExists(', name, ')');
+	debug.log('name = ', name);
 	var self = this;
 	return do_select.call(self, NoPg.Lib, name).then(function(types) {
 		return (types.length >= 1) ? true : false;
@@ -623,21 +630,21 @@ NoPg.prototype._libExists = function(name) {
 
 /** Get type and save it to result queue. */
 NoPg.prototype.typeExists = function(name) {
-	debug.log('at NoPg::typeExists(', name, ')');
+	debug.log('name = ', name);
 	var self = this;
 	return self._typeExists(name).then(save_result_to(self));
 };
 
 /** Get type directly */
 NoPg.prototype._getType = function(name) {
-	debug.log('at NoPg::_getType(', name, ')');
+	debug.log('name = ', name);
 	var self = this;
 	return do_select.call(self, NoPg.Type, name).then(get_result(NoPg.Type));
 };
 
 /** Get type and save it to result queue. */
 NoPg.prototype.getType = function(name) {
-	debug.log('at NoPg::getType(', name, ')');
+	debug.log('name = ', name);
 	var self = this;
 	return self._getType(name).then(save_result_to(self));
 };
@@ -721,14 +728,14 @@ NoPg.prototype.importLib = function(file, opts) {
 
 /** Get document directly */
 NoPg.prototype._getDocument = function(opts) {
-	debug.log('at NoPg::_getDocument(', opts, ')');
+	debug.log('opts = ', opts);
 	var self = this;
 	return do_select.call(self, NoPg.Document, opts).then(get_result(NoPg.Document));
 };
 
 /** Get document and save it to result queue. */
 NoPg.prototype.getDocument = function(opts) {
-	debug.log('at NoPg::getDocument(', opts, ')');
+	debug.log('opts = ', opts);
 	var self = this;
 	return self._getDocument(opts).then(save_result_to(self));
 };
