@@ -12,15 +12,15 @@ var nopg = require('../src');
 
 /** Run init() at start */
 before(function(done){
-	nopg.start(PGCONFIG).test().then(function(db) {
+	nopg.start(PGCONFIG).init().then(function(db) {
 		//var doc = db.fetch();
 		//debug.log('initialized database: doc = ' + util.inspect(doc));
 		return db.commit();
 	}).then(function(db) {
-		debug.log('Database test was successful.');
+		debug.log('Database init was successful.');
 		done();
 	}).fail(function(err) {
-		debug.log('Database test failed: ' + err);
+		debug.log('Database init failed: ' + err);
 		done(err);
 	}).done();
 });
