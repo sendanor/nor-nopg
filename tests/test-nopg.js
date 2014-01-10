@@ -14,7 +14,7 @@ var nopg = require('../src');
 before(function(done){
 	nopg.start(PGCONFIG).init().then(function(db) {
 		//var doc = db.fetch();
-		//util.debug('initialized database: doc = ' + util.inspect(doc));
+		//debug.log('initialized database: doc = ' + util.inspect(doc));
 		return db.commit();
 	}).then(function(db) {
 		debug.log('Database init was successful.');
@@ -36,13 +36,13 @@ describe('nopg', function(){
 
 	});
 
-	describe('tests', function() {
+	describe('test of', function() {
 
 		it('typeless document creation', function(done){
 			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
 				debug.log('db is ', db);
 				var doc = db.fetch();
-				util.debug('doc = ' + util.inspect(doc));
+				debug.log('doc = ' + util.inspect(doc));
 				assert.strictEqual(typeof doc.hello, 'string');
 				assert.strictEqual(doc.hello, 'world');
 				return db.commit();
@@ -59,7 +59,7 @@ describe('nopg', function(){
 				debug.log('db is ', db);
 				var type = db.fetch();
 				var doc = db.fetch();
-				util.debug('doc = ' + util.inspect(doc));
+				debug.log('doc = ' + util.inspect(doc));
 				assert.strictEqual(typeof doc.hello, 'string');
 				assert.strictEqual(doc.hello, 'world');
 				return db.commit();
@@ -75,14 +75,17 @@ describe('nopg', function(){
 			var doc;
 			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
 				doc = db.fetch();
-				util.debug('before doc = ' + util.inspect(doc));
+				debug.log('before doc = ' + util.inspect(doc));
+				assert.strictEqual(typeof doc.hello, 'string');
 				assert.strictEqual(doc.hello, 'world');
-				return db.update(doc, {"hello": "another"});
+				return db.update(doc, {"hello2": "another"});
 			}).then(function(db) {
 				var doc2 = db.fetch();
-				util.debug('updated doc2 = ' + util.inspect(doc2));
+				debug.log('updated doc2 = ' + util.inspect(doc2));
 				assert.strictEqual(typeof doc2.hello, 'string');
-				assert.strictEqual(doc2.hello, 'another');
+				assert.strictEqual(doc2.hello, 'world');
+				assert.strictEqual(typeof doc2.hello2, 'string');
+				assert.strictEqual(doc2.hello2, 'another');
 				assert.strictEqual(doc.$id, doc2.$id);
 				return db.commit();
 			}).then(function(db) {
@@ -97,11 +100,11 @@ describe('nopg', function(){
 			var doc;
 			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
 				doc = db.fetch();
-				util.debug('before doc = ' + util.inspect(doc));
+				debug.log('before doc = ' + util.inspect(doc));
 				doc.hello = "another";
 				return db.update(doc);
 			}).then(function(db) {
-				util.debug('updated doc = ' + util.inspect(doc));
+				debug.log('updated doc = ' + util.inspect(doc));
 				assert.strictEqual(typeof doc.hello, 'string');
 				assert.strictEqual(doc.hello, 'another');
 				return db.commit();
@@ -117,7 +120,7 @@ describe('nopg', function(){
 			var doc;
 			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
 				doc = db.fetch();
-				util.debug('before doc = ' + util.inspect(doc));
+				debug.log('before doc = ' + util.inspect(doc));
 				return db.del(doc);
 			}).then(function(db) {
 				// FIXME: Test that the doc was really deleted.
@@ -134,7 +137,7 @@ describe('nopg', function(){
 			nopg.start(PGCONFIG).create()({"hello":"UAJuE5ya6m9UvUM87GUFu7GBIJWghHMT"}).then(function(db) {
 				debug.log('db is ', db);
 				var doc = db.fetch();
-				util.debug('doc = ' + util.inspect(doc));
+				debug.log('doc = ' + util.inspect(doc));
 				assert.strictEqual(typeof doc.hello, 'string');
 				assert.strictEqual(doc.hello, 'UAJuE5ya6m9UvUM87GUFu7GBIJWghHMT');
 
@@ -161,7 +164,7 @@ describe('nopg', function(){
 			nopg.start(PGCONFIG).create()({"hello":"AF82RqSsXM527S3PGK76r6H3xjWqnYgP"}).then(function(db) {
 				debug.log('db is ', db);
 				var doc = db.fetch();
-				util.debug('doc = ' + util.inspect(doc));
+				debug.log('doc = ' + util.inspect(doc));
 				assert.strictEqual(typeof doc.hello, 'string');
 				assert.strictEqual(doc.hello, 'AF82RqSsXM527S3PGK76r6H3xjWqnYgP');
 
@@ -345,8 +348,8 @@ describe('nopg', function(){
 				debug.log('db is ', db);
 				var type1 = db.fetch();
 				var type2 = db.fetch();
-				util.debug('type1 = ', util.inspect(type1));
-				util.debug('type2 = ', util.inspect(type2));
+				debug.log('type1 = ', util.inspect(type1));
+				debug.log('type2 = ', util.inspect(type2));
 				assert.strictEqual(typeof type1, 'object');
 				assert.strictEqual(typeof type2, 'object');
 				assert.strictEqual(typeof type1.hello, 'string');
@@ -367,7 +370,7 @@ describe('nopg', function(){
 			nopg.start(PGCONFIG).declareType("Type4UJHIRRiCc")({"hello":"world"}).then(function(db) {
 				debug.log('db is ', db);
 				var type1 = db.fetch();
-				util.debug('type1 = ', util.inspect(type1));
+				debug.log('type1 = ', util.inspect(type1));
 				assert.strictEqual(typeof type1, 'object');
 				assert.strictEqual(typeof type1.hello, 'string');
 				assert.strictEqual(type1.hello, 'world');
@@ -384,7 +387,7 @@ describe('nopg', function(){
 			nopg.start(PGCONFIG).declareType("TypeSession4UJHIRRiCc")({"$schema":{"type":"object"}}).then(function(db) {
 				debug.log('db is ', db);
 				var type1 = db.fetch();
-				util.debug('type1 = ', util.inspect(type1));
+				debug.log('type1 = ', util.inspect(type1));
 				assert.strictEqual(typeof type1, 'object');
 				assert.strictEqual(typeof type1.$schema, 'object');
 				assert.strictEqual(type1.$schema.type, 'object');
@@ -401,7 +404,7 @@ describe('nopg', function(){
 			var type, exists;
 			nopg.start(PGCONFIG).createType("DeleteTypeTestsxWH8QiBYc")({"hello":"world"}).then(function(db) {
 				type = db.fetch();
-				util.debug('type = ' + util.inspect(type));
+				debug.log('type = ' + util.inspect(type));
 				return db.del(type).commit();
 			}).then(function() {
 				return nopg.start(PGCONFIG).typeExists("DeleteTypeTestsxWH8QiBYc").commit();
@@ -432,7 +435,7 @@ describe('nopg', function(){
 				}
 			}).then(function(db) {
 				type = db.fetch();
-				util.debug('type = ' + util.inspect(type));
+				debug.log('type = ' + util.inspect(type));
 				return db.create(type)({"x":10, "y":20});
 			}).then(function(db) {
 				var point = db.fetch();
@@ -481,7 +484,7 @@ describe('nopg', function(){
 				}
 			}).then(function(db) {
 				type = db.fetch();
-				util.debug('type = ' + util.inspect(type));
+				debug.log('type = ' + util.inspect(type));
 				return db.create(type)({"x":10, "y":20});
 			}).then(function(db) {
 				var point = db.fetch();
@@ -513,7 +516,7 @@ describe('nopg', function(){
 			var type, type2;
 			nopg.start(PGCONFIG).createType("EditTypeTest_VGM3")({"hello":"world"}).then(function(db) {
 				type = db.fetch();
-				util.debug('type = ' + util.inspect(type));
+				debug.log('type = ' + util.inspect(type));
 
 				assert.strictEqual(typeof type, 'object');
 				assert.strictEqual(type instanceof nopg.Type, true);
@@ -542,21 +545,27 @@ describe('nopg', function(){
 			var type, type2;
 			nopg.start(PGCONFIG).createType("EditTypeTest2_5Vmf")({"hello":"world"}).then(function(db) {
 				type = db.fetch();
-				util.debug('type = ' + util.inspect(type));
+				debug.log('type = ' + util.inspect(type));
 
 				assert.strictEqual(typeof type, 'object');
 				assert.strictEqual(type instanceof nopg.Type, true);
 				assert.strictEqual(type.hello, 'world');
 				
-				return db.update(type, {'hello':'something else'}).commit();
+				return db.update(type, {'hello2':'something else'}).commit();
 			}).then(function() {
 				return nopg.start(PGCONFIG).getType("EditTypeTest2_5Vmf").commit();
 			}).then(function(db) {
 				type2 = db.fetch();
+
+				assert.strictEqual(typeof type2, 'object');
+				assert.strictEqual(type2 instanceof nopg.Type, true);
+				assert.strictEqual(type2.hello, 'world');
+				
 				assert.strictEqual(typeof type2, 'object');
 				assert.strictEqual(type2 instanceof nopg.Type, true);
 				assert.strictEqual(type2.$id, type.$id);
-				assert.strictEqual(type2.hello, 'something else');
+				assert.strictEqual(type2.hello2, 'something else');
+
 			}).then(function() {
 				done();
 			}).fail(function(err) {
@@ -565,13 +574,13 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it('partial edit of document', function(done){
+		it('partial update of typed document', function(done){
 			var doc;
 			nopg.start(PGCONFIG).createType("Test-mtm8")({"$schema":{"type":"object"}}).create("Test-mtm8")({"hello":"world"}).then(function(db) {
 				debug.log('db is ', db);
 				var type = db.fetch();
 				doc = db.fetch();
-				util.debug('doc = ' + util.inspect(doc));
+				debug.log('doc = ' + util.inspect(doc));
 				assert.strictEqual(typeof doc.hello, 'string');
 				assert.strictEqual(doc.hello, 'world');
 				return db.update(doc, {"hello2": "world2"});
@@ -579,7 +588,7 @@ describe('nopg', function(){
 				return db.getDocument({'$id':doc.$id});
 			}).then(function(db) {
 				var doc2 = db.fetch();
-				util.debug('doc2 = ' + util.inspect(doc2));
+				debug.log('doc2 = ' + util.inspect(doc2));
 
 				assert.strictEqual(typeof doc2.hello, 'string');
 				assert.strictEqual(doc2.hello, 'world');

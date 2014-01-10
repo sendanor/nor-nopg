@@ -222,34 +222,53 @@ function do_insert(ObjType, data) {
 
 
 /** Internal UPDATE query */
-function do_update(ObjType, obj, data) {
-	debug.log('args = (ObjType=', ObjType, ', obj=', obj, ", data=", data, ')');
+function do_update(ObjType, obj, orig_data) {
+
+	function json_cmp(a, b) {
+		a = JSON.stringify(a);
+		debug.log("a = ", a);
+		b = JSON.stringify(b);
+		debug.log("b = ", b);
+		var ret = (a === b) ? true : false;
+		debug.log("returns ", ret);
+		return ret;
+	}
+
+	debug.log('ObjType = ', ObjType);
+	debug.log('obj = ', obj);
+	debug.log("orig_data = ", orig_data);
 
 	var self = this;
-	var query, params;
+	var query, params, data;
 
-	if(data === undefined) {
-		debug.log("data was undefined, building it from obj=", obj);
+	if(orig_data === undefined) {
+		debug.log("orig_data was undefined, building it from obj=", obj);
 		// FIXME: Check that `obj` is an ORM object
 		data = obj.valueOf();
 	} else {
-		debug.log("data was not undefined: ", data);
-		data = (new ObjType(data)).valueOf();
+		debug.log("orig_data was not undefined: ", orig_data);
+		data = (new ObjType(obj)).update(orig_data).valueOf();
 	}
 	debug.log('data = ', data);
 
-	// Filter only $-keys which are not the datakey
+	// Select only keys that start with $
 	var keys = ObjType.meta.keys.filter(function(key) {
 		return (key[0] === '$') ? true : false;
+
+	// Remove leading '$' character from keys
 	}).map(function(key) {
 		return key.substr(1);
+
+	// Ignore keys that aren't going to be changed
 	}).filter(function(key) {
 		return data[key] ? true : false;
+
+	// Ignore keys that were not changed
+	}).filter(function(key) {
+		return json_cmp(data[key], obj['$'+key]) ? false : true;
 	});
+
 	debug.log('keys = ', keys);
-
-	// Convert meta object into direct JSON references for UPDATE query
-
 
 	// Throw an exception if there is no keys to update
 	if(keys.length === 0) { throw new TypeError("No data to submit: keys array is empty."); }
