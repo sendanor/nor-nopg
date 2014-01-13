@@ -13,7 +13,7 @@ function NoPgDocument(opts) {
 	var self = this;
 	opts = opts || {};
 
-	debug.log("NoPg.Document(opts = ", opts, ")");
+	//debug.log("NoPg.Document(opts = ", opts, ")");
 
 	meta(self).set_meta_keys(opts).resolve();
 }
@@ -31,7 +31,7 @@ NoPgDocument.prototype.valueOf = function() {
 /** Update changes to current instance */
 NoPgDocument.prototype.update = function(data) {
 	var self = this;
-	debug.log("NoPg.Document.prototype.update(data = ", data, ")");
+	//debug.log("NoPg.Document.prototype.update(data = ", data, ")");
 	// FIXME: If values are removed from the database, local copy properties are NOT removed currently!
 	meta(self).set_meta_keys(data).resolve();
 	return self;

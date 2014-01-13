@@ -154,15 +154,15 @@ function do_query(query, values) {
 	if(!self._db) { throw new TypeError("invalid: self._db: " + util.inspect(self._db)); }
 	if(!query) { throw new TypeError("invalid: query: " + util.inspect(query)); }
 
-	debug.log('query = ', query);
-	debug.log('values = ', values);
+	//debug.log('query = ', query);
+	//debug.log('values = ', values);
 
 	return extend.promise( [NoPg], self._db._query(query, values) );
 }
 
 /** Generic SELECT query */
 function do_select(ObjType, opts) {
-	debug.log('ObjType=', ObjType, ', opts=', opts);
+	//debug.log('ObjType=', ObjType, ', opts=', opts);
 	var self = this;
 	var query, keys, params;
 	var where = {};
@@ -182,12 +182,12 @@ function do_select(ObjType, opts) {
 	keys = Object.keys(where);
 
 	query = "SELECT * FROM " + (ObjType.meta.table) + " WHERE " + keys.map(function(key, i) { return key + ' = $' + (i+1); }).join(' AND ');
-	debug.log('query = ', query);
+	//debug.log('query = ', query);
 
 	params = keys.map(function(key) {
 		return where[key];
 	});
-	debug.log('params = ', params);
+	//debug.log('params = ', params);
 
 	return do_query.call(self, query, params);
 }
@@ -195,10 +195,10 @@ function do_select(ObjType, opts) {
 /** Internal INSERT query */
 function do_insert(ObjType, data) {
 	var self = this;
-	debug.log('ObjType=', ObjType, ", data=", data);
+	//debug.log('ObjType=', ObjType, ", data=", data);
 
 	data = (new ObjType(data)).valueOf();
-	debug.log("after parsing, data = ", data);
+	//debug.log("after parsing, data = ", data);
 
 	var query, params;
 
@@ -214,12 +214,12 @@ function do_insert(ObjType, data) {
 	if(keys.length === 0) { throw new TypeError("No data to submit: keys array is empty."); }
 
 	query = "INSERT INTO " + (ObjType.meta.table) + " ("+ keys.join(', ') +") VALUES ("+ keys.map(function(k, i) { return '$' + (i+1); }).join(', ') +") RETURNING *";
-	debug.log('query = ', query);
+	//debug.log('query = ', query);
 
 	params = keys.map(function(key) {
 		return data[key];
 	});
-	debug.log('params = ', params);
+	//debug.log('params = ', params);
 
 	return do_query.call(self, query, params); //.then(get_result(ObjType)).then(save_result_to(self));
 }
@@ -230,17 +230,17 @@ function do_update(ObjType, obj, orig_data) {
 
 	function json_cmp(a, b) {
 		a = JSON.stringify(a);
-		debug.log("a = ", a);
+		//debug.log("a = ", a);
 		b = JSON.stringify(b);
-		debug.log("b = ", b);
+		//debug.log("b = ", b);
 		var ret = (a === b) ? true : false;
-		debug.log("returns ", ret);
+		//debug.log("returns ", ret);
 		return ret;
 	}
 
-	debug.log('ObjType = ', ObjType);
-	debug.log('obj = ', obj);
-	debug.log("orig_data = ", orig_data);
+	//debug.log('ObjType = ', ObjType);
+	//debug.log('obj = ', obj);
+	//debug.log("orig_data = ", orig_data);
 
 	var self = this;
 	var query, params, data, where = {};
@@ -253,17 +253,17 @@ function do_update(ObjType, obj, orig_data) {
 		debug.log('obj = ', obj);
 		throw new TypeError("Cannot know what to update!");
 	}
-	debug.log('where = ', where);
+	//debug.log('where = ', where);
 
 	if(orig_data === undefined) {
-		debug.log("orig_data was undefined, building it from obj=", obj);
+		//debug.log("orig_data was undefined, building it from obj=", obj);
 		// FIXME: Check that `obj` is an ORM object
 		data = obj.valueOf();
 	} else {
-		debug.log("orig_data was not undefined: ", orig_data);
+		//debug.log("orig_data was not undefined: ", orig_data);
 		data = (new ObjType(obj)).update(orig_data).valueOf();
 	}
-	debug.log('data = ', data);
+	//debug.log('data = ', data);
 
 	// Select only keys that start with $
 	var keys = ObjType.meta.keys.filter(function(key) {
@@ -282,11 +282,11 @@ function do_update(ObjType, obj, orig_data) {
 		return json_cmp(data[key], obj['$'+key]) ? false : true;
 	});
 
-	debug.log('keys = ', keys);
+	//debug.log('keys = ', keys);
 
 	// Return with the current object if there is no keys to update
 	if(keys.length === 0) { 
-		debug.log("Warning! No data to update! Fetching current object from database.");
+		//debug.log("Warning! No data to update! Fetching current object from database.");
 		return do_select.call(self, ObjType, where);
 	}
 
@@ -303,7 +303,7 @@ function do_update(ObjType, obj, orig_data) {
 	}
 
 	query += " RETURNING *";
-	debug.log('query = ', query);
+	//debug.log('query = ', query);
 
 	params = keys.map(function(key) {
 		return data[key];
@@ -315,21 +315,21 @@ function do_update(ObjType, obj, orig_data) {
 		params.push(where.$name);
 	}
 
-	debug.log('params = ', params);
+	//debug.log('params = ', params);
 
 	return do_query.call(self, query, params);
 }
 
 /** Internal DELETE query */
 function do_delete(ObjType, obj) {
-	debug.log('args = (ObjType=', ObjType,'obj=', obj, ')');
+	//debug.log('args = (ObjType=', ObjType,'obj=', obj, ')');
 	if(!obj.$id) { throw new TypeError("opts.$id invalid: " + util.inspect(obj) ); }
 	var self = this;
 	var query, params;
 	query = "DELETE FROM " + (ObjType.meta.table) + " WHERE id = $1";
-	debug.log('query = ', query);
+	//debug.log('query = ', query);
 	params = [obj.$id];
-	debug.log('params = ', params);
+	//debug.log('params = ', params);
 	return do_query.call(self, query, params);
 }
 
@@ -382,10 +382,10 @@ NoPg.start = function(pgconfig) {
 	})).then(function(db) {
 		return pg_table_exists.call(db, NoPg.DBVersion.meta.table).then(function(exists) {
 			if(exists) {
-				debug.log('OK. Detected already initialized database.');
+				//debug.log('OK. Detected already initialized database.');
 				return pg_query("SET plv8.start_proc = 'plv8_init'")(db);
 			}
-			debug.log('Warning! Detected uninitialized database.');
+			//debug.log('Warning! Detected uninitialized database.');
 			return db;
 		}).then(function() { return db; });
 	});
@@ -418,10 +418,10 @@ NoPg.prototype.rollback = function() {
 NoPg.prototype.testServerVersion = function() {
 	var self = this;
 	return do_query.call(self, 'show server_version_num').then(function(rows) {
-		debug.log('PostgreSQL server version (before parse): ', rows);
+		//debug.log('PostgreSQL server version (before parse): ', rows);
 		var num = rows.shift().server_version_num;
 		num = parseInt(num, 10);
-		debug.log('PostgreSQL server version: ', num);
+		//debug.log('PostgreSQL server version: ', num);
 		if(num >= 90300) {
 			return self;
 		} else {
@@ -436,7 +436,7 @@ NoPg.prototype.testExtension = function(name) {
 	return do_query.call(self, 'SELECT COUNT(*) AS count FROM pg_catalog.pg_extension WHERE extname = $1', [name]).then(function(rows) {
 		var row = rows.shift();
 		var count = parseInt(row.count, 10);
-		debug.log('Count of extensions by ' + name + ': ', count);
+		//debug.log('Count of extensions by ' + name + ': ', count);
 		if(count === 1) {
 			return self;
 		} else {
@@ -475,10 +475,10 @@ NoPg.prototype.init = function() {
 			i += 1;
 			file = './schema/v' + pad(i, 4) + '.js';
 			try {
-				debug.log('Loading database version ', i, " from ", file);
+				//debug.log('Loading database version ', i, " from ", file);
 				builders.push.apply(builders, require(file) );
 			} catch(err) {
-				debug.log("Exception: ", err);
+				//debug.log("Exception: ", err);
 				throw new TypeError("Failed to load: "+ file + ": " + err);
 			}
 		}
@@ -497,7 +497,7 @@ NoPg.prototype.init = function() {
 		}, Q(self._db)).then(function() {
 			return db._addDBVersion({'$version': code_version});
 		}).then(function() {
-			debug.log('Successfully upgraded database from v' + db_version + ' to v' + code_version); 
+			//debug.log('Successfully upgraded database from v' + db_version + ' to v' + code_version); 
 			return self;
 		});
 	}).then(function() {
@@ -507,11 +507,11 @@ NoPg.prototype.init = function() {
 
 /** Create document by type: `db.create([TYPE])([OPT(S)])`. */
 NoPg.prototype.create = function(type) {
-	debug.log('args = (', type, ')');
+	//debug.log('args = (', type, ')');
 	var self = this;
 
 	function create2(data) {
-		debug.log('args = (', data, ')');
+		//debug.log('args = (', data, ')');
 
 		if(type && (type instanceof NoPg.Type)) {
 			data.$types_id = type.$id;
@@ -534,34 +534,34 @@ NoPg.prototype.create = function(type) {
 /** Add new DBVersion record */
 NoPg.prototype._addDBVersion = function(data) {
 	var self = this;
-	debug.log('data = ', data);
+	//debug.log('data = ', data);
 	return do_insert.call(self, NoPg.DBVersion, data).then(get_result(NoPg.DBVersion));
 };
 
 /** Search documents */
 NoPg.prototype.search = function(type) {
-	debug.log('type = ', type);
+	//debug.log('type = ', type);
 	var self = this;
 
 	function search2(opts) {
-		debug.log('opts=', opts);
+		//debug.log('opts=', opts);
 
 		var query, keys, params, ObjType, dbtype;
 
 		ObjType = NoPg.Document;
 
-		debug.log('opts = ', opts);
+		//debug.log('opts = ', opts);
 		var parsed_opts = parse_predicates(ObjType)(opts, ObjType.meta.datakey.substr(1) );
-		debug.log('parsed_opts = ', parsed_opts);
+		//debug.log('parsed_opts = ', parsed_opts);
 
 		keys = Object.keys(parsed_opts);
-		debug.log('keys = ', keys);
+		//debug.log('keys = ', keys);
 
 		params = keys.map(function(key) { return parsed_opts[key]; });
-		debug.log('params = ', params);
+		//debug.log('params = ', params);
 
 		var where = keys.map(function(k,n) { return k + ' = $' + (n+1); });
-		debug.log('where = ', where);
+		//debug.log('where = ', where);
 
 		if(type !== undefined) {
 			if(typeof type === 'string') {
@@ -573,8 +573,8 @@ NoPg.prototype.search = function(type) {
 			} else {
 				throw new TypeError("Unknown type: " + type);
 			}
-			debug.log('where = ', where, ' after types_id');
-			debug.log('params = ', params, ' after types_id');
+			//debug.log('where = ', where, ' after types_id');
+			//debug.log('params = ', params, ' after types_id');
 		}
 
 		query = "SELECT * FROM "+(ObjType.meta.table);
@@ -583,7 +583,7 @@ NoPg.prototype.search = function(type) {
 			query += " WHERE " + where.join(' AND ');
 		}
 
-		debug.log('query = ' + query);
+		//debug.log('query = ' + query);
 
 		return do_query.call(self, query, params).then(get_results(ObjType)).then(save_result_to_queue(self)).then(function() { return self; });
 	}
@@ -610,11 +610,11 @@ NoPg.prototype['delete'] = NoPg.prototype.del;
 
 /** Create a new type. We recommend using `.declareType()` instead unless you want an error if the type exists already. Use like `db.createType([TYPE-NAME])([OPT(S)])`. */
 NoPg.prototype.createType = function(name) {
-	debug.log('name = ', name);
+	//debug.log('name = ', name);
 	var self = this;
 	function createType2(data) {
 		data = data || {};
-		debug.log('data = ', data);
+		//debug.log('data = ', data);
 		if(name !== undefined) {
 			data.$name = ''+name;
 		}
@@ -625,11 +625,11 @@ NoPg.prototype.createType = function(name) {
 
 /** Create a new type or replace existing type with the new values. Use like `db.declareType([TYPE-NAME])([OPT(S)])`. */
 NoPg.prototype.declareType = function(name) {
-	debug.log('name = ', name);
+	//debug.log('name = ', name);
 	var self = this;
 	function createOrReplaceType2(data) {
 		data = data || {};
-		debug.log('data = ', data);
+		//debug.log('data = ', data);
 		var where = {};
 		if(name !== undefined) {
 			if(name instanceof NoPg.Type) {
@@ -651,13 +651,13 @@ NoPg.prototype.declareType = function(name) {
 
 /** This is an alias for `.declareType()`. */
 NoPg.prototype.createOrReplaceType = function(name) {
-	debug.log('NoPg.prototype.createOrReplaceType() is obsolete, use .declareType() instead.');
+	//debug.log('NoPg.prototype.createOrReplaceType() is obsolete, use .declareType() instead.');
 	return this.declareType(name);
 };
 
 /** Tests if type exists */
 NoPg.prototype._typeExists = function(name) {
-	debug.log('name = ', name);
+	//debug.log('name = ', name);
 	var self = this;
 	return do_select.call(self, NoPg.Type, name).then(function(types) {
 		return (types.length >= 1) ? true : false;
@@ -666,7 +666,7 @@ NoPg.prototype._typeExists = function(name) {
 
 /** Tests if lib exists */
 NoPg.prototype._libExists = function(name) {
-	debug.log('name = ', name);
+	//debug.log('name = ', name);
 	var self = this;
 	return do_select.call(self, NoPg.Lib, name).then(function(types) {
 		return (types.length >= 1) ? true : false;
@@ -675,21 +675,21 @@ NoPg.prototype._libExists = function(name) {
 
 /** Get type and save it to result queue. */
 NoPg.prototype.typeExists = function(name) {
-	debug.log('name = ', name);
+	//debug.log('name = ', name);
 	var self = this;
 	return self._typeExists(name).then(save_result_to(self));
 };
 
 /** Get type directly */
 NoPg.prototype._getType = function(name) {
-	debug.log('name = ', name);
+	//debug.log('name = ', name);
 	var self = this;
 	return do_select.call(self, NoPg.Type, name).then(get_result(NoPg.Type));
 };
 
 /** Get type and save it to result queue. */
 NoPg.prototype.getType = function(name) {
-	debug.log('name = ', name);
+	//debug.log('name = ', name);
 	var self = this;
 	return self._getType(name).then(save_result_to(self));
 };
@@ -709,7 +709,7 @@ function _latestDBVersion() {
 		return do_query.call(self, query).then(function(rows) {
 			if(!(rows instanceof Array)) { throw new TypeError("Unexpected result from rows: " + util.inspect(rows) ); }
 			var obj = rows.shift();
-			debug.log('Latest database version: ', obj.version);
+			//debug.log('Latest database version: ', obj.version);
 			return parseInt(obj.version, 10);
 		});
 	}).then(function(db_version) {
@@ -774,23 +774,23 @@ NoPg.prototype.importLib = function(file, opts) {
 /** Get specified object directly */
 NoPg.prototype._getObject = function(ObjType) {
 	var self = this;
-	debug.log('ObjType = ', ObjType);
+	//debug.log('ObjType = ', ObjType);
 	return function(opts) {
-		debug.log('opts = ', opts);
+		//debug.log('opts = ', opts);
 		return do_select.call(self, ObjType, opts).then(get_result(ObjType));
 	};
 };
 
 /** Get document directly */
 NoPg.prototype._getDocument = function(opts) {
-	debug.log('opts = ', opts);
+	//debug.log('opts = ', opts);
 	var self = this;
 	return self._getObject(NoPg.Document)(opts);
 };
 
 /** Get document and save it to result queue. */
 NoPg.prototype.getDocument = function(opts) {
-	debug.log('opts = ', opts);
+	//debug.log('opts = ', opts);
 	var self = this;
 	return self._getDocument(opts).then(save_result_to(self));
 };

@@ -9,7 +9,7 @@ fun.toString = function(f) {
 		throw new TypeError("argument is not Function");
 	}
 	var s = ''+f;
-	debug.log('Function serialized as ', s);
+	//debug.log('Function serialized as ', s);
 	return s;
 };
 
@@ -21,7 +21,7 @@ fun.toFunction = function(s) {
 		throw new TypeError('Invalid input: ' + s);
 	}
 
-	debug.log('Serialized function is: ', s);
+	//debug.log('Serialized function is: ', s);
 	return new Function('return (' + s + ')')();
 };
 

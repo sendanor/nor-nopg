@@ -13,15 +13,15 @@ function meta(opts) {
 	if(!opts.parsers) { opts.parsers = {}; }
 
 	function builder(self) {
-		debug.log("meta::builder(self=", self, ")");
+		//debug.log("meta::builder(self=", self, ")");
 		var obj = {};
 
 		/** Set meta keys */
 		obj.set_meta_keys = function(data) {
-			debug.log("meta.set_meta_keys(data=", data, ")");
+			//debug.log("meta.set_meta_keys(data=", data, ")");
 
-			debug.log("builder.datakey = ", builder.datakey);
-			debug.log("self = ", self);
+			//debug.log("builder.datakey = ", builder.datakey);
+			//debug.log("self = ", self);
 
 			// Search initial meta keys
 			builder.keys.forEach(function(key) {
@@ -49,33 +49,33 @@ function meta(opts) {
 				delete self[key];
 			});
 
-			debug.log("object after set_meta_keys(", data, ") is: ", self);
+			//debug.log("object after set_meta_keys(", data, ") is: ", self);
 			return obj;
 		};
 		
 		/** Resolve single object key into top level */
 		obj.resolve = function(datakey) {
-			debug.log("meta.resolve(datakey=", datakey, ")");
+			//debug.log("meta.resolve(datakey=", datakey, ")");
 			datakey = datakey || builder.datakey;
-			debug.log("datakey = ", datakey);
-			debug.log("self = ", self);
+			//debug.log("datakey = ", datakey);
+			//debug.log("self = ", self);
 
 			if(self[datakey]) {
 				Object.keys(self[datakey]).forEach(function(key) {
 					self[key] = clone(self[datakey][key]);
 				});
-				debug.log("object after resolve(", datakey, ") is: ", self);
+				//debug.log("object after resolve(", datakey, ") is: ", self);
 			}
 			return obj;
 		};
 
 		/** Unresolve object back into internal database data */
 		obj.unresolve = function(datakey) {
-			debug.log("meta.unresolve(datakey=", datakey, ")");
+			//debug.log("meta.unresolve(datakey=", datakey, ")");
 			datakey = (datakey || builder.datakey) .substr(1);
 
-			debug.log("datakey = ", datakey);
-			debug.log("self = ", self);
+			//debug.log("datakey = ", datakey);
+			//debug.log("self = ", self);
 
 			var data = {};
 
@@ -110,7 +110,7 @@ function meta(opts) {
 				data[datakey][key] = clone(self[key]);
 			});
 
-			debug.log("data after unresolve: ", data);
+			//debug.log("data after unresolve: ", data);
 			return data;
 		};
 

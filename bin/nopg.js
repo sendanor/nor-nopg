@@ -16,11 +16,11 @@ if(argv.v) {
 	debug.setNodeENV('production');
 }
 
-debug.log('PGCONFIG = ', PGCONFIG);
+//debug.log('PGCONFIG = ', PGCONFIG);
 
 /** Output usage information */
 actions.help = function action_help() {
-	debug.log("Executing");
+	//debug.log("Executing");
 	console.log("USAGE: nopg [--pg='psql://localhost:5432/test'] help|test|init");
 	console.log('where:');
 	console.log('  help -- print this help');
@@ -30,7 +30,7 @@ actions.help = function action_help() {
 
 /** Initialize database */
 actions.init = function action_init() {
-	debug.log("Executing");
+	//debug.log("Executing");
 	return NoPg.start(PGCONFIG).init().commit().then(function() {
 		console.log('init: Successfully initialized database');
 	});
@@ -38,7 +38,7 @@ actions.init = function action_init() {
 
 /** Test server features */
 actions.test = function action_test() {
-	debug.log("Executing");
+	//debug.log("Executing");
 	return NoPg.start(PGCONFIG).test().commit().then(function() { console.log("test: OK"); });
 };
 
@@ -55,7 +55,7 @@ Q.fcall(function() {
 			throw ""+action + ": Unknown action";
 		}
 
-		debug.log("Scheduled action for ", action);
+		//debug.log("Scheduled action for ", action);
 
 		return function() {
 			return Q.fcall(actions[action]).fail(function(err) {
@@ -64,7 +64,7 @@ Q.fcall(function() {
 		};
 	});
 
-	debug.log("funcs loaded ", funcs.length);
+	//debug.log("funcs loaded ", funcs.length);
 
 	return funcs.reduce(function (soFar, f) {
 	    return soFar.then(f);
@@ -72,7 +72,7 @@ Q.fcall(function() {
 
 }).then(function() {
 	// FIXME: Implement automatic shutdown, now pg still listens.
-	debug.log("Returning with exit status 0");
+	//debug.log("Returning with exit status 0");
 	process.exit(0);
 }).fail(function(err) {
 	util.error(''+err);
