@@ -809,7 +809,7 @@ NoPg.prototype.searchTypes = function(opts) {
 	//debug.log('ObjType = ', ObjType);
 	var ObjType = NoPg.Type;
 	//debug.log('opts = ', opts);
-	return do_select.call(self, ObjType, opts).then(get_results(ObjType)).then(save_result_to_queue(self)).then(function() { return self; });;
+	return do_select.call(self, ObjType, opts).then(get_results(ObjType)).then(save_result_to_queue(self)).then(function() { return self; });
 };
 
 /* EOF */
