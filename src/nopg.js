@@ -164,10 +164,11 @@ function do_query(query, values) {
 function do_select(ObjType, opts) {
 	//debug.log('ObjType=', ObjType, ', opts=', opts);
 	var self = this;
-	var query, keys, params;
+	var query, keys, params = [];
 	var where = {};
 
-	if(opts instanceof NoPg.Type) {
+	if(opts === undefined) {
+	} else if(opts instanceof NoPg.Type) {
 		where.id = opts.$id;
 	} else if(typeof opts === 'object') {
 		Object.keys(opts).filter(function(key) {
@@ -180,13 +181,18 @@ function do_select(ObjType, opts) {
 	}
 
 	keys = Object.keys(where);
-
-	query = "SELECT * FROM " + (ObjType.meta.table) + " WHERE " + keys.map(function(key, i) { return key + ' = $' + (i+1); }).join(' AND ');
-	//debug.log('query = ', query);
-
 	params = keys.map(function(key) {
 		return where[key];
 	});
+
+	query = "SELECT * FROM " + (ObjType.meta.table);
+
+	if(keys && (keys.length >= 1) ) {
+		query += " WHERE " + keys.map(function(key, i) { return key + ' = $' + (i+1); }).join(' AND ');
+	}
+
+	//debug.log('query = ', query);
+
 	//debug.log('params = ', params);
 
 	return do_query.call(self, query, params);
@@ -351,20 +357,22 @@ function pg_table_exists(name) {
 
 /* ------------- PUBLIC FUNCTIONS --------------- */
 
+/** Returns the NoPg constructor type of `doc`, otherwise returns undefined. */
+NoPg._getObjectType = function(doc) {
+	if(doc instanceof NoPg.Document  ) { return NoPg.Document;   }
+	if(doc instanceof NoPg.Type      ) { return NoPg.Type;       }
+	if(doc instanceof NoPg.Attachment) { return NoPg.Attachment; }
+	if(doc instanceof NoPg.Lib       ) { return NoPg.Lib;        }
+	if(doc instanceof NoPg.DBVersion ) { return NoPg.DBVersion;  }
+};
+
 /** Returns the NoPg constructor type of `doc`, otherwise throws an exception of `TypeError`. */
 NoPg.getObjectType = function(doc) {
-	if(doc instanceof NoPg.Document) {
-		return NoPg.Document;
-	} else if(doc instanceof NoPg.Type) {
-		return NoPg.Type;
-	} else if(doc instanceof NoPg.Attachment) {
-		return NoPg.Attachment;
-	} else if(doc instanceof NoPg.Lib) {
-		return NoPg.Lib;
-	} else if(doc instanceof NoPg.DBVersion) {
-		return NoPg.DBVersion;
+	var ObjType = NoPg._getObjectType(doc);
+	if(!ObjType) {
+		throw new TypeError("doc is unknown type: " + doc);
 	}
-	throw new TypeError("doc is unknown type: " + doc);
+	return ObjType;
 };
 
 /** Run query `SET $key = $value` on the PostgreSQL server */
@@ -538,17 +546,17 @@ NoPg.prototype._addDBVersion = function(data) {
 	return do_insert.call(self, NoPg.DBVersion, data).then(get_result(NoPg.DBVersion));
 };
 
+
 /** Search documents */
 NoPg.prototype.search = function(type) {
 	//debug.log('type = ', type);
 	var self = this;
+	var ObjType = NoPg.Document;
 
 	function search2(opts) {
 		//debug.log('opts=', opts);
 
-		var query, keys, params, ObjType, dbtype;
-
-		ObjType = NoPg.Document;
+		var query, keys, params, dbtype;
 
 		//debug.log('opts = ', opts);
 		var parsed_opts = parse_predicates(ObjType)(opts, ObjType.meta.datakey.substr(1) );
@@ -793,6 +801,15 @@ NoPg.prototype.getDocument = function(opts) {
 	//debug.log('opts = ', opts);
 	var self = this;
 	return self._getDocument(opts).then(save_result_to(self));
+};
+
+/** Search types */
+NoPg.prototype.searchTypes = function(opts) {
+	var self = this;
+	//debug.log('ObjType = ', ObjType);
+	var ObjType = NoPg.Type;
+	//debug.log('opts = ', opts);
+	return do_select.call(self, ObjType, opts).then(get_results(ObjType)).then(save_result_to_queue(self)).then(function() { return self; });;
 };
 
 /* EOF */

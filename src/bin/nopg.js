@@ -23,9 +23,11 @@ actions.help = function action_help() {
 	//debug.log("Executing");
 	console.log("USAGE: nopg [--pg='psql://localhost:5432/test'] help|test|init");
 	console.log('where:');
-	console.log('  help -- print this help');
-	console.log('  test -- test server features');
-	console.log('  init -- initialize database');
+	console.log('  help      -- print this help');
+	console.log('  test      -- test server features');
+	console.log('  init      -- initialize database');
+	console.log('  types     -- list types');
+	console.log('  documents -- list documents');
 };
 
 /** Initialize database */
@@ -33,6 +35,42 @@ actions.init = function action_init() {
 	//debug.log("Executing");
 	return NoPg.start(PGCONFIG).init().commit().then(function() {
 		console.log('init: Successfully initialized database');
+	});
+};
+
+/** Returns markdown formated table */
+function markdown_table(headers, table) {
+	// FIXME: Implement better markdown table formating
+	return [headers, [ "---", "---" ]].concat(table).map(function(cols) {
+		return  '| ' + cols.join(' | ') + ' |';
+	}).join('\n');
+}
+
+/** List types */
+actions.types = function action_types() {
+	//debug.log("Executing");
+	var keys = ['_', 'v', '$0'];
+	var opts = {};
+	Object.keys(argv).filter(function(k) {
+		return keys.indexOf(k) === -1 ? true : false;
+	}).forEach(function(key) {
+		if (key[0] === '-') {
+			opts[ '$' + key.substr(1) ] = argv[key];
+		} else {
+			opts[key] = argv[key];
+		}
+	});
+	if(Object.keys(opts).length === 0) {
+		opts = undefined;
+	}
+	debug.log('opts = ', opts);
+	return NoPg.start(PGCONFIG).searchTypes(opts).commit().then(function(db) {
+		var types = db.fetch();
+		var table = types.map(function(type) {
+			return [type.$id, type.$name];
+		});
+		console.log( markdown_table([ "$id", "$name" ], table) );
+
 	});
 };
 
