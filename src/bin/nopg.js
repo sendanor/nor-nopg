@@ -3,7 +3,7 @@
 var Q = require('q');
 var argv = require('optimist').boolean('v').argv;
 var util = require('util');
-var NoPg = require('../src');
+var NoPg = require('../');
 var debug = require('nor-debug');
 
 var PGCONFIG = argv.pg || process.env.PGCONFIG || 'psql://localhost:5432/test';
