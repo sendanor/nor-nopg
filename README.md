@@ -3,7 +3,7 @@
 nor-nopg
 ========
 
-Node.js PostgreSQL Module for Sendanor NoSQL Schema.
+NoSQL Client Module for PostgreSQL databases.
 
 Usage
 -----
