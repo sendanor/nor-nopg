@@ -387,21 +387,27 @@ NoPg.start = function(pgconfig) {
 	return extend.promise( [NoPg], pg.start(pgconfig).then(function(db) {
 		if(!db) { throw new TypeError("invalid db: " + util.inspect(db) ); }
 		return new NoPg(db);
+	}).then(function(db) {
+		return pg_query("SET plv8.start_proc = 'plv8_init'")(db);
 	})).then(function(db) {
 		return pg_table_exists.call(db, NoPg.DBVersion.meta.table).then(function(exists) {
-			if(exists) {
-				//debug.log('OK. Detected already initialized database.');
-				return pg_query("SET plv8.start_proc = 'plv8_init'")(db);
+			if(!exists) {
+				debug.log('Warning! Detected uninitialized database.');
 			}
-			//debug.log('Warning! Detected uninitialized database.');
 			return db;
-		}).then(function() { return db; });
+		});
 	});
 };
 
 /** Fetch next value from queue */
 NoPg.prototype.fetch = function() {
 	return this._values.shift();
+};
+
+/** Returns the latest value in the queue but does not remove it */
+NoPg.prototype._getLastValue = function() {
+	//debug.log('values = ', this._values);
+	return this._values[this._values.length - 1];
 };
 
 /** Commit transaction */
@@ -810,6 +816,58 @@ NoPg.prototype.searchTypes = function(opts) {
 	var ObjType = NoPg.Type;
 	//debug.log('opts = ', opts);
 	return do_select.call(self, ObjType, opts).then(get_results(ObjType)).then(save_result_to_queue(self)).then(function() { return self; });
+};
+
+/** Create an attachment from a file in the filesystem.
+ * @param obj {object} The document object where the attachment will be placed.
+ *          If it is an attachment object, it's parent will be used. If it is 
+ *          undefined, then last object in the queue will be used.
+ */
+NoPg.prototype.createAttachment = function(doc) {
+	var self = this;
+
+	return function createAttachment2(file, opts) {
+
+		opts = opts || {};
+
+		debug.assert(file).typeOf('string');
+		debug.assert(opts).typeOf('object');
+		
+		var doc_id;
+
+		if(doc === undefined) {
+			doc = self._getLastValue();
+			//debug.log("last doc was = ", doc);
+		}
+
+		if(doc && (doc instanceof NoPg.Document)) {
+			doc_id = doc.$id;
+		} else if(doc && (doc instanceof NoPg.Attachment)) {
+			doc_id = doc.$documents_id;
+		} else {
+			throw new TypeError("Could not detect document ID!");
+		}
+
+		debug.log("documents_id = ", doc_id);
+		debug.assert(doc_id).typeOf('string');
+		
+		return fs.readFile(file, {'encoding':'hex'}).then(function(buffer) {
+			//debug.log("typeof data = ", typeof data);
+			
+			var data = {
+				$documents_id: doc_id,
+				$content: '\\x' + buffer,
+				$meta: opts
+			};
+			
+			debug.assert(data.$documents_id).typeOf('string');
+
+			debug.log("data.$documents_id = ", data.$documents_id);
+			debug.log("data.$meta = ", data.$meta);
+
+			return do_insert.call(self, NoPg.Attachment, data).then(get_result(NoPg.Attachment)).then(save_result_to(self));
+		});
+	};
 };
 
 /* EOF */

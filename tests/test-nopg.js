@@ -3,6 +3,7 @@
 var Q = require('q');
 Q.longStackSupport = true;
 
+var crypto = require('crypto');
 var is = require('nor-is');
 var assert = require('assert');
 var util = require('util');
@@ -623,6 +624,47 @@ describe('nopg', function(){
 
 				assert.strictEqual(typeof doc2.hello, 'string');
 				assert.strictEqual(doc2.hello, 'world');
+
+				return db.commit();
+			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
+				done(err);
+			}).done();
+		});
+
+		it('can create document with attachments', function(done){
+			var doc;
+			nopg.start(PGCONFIG)
+			    .createType("Test-6pvY")({"$schema":{"type":"object"}})
+			    .create("Test-6pvY")({"hello":"world"})
+			    .createAttachment()( __dirname + '/files/test1.jpg')
+			    .createAttachment()( __dirname + '/files/test2.jpg', {"foo":"bar"})
+				.then(function(db) {
+
+				var type = db.fetch();
+				var doc = db.fetch();
+				var att1 = db.fetch();
+				var att2 = db.fetch();
+
+				debug.assert(type).typeOf('object').instanceOf(nopg.Type);
+				debug.assert(doc).typeOf('object').instanceOf(nopg.Document);
+				debug.assert(att1).typeOf('object').instanceOf(nopg.Attachment);
+				debug.assert(att2).typeOf('object').instanceOf(nopg.Attachment);
+
+				assert.strictEqual(att1.$documents_id, doc.$id);
+				assert.strictEqual(att2.$documents_id, doc.$id);
+				assert.strictEqual(att2.foo, "bar");
+
+				var att1_hash = crypto.createHash('md5').update( att1.getBuffer() ).digest('hex');
+				var att2_hash = crypto.createHash('md5').update( att2.getBuffer() ).digest('hex');
+
+				debug.log("att1_hash = ", att1_hash);
+				debug.log("att2_hash = ", att2_hash);
+
+				assert.strictEqual(att1_hash, "43e9b43ddebe7cee7fff8e46d258c67f");
+				assert.strictEqual(att2_hash, "7e87855080a7eb8b8dd4a06122fccb44");
 
 				return db.commit();
 			}).then(function(db) {

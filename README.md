@@ -387,11 +387,13 @@ Attachments
 ### Create attachments
 
 ```javascript
-doc.createAttachment(data, {"content-type": "image/png"}).then(function(db) {
+nopg.createAttachment(doc)(file, {"content-type": "image/png"}).then(function(db) {
 	var file = db.fetch();
 	console.log("Successfully created new attachment: " + util.inspect(file) );
 });
 ```
+
+* If `doc` is `undefined` then document is looked from previous value in the buffer which must by `nopg.Attachment` or `nopg.Document`.
 
 ### Search attachments
 

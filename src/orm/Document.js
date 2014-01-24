@@ -1,5 +1,6 @@
 /* nor-nopg -- NoPg.Document implementation */
 
+var fs = require('nor-fs');
 var debug = require('nor-debug');
 
 var meta = require('./meta.js')({
