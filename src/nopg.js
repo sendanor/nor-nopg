@@ -827,7 +827,7 @@ NoPg.prototype.createAttachment = function(doc) {
 	var self = this;
 	var doc_id;
 
-	return function createAttachment2(file, opts) {
+	function createAttachment2(file, opts) {
 		opts = opts || {};
 
 		return Q.fcall(function() {
@@ -885,6 +885,40 @@ NoPg.prototype.createAttachment = function(doc) {
 			return do_insert.call(self, NoPg.Attachment, data).then(get_result(NoPg.Attachment)).then(save_result_to(self));
 		});
 	};
+	return createAttachment2;
+};
+
+/** Search attachments */
+NoPg.prototype.searchAttachments = function(doc) {
+	var self = this;
+	var doc_id;
+
+	//debug.log('ObjAttachment = ', ObjType);
+
+	function searchAttachments2(opts) {
+		var ObjType = NoPg.Attachment;
+
+		if(doc === undefined) {
+			doc = self._getLastValue();
+			//debug.log("last doc was = ", doc);
+		}
+		
+		if(doc && (doc instanceof NoPg.Document)) {
+			doc_id = doc.$id;
+		} else if(doc && (doc instanceof NoPg.Attachment)) {
+			doc_id = doc.$documents_id;
+		} else {
+				throw new TypeError("Could not detect document ID!");
+		}
+
+		debug.log("documents_id = ", doc_id);
+		debug.assert(doc_id).typeOf('string');
+
+		//debug.log('opts = ', opts);
+		return do_select.call(self, ObjType, opts).then(get_results(ObjType)).then(save_result_to_queue(self)).then(function() { return self; });
+	}
+
+	return searchAttachments2;
 };
 
 /* EOF */

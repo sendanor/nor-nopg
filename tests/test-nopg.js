@@ -727,6 +727,62 @@ describe('nopg', function(){
 			}).done();
 		});
 
+		it('can list document with attachments', function(done){
+			var doc;
+
+			nopg.start(PGCONFIG)
+			    .createType("Test-0qBe")({"$schema":{"type":"object"}})
+			    .create("Test-0qBe")({"hello":"world"})
+			    .createAttachment()( __dirname + '/files/test1.jpg')
+			    .createAttachment()( __dirname + '/files/test2.jpg', {"foo":"bar"})
+			    .searchAttachments()()
+				.then(function(db) {
+
+				var type = db.fetch();
+				var doc = db.fetch();
+				var att1 = db.fetch();
+				var att2 = db.fetch();
+				var atts = db.fetch();
+
+				debug.assert(type).typeOf('object').instanceOf(nopg.Type);
+				debug.assert(doc).typeOf('object').instanceOf(nopg.Document);
+				debug.assert(att1).typeOf('object').instanceOf(nopg.Attachment);
+				debug.assert(att2).typeOf('object').instanceOf(nopg.Attachment);
+				debug.assert(atts).typeOf('object').instanceOf(Array);
+
+				assert.strictEqual(att1.$documents_id, doc.$id);
+				assert.strictEqual(att2.$documents_id, doc.$id);
+				assert.strictEqual(att2.foo, "bar");
+
+				var att1_buffer = att1.getBuffer();
+				var att2_buffer = att2.getBuffer();
+				var atts_buffers = atts.map(function(a) { return a.getBuffer(); });
+
+				debug.log("att1_buffer.length = ", att1_buffer.length);
+				debug.log("att2_buffer.length = ", att2_buffer.length);
+
+				var att1_hash = crypto.createHash('md5').update( att1_buffer ).digest('hex');
+				var att2_hash = crypto.createHash('md5').update( att2_buffer ).digest('hex');
+				var atts_hashes = atts_buffers.map(function(a) { return crypto.createHash('md5').update( a ).digest('hex'); });
+
+				debug.log("att1_hash = ", att1_hash);
+				debug.log("att2_hash = ", att2_hash);
+
+				assert.strictEqual(att1_hash, "43e9b43ddebe7cee7fff8e46d258c67f");
+				assert.strictEqual(att2_hash, "7e87855080a7eb8b8dd4a06122fccb44");
+
+				assert.strictEqual(atts_hashes[0], "43e9b43ddebe7cee7fff8e46d258c67f");
+				assert.strictEqual(atts_hashes[1], "7e87855080a7eb8b8dd4a06122fccb44");
+
+				return db.commit();
+			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
+				done(err);
+			}).done();
+		});
+
 // End of tests
 
 	});
