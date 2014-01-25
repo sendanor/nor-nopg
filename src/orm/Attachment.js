@@ -43,12 +43,9 @@ NoPgAttachment.prototype.getBuffer = function() {
 	if( self.$content && (typeof self.$content === 'object') && (self.$content instanceof Buffer)) {
 		return self.$content;
 	}
-	
-	// Not the most efficient but hopefully works for now. Got from https://github.com/brianc/node-postgres/issues/37
-	var val = '' + self.$content;
-	return new Buffer(val.replace(/\\([0-7]{3})/g, function (full_match, code) {
-		return String.fromCharCode(parseInt(code, 8));
-	}).replace(/\\\\/g, "\\"), "binary");
+
+	debug.assert(self.$content).typeOf('object').instanceOf(Array);
+	return new Buffer( self.$content );
 
 };
 

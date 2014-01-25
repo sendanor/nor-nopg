@@ -657,8 +657,14 @@ describe('nopg', function(){
 				assert.strictEqual(att2.$documents_id, doc.$id);
 				assert.strictEqual(att2.foo, "bar");
 
-				var att1_hash = crypto.createHash('md5').update( att1.getBuffer() ).digest('hex');
-				var att2_hash = crypto.createHash('md5').update( att2.getBuffer() ).digest('hex');
+				var att1_buffer = att1.getBuffer();
+				var att2_buffer = att2.getBuffer();
+
+				debug.log("att1_buffer.length = ", att1_buffer.length);
+				debug.log("att2_buffer.length = ", att2_buffer.length);
+
+				var att1_hash = crypto.createHash('md5').update( att1_buffer ).digest('hex');
+				var att2_hash = crypto.createHash('md5').update( att2_buffer ).digest('hex');
 
 				debug.log("att1_hash = ", att1_hash);
 				debug.log("att2_hash = ", att2_hash);
