@@ -400,11 +400,14 @@ nopg.createAttachment(doc)(file, {"content-type": "image/png"}).then(function(db
 #### Search all attachments
 
 ```javascript
-doc.searchAttachments().then(function(db) {
+doc.searchAttachments(doc)(opts).then(function(db) {
 	var list = db.fetch();
 	console.log("Found attachments: " + util.inspect(list) );
 });
 ```
+
+* If you omit doc, the last element in the queue will be used.
+* If you omit opts, then all attachments are listed otherwise only matching.
 
 #### Get attachment by ID
 
