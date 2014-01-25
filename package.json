@@ -20,7 +20,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/Sendanor/nor-nopg.git"
+    "url": "git://github.com/sendanor/nor-nopg.git"
   },
   "keywords": [
     "nosql",
@@ -41,11 +41,11 @@
     "lint": "*",
     "mocha": "*",
     "nor-is": "*",
-    "nor-pgrunner": "Sendanor/nor-pgrunner"
+    "nor-pgrunner": "sendanor/nor-pgrunner"
   },
   "author": "Jaakko-Heikki Heusala <jheusala@iki.fi>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Sendanor/nor-nopg/issues"
+    "url": "https://github.com/sendanor/nor-nopg/issues"
   }
 }
