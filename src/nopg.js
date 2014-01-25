@@ -825,33 +825,50 @@ NoPg.prototype.searchTypes = function(opts) {
  */
 NoPg.prototype.createAttachment = function(doc) {
 	var self = this;
+	var doc_id;
 
 	return function createAttachment2(file, opts) {
-
 		opts = opts || {};
 
-		debug.assert(file).typeOf('string');
-		debug.assert(opts).typeOf('object');
-		
-		var doc_id;
+		return Q.fcall(function() {
 
-		if(doc === undefined) {
-			doc = self._getLastValue();
-			//debug.log("last doc was = ", doc);
-		}
+			var file_is_buffer = false;
 
-		if(doc && (doc instanceof NoPg.Document)) {
-			doc_id = doc.$id;
-		} else if(doc && (doc instanceof NoPg.Attachment)) {
-			doc_id = doc.$documents_id;
-		} else {
-			throw new TypeError("Could not detect document ID!");
-		}
+			try {
+				if(file && (typeof file === 'string')) {
+					debug.assert(file).typeOf('string');
+				} else {
+					debug.assert(file).typeOf('object').instanceOf(Buffer);
+					file_is_buffer = true;
+				}
+			} catch(e) {
+				throw new TypeError("Argument not String or Buffer: " + e);
+			}
+			debug.assert(opts).typeOf('object');
+			
+			if(doc === undefined) {
+				doc = self._getLastValue();
+				//debug.log("last doc was = ", doc);
+			}
+			
+			if(doc && (doc instanceof NoPg.Document)) {
+				doc_id = doc.$id;
+			} else if(doc && (doc instanceof NoPg.Attachment)) {
+				doc_id = doc.$documents_id;
+			} else {
+				throw new TypeError("Could not detect document ID!");
+			}
+	
+			debug.log("documents_id = ", doc_id);
+			debug.assert(doc_id).typeOf('string');
+			
+			if(file_is_buffer) {
+				return file;
+			}
+			
+			return fs.readFile(file, {'encoding':'hex'});
 
-		debug.log("documents_id = ", doc_id);
-		debug.assert(doc_id).typeOf('string');
-		
-		return fs.readFile(file, {'encoding':'hex'}).then(function(buffer) {
+		}).then(function(buffer) {
 			//debug.log("typeof data = ", typeof data);
 			
 			var data = {
