@@ -783,6 +783,45 @@ describe('nopg', function(){
 			}).done();
 		});
 
+		it('typed document search by properties with any match', function(done){
+			nopg.start(PGCONFIG)
+			  .createType("TestdtIWxj5c")()
+			  .create("TestdtIWxj5c")({"foo":1,"bar":"foobar"})
+			  .create("TestdtIWxj5c")({"foo":2,"bar":"hello"})
+			  .create("TestdtIWxj5c")({"foo":3})
+			  .search("TestdtIWxj5c")({"bar":"hello", "foo":1}, {"match":"any"})
+			  .then(function(db) {
+				var type = db.fetch();
+				var item0 = db.fetch();
+				var item1 = db.fetch();
+				var item2 = db.fetch();
+				var items = db.fetch();
+
+				assert.strictEqual(type.$name, "TestdtIWxj5c");
+
+				assert.strictEqual(item0.foo, 1);
+				assert.strictEqual(item0.bar, "foobar");
+				assert.strictEqual(item1.bar, "hello");
+				assert.strictEqual(item1.bar, "hello");
+				assert.strictEqual(item2.foo, 3);
+
+				assert.strictEqual(items.length, 2);
+
+				assert.strictEqual(item0.foo, items[0].foo);
+				assert.strictEqual(item0.bar, items[0].bar);
+
+				assert.strictEqual(item1.foo, items[1].foo);
+				assert.strictEqual(item1.bar, items[1].bar);
+
+				return db.commit();
+			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
+				done(err);
+			}).done();
+		});
+
 // End of tests
 
 	});

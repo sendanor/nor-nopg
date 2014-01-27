@@ -559,8 +559,10 @@ NoPg.prototype.search = function(type) {
 	var self = this;
 	var ObjType = NoPg.Document;
 
-	function search2(opts) {
+	function search2(opts, traits) {
 		//debug.log('opts=', opts);
+
+		traits = traits || {};
 
 		var query, keys, params, dbtype;
 
@@ -577,12 +579,14 @@ NoPg.prototype.search = function(type) {
 		var where = keys.map(function(k,n) { return k + ' = $' + (n+1); });
 		//debug.log('where = ', where);
 
+		var types_where = [];
+
 		if(type !== undefined) {
 			if(typeof type === 'string') {
-				where.push("types_id = get_type_id($"+(where.length+1)+")");
+				types_where.push("types_id = get_type_id($"+(where.length+1)+")");
 				params.push(type);
 			} else if(type instanceof NoPg.Type) {
-				where.push("types_id = $" + (where.length+1));
+				types_where.push("types_id = $" + (where.length+1));
 				params.push(type.$id);
 			} else {
 				throw new TypeError("Unknown type: " + type);
@@ -593,8 +597,19 @@ NoPg.prototype.search = function(type) {
 
 		query = "SELECT * FROM "+(ObjType.meta.table);
 
+		if( (where.length >= 1) || (types_where.length >= 1) ) {
+			query += " WHERE";
+		}
+
 		if(where.length >= 1) {
-			query += " WHERE " + where.join(' AND ');
+			query += " (" + where.join( ((traits.match === 'any') ? ' OR ' : ' AND ') ) + ")";
+		}
+
+		if(types_where.length >= 1) {
+			if(where.length >= 1) {
+				query += " AND";
+			}
+			query += " (" + types_where.join(' AND ') + ")";
 		}
 
 		//debug.log('query = ' + query);
