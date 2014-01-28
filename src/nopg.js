@@ -663,7 +663,7 @@ NoPg.prototype.search = function(type) {
 		} else {
 			opts = [ ((traits.match === 'any') ? 'OR' : 'AND') , opts];
 		}
-		debug.log('opts = ', opts);
+		//debug.log('opts = ', opts);
 
 		/* Build where */
 		var where = [];
@@ -672,18 +672,18 @@ NoPg.prototype.search = function(type) {
 		/* Build `type_condition` */
 
 		var type_condition = get_type_condition(params, type);
-		debug.log('type_condition = ', type_condition);
+		//debug.log('type_condition = ', type_condition);
 		if(type_condition) { where.push( type_condition ); }
 
 		/* Parse `opts_condition` */
 
 		if(opts) {
 			var opts_condition = recursive_parse_predicates(params, ((traits.match === 'any') ? 'OR' : 'AND'), opts);
-			debug.log('opts_condition = ', opts_condition);
+			//debug.log('opts_condition = ', opts_condition);
 			where.push( opts_condition );
 		}
 
-		debug.log('where = ', where);
+		//debug.log('where = ', where);
 
 		/* Build `query` */
 
@@ -697,8 +697,8 @@ NoPg.prototype.search = function(type) {
 			query += ' ORDER BY ' + traits.order.map(parse_predicate_key.bind(undefined, ObjType)).join(', ');
 		}
 
-		debug.log('query = ' + query);
-		debug.log('params = ', params);
+		//debug.log('query = ' + query);
+		//debug.log('params = ', params);
 
 		return do_query.call(self, query, params).then(get_results(ObjType)).then(save_result_to_queue(self)).then(function() { return self; });
 	}
