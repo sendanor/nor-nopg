@@ -822,6 +822,41 @@ describe('nopg', function(){
 			}).done();
 		});
 
+		it('typed document search by properties with order', function(done){
+			nopg.start(PGCONFIG)
+			  .createType("Testj0LidL")()
+			  .create("Testj0LidL")({"foo":"Hello"})
+			  .create("Testj0LidL")({"foo":"Bar"})
+			  .create("Testj0LidL")({"foo":"World"})
+			  .search("Testj0LidL")(undefined, {"order":"foo"})
+			  .then(function(db) {
+				var type = db.fetch();
+				var item0 = db.fetch();
+				var item1 = db.fetch();
+				var item2 = db.fetch();
+				var items = db.fetch();
+
+				assert.strictEqual(type.$name, "Testj0LidL");
+
+				assert.strictEqual(item0.foo, "Hello");
+				assert.strictEqual(item1.foo, "Bar");
+				assert.strictEqual(item2.foo, "World");
+
+				assert.strictEqual(items.length, 3);
+
+				assert.strictEqual(item1.foo, items[0].foo);
+				assert.strictEqual(item0.foo, items[1].foo);
+				assert.strictEqual(item2.foo, items[2].foo);
+
+				return db.commit();
+			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
+				done(err);
+			}).done();
+		});
+
 // End of tests
 
 	});

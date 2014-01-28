@@ -107,18 +107,47 @@ function save_result_to_queue(self) {
 	throw new TypeError("Unknown target: " + (typeof self));
 }
 
+/** Returns the data key of Type */
+function get_predicate_datakey(Type) {
+	return (Type.meta.datakey || '$meta').substr(1);
+}
+
+/** Returns PostgreSQL keyword for NoPg keyword. Converts `$foo` to `foo` and `foo` to `meta->'foo'` etc.  */
+function parse_predicate_key(Type, key) {
+	
+	var datakey = get_predicate_datakey(Type);
+
+	function parse_meta_key(datakey, key) {
+
+		/*jslint regexp: false*/
+		var keyreg = /^[^']+$/;
+		/*jslint regexp: true*/
+
+		// FIXME: Implement escape?
+		if(!(keyreg.test(key))) { throw new TypeError("Invalid keyword: " + key); }
+
+		return ""+datakey+"->>'"+key+"'";
+	}
+
+	function parse_top_key(key) {
+		return key.substr(1);
+	}
+
+	// Huh, next line is implemented in a funny way. Not sure if it's even faster/better. Not even less bytes. :-)
+	return ( (key[0] === '$') ? parse_top_key : parse_meta_key.bind(undefined, datakey) ) (key);
+}
+
 /** Convert properties like {"$foo":123} -> "foo = 123" and {foo:123} -> "(meta->'foo')::numeric = 123" and {foo:"123"} -> "meta->'foo' = '123'"
  * Usage: `var where = parse_predicates(NoPg.Document)({"$foo":123})`
  */
 function parse_predicates(Type) {
 	function parse_data(opts) {
 		opts = opts || {};
-		var datakey = (Type.meta.datakey || '$meta').substr(1);
+		var datakey = get_predicate_datakey(Type);
 		var res = {};
 		
 		// Parse meta properties
 		Object.keys(opts).filter(function(k) { return k[0] !== '$'; }).forEach(function(key) {
-
 			/*jslint regexp: false*/
 			var keyreg = /^[^']+$/;
 			/*jslint regexp: true*/
@@ -552,7 +581,6 @@ NoPg.prototype._addDBVersion = function(data) {
 	return do_insert.call(self, NoPg.DBVersion, data).then(get_result(NoPg.DBVersion));
 };
 
-
 /** Search documents */
 NoPg.prototype.search = function(type) {
 	//debug.log('type = ', type);
@@ -565,6 +593,15 @@ NoPg.prototype.search = function(type) {
 		traits = traits || {};
 
 		var query, keys, params, dbtype;
+
+		if(!traits.order) {
+			// FIXME: Check if `$created` exists in the ObjType!
+			traits.order = ['$created'];
+		}
+
+		if(! (traits.order && (typeof traits.order === 'object') && (traits.order instanceof Array) ) ) {
+			traits.order = [traits.order];
+		}
 
 		//debug.log('opts = ', opts);
 		var parsed_opts = parse_predicates(ObjType)(opts, ObjType.meta.datakey.substr(1) );
@@ -610,6 +647,10 @@ NoPg.prototype.search = function(type) {
 				query += " AND";
 			}
 			query += " (" + types_where.join(' AND ') + ")";
+		}
+
+		if(traits.order) {
+			query += ' ORDER BY ' + traits.order.map(parse_predicate_key.bind(undefined, ObjType)).join(', ');
 		}
 
 		//debug.log('query = ' + query);
