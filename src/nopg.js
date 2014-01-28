@@ -607,17 +607,23 @@ NoPg.prototype.search = function(type) {
 
 		//debug.assert(params).typeOf('object');
 
+		function not_undefined(i) {
+			return i !== undefined;
+		}
+
 		/* Returns match string */
 		function build_match(k,n) {
 			return '' + k + ' = $' + (n+1);
 		}
+
+		if(o === undefined) { return; }
 
 		if( o && (typeof o === 'object') && (o instanceof Array) ) {
 			var op = 'AND';
 			if( (o[0] === 'AND') || (o[0] === 'OR') ) {
 				op = o.shift();
 			}
-			return '(' + o.map(recursive_parse_predicates.bind(undefined, params, def_op)).join(') '+op+' (') + ')';
+			return '(' + o.map(recursive_parse_predicates.bind(undefined, params, def_op)).filter(not_undefined).join(') '+op+' (') + ')';
 		}
 
 		if( o && (typeof o === 'object') ) {
