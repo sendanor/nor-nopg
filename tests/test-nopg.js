@@ -857,6 +857,58 @@ describe('nopg', function(){
 			}).done();
 		});
 
+		it('typed document search by properties with array logic', function(done){
+			nopg.start(PGCONFIG)
+			  .createType("TestAATxICz0")()
+			  .create("TestAATxICz0")({"index":1,"bar":"foobar"})
+			  .create("TestAATxICz0")({"index":2,"bar":"hello"})
+			  .create("TestAATxICz0")({"index":3})
+			  .create("TestAATxICz0")({"index":4,"bar":"foo"})
+			  .create("TestAATxICz0")({"index":5,"bar":"hello"})
+			  .search("TestAATxICz0")(["OR", {"index":3}, ["AND", {"bar":"hello"}, {"index":5}]])
+			  .then(function(db) {
+				var type = db.fetch();
+				var item0 = db.fetch();
+				var item1 = db.fetch();
+				var item2 = db.fetch();
+				var item3 = db.fetch();
+				var item4 = db.fetch();
+				var items = db.fetch();
+
+				assert.strictEqual(type.$name, "TestAATxICz0");
+
+
+				assert.strictEqual(item0.index, 1);
+				assert.strictEqual(item0.bar, "foobar");
+
+				assert.strictEqual(item1.index, 2);
+				assert.strictEqual(item1.bar, "hello");
+
+				assert.strictEqual(item2.index, 3);
+
+				assert.strictEqual(item3.index, 4);
+				assert.strictEqual(item3.bar, "foo");
+
+				assert.strictEqual(item4.index, 5);
+				assert.strictEqual(item4.bar, "hello");
+
+
+				assert.strictEqual(items.length, 2);
+
+				assert.strictEqual(item2.index, items[0].index);
+
+				assert.strictEqual(item4.index, items[1].index);
+				assert.strictEqual(item4.bar, items[1].bar);
+
+				return db.commit();
+			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
+				done(err);
+			}).done();
+		});
+
 // End of tests
 
 	});

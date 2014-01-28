@@ -217,7 +217,7 @@ function do_select(ObjType, opts) {
 	query = "SELECT * FROM " + (ObjType.meta.table);
 
 	if(keys && (keys.length >= 1) ) {
-		query += " WHERE " + keys.map(function(key, i) { return key + ' = $' + (i+1); }).join(' AND ');
+		query += " WHERE (" + keys.map(function(key, i) { return key + ' = $' + (i+1); }).join(') AND (') + ')';
 	}
 
 	//debug.log('query = ', query);
@@ -587,12 +587,56 @@ NoPg.prototype.search = function(type) {
 	var self = this;
 	var ObjType = NoPg.Document;
 
+	/* Returns the type condition and pushes new params to `params` */
+	function get_type_condition(params, type) {
+		if(type !== undefined) {
+			if(typeof type === 'string') {
+				params.push(type);
+				return "types_id = get_type_id($"+(params.length)+")";
+			} else if(type instanceof NoPg.Type) {
+				params.push(type.$id);
+				return "types_id = $" + (params.length);
+			} else {
+				throw new TypeError("Unknown type: " + type);
+			}
+		}
+	}
+
+	/* Recursively parse predicates */
+	function recursive_parse_predicates(params, def_op, o) {
+
+		//debug.assert(params).typeOf('object');
+
+		/* Returns match string */
+		function build_match(k,n) {
+			return '' + k + ' = $' + (n+1);
+		}
+
+		if( o && (typeof o === 'object') && (o instanceof Array) ) {
+			var op = 'AND';
+			if( (o[0] === 'AND') || (o[0] === 'OR') ) {
+				op = o.shift();
+			}
+			return '(' + o.map(recursive_parse_predicates.bind(undefined, params, def_op)).join(') '+op+' (') + ')';
+		}
+
+		if( o && (typeof o === 'object') ) {
+			o = parse_predicates(ObjType)(o, ObjType.meta.datakey.substr(1) );
+			return '(' + Object.keys(o).map(function(k) {
+				params.push(o[k]);
+				return '' + k + ' = $' + params.length;
+			}).join(') '+def_op+' (') + ')';
+		}
+
+		return ''+o;
+	}
+
 	function search2(opts, traits) {
 		//debug.log('opts=', opts);
 
 		traits = traits || {};
 
-		var query, keys, params, dbtype;
+		/* Parse `traits.order` */
 
 		if(!traits.order) {
 			// FIXME: Check if `$created` exists in the ObjType!
@@ -603,57 +647,52 @@ NoPg.prototype.search = function(type) {
 			traits.order = [traits.order];
 		}
 
-		//debug.log('opts = ', opts);
-		var parsed_opts = parse_predicates(ObjType)(opts, ObjType.meta.datakey.substr(1) );
-		//debug.log('parsed_opts = ', parsed_opts);
+		/* Parse `opts` */
 
-		keys = Object.keys(parsed_opts);
-		//debug.log('keys = ', keys);
-
-		params = keys.map(function(key) { return parsed_opts[key]; });
-		//debug.log('params = ', params);
-
-		var where = keys.map(function(k,n) { return k + ' = $' + (n+1); });
-		//debug.log('where = ', where);
-
-		var types_where = [];
-
-		if(type !== undefined) {
-			if(typeof type === 'string') {
-				types_where.push("types_id = get_type_id($"+(where.length+1)+")");
-				params.push(type);
-			} else if(type instanceof NoPg.Type) {
-				types_where.push("types_id = $" + (where.length+1));
-				params.push(type.$id);
-			} else {
-				throw new TypeError("Unknown type: " + type);
+		if(opts === undefined) {
+		} else if(opts && (typeof opts === 'object') && (opts instanceof Array) ) {
+			if( (opts.length >= 1) && opts[0] && (typeof opts[0] === 'object') ) {
+				opts = [ ((traits.match === 'any') ? 'OR' : 'AND') ].concat(opts);
 			}
-			//debug.log('where = ', where, ' after types_id');
-			//debug.log('params = ', params, ' after types_id');
+		} else {
+			opts = [ ((traits.match === 'any') ? 'OR' : 'AND') , opts];
+		}
+		debug.log('opts = ', opts);
+
+		/* Build where */
+		var where = [];
+		var params = [];
+
+		/* Build `type_condition` */
+
+		var type_condition = get_type_condition(params, type);
+		debug.log('type_condition = ', type_condition);
+		if(type_condition) { where.push( type_condition ); }
+
+		/* Parse `opts_condition` */
+
+		if(opts) {
+			var opts_condition = recursive_parse_predicates(params, ((traits.match === 'any') ? 'OR' : 'AND'), opts);
+			debug.log('opts_condition = ', opts_condition);
+			where.push( opts_condition );
 		}
 
-		query = "SELECT * FROM "+(ObjType.meta.table);
+		debug.log('where = ', where);
 
-		if( (where.length >= 1) || (types_where.length >= 1) ) {
-			query += " WHERE";
-		}
+		/* Build `query` */
+
+		var query = "SELECT * FROM "+(ObjType.meta.table);
 
 		if(where.length >= 1) {
-			query += " (" + where.join( ((traits.match === 'any') ? ' OR ' : ' AND ') ) + ")";
-		}
-
-		if(types_where.length >= 1) {
-			if(where.length >= 1) {
-				query += " AND";
-			}
-			query += " (" + types_where.join(' AND ') + ")";
+			query += " WHERE (" + where.join(') AND (') + ')';
 		}
 
 		if(traits.order) {
 			query += ' ORDER BY ' + traits.order.map(parse_predicate_key.bind(undefined, ObjType)).join(', ');
 		}
 
-		//debug.log('query = ' + query);
+		debug.log('query = ' + query);
+		debug.log('params = ', params);
 
 		return do_query.call(self, query, params).then(get_results(ObjType)).then(save_result_to_queue(self)).then(function() { return self; });
 	}
