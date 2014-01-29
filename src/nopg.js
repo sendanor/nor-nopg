@@ -960,7 +960,7 @@ NoPg.prototype.createAttachment = function(doc) {
 				throw new TypeError("Could not detect document ID!");
 			}
 	
-			debug.log("documents_id = ", doc_id);
+			//debug.log("documents_id = ", doc_id);
 			debug.assert(doc_id).typeOf('string');
 			
 			if(file_is_buffer) {
@@ -980,8 +980,8 @@ NoPg.prototype.createAttachment = function(doc) {
 			
 			debug.assert(data.$documents_id).typeOf('string');
 
-			debug.log("data.$documents_id = ", data.$documents_id);
-			debug.log("data.$meta = ", data.$meta);
+			//debug.log("data.$documents_id = ", data.$documents_id);
+			//debug.log("data.$meta = ", data.$meta);
 
 			return do_insert.call(self, NoPg.Attachment, data).then(get_result(NoPg.Attachment)).then(save_result_to(self));
 		});
@@ -1008,14 +1008,20 @@ NoPg.prototype.searchAttachments = function(doc) {
 			doc_id = doc.$id;
 		} else if(doc && (doc instanceof NoPg.Attachment)) {
 			doc_id = doc.$documents_id;
+		} else if(doc.$id) {
+			doc_id = doc.$id;
 		} else {
-				throw new TypeError("Could not detect document ID!");
+			throw new TypeError("Could not detect document ID!");
 		}
 
-		debug.log("documents_id = ", doc_id);
+		//debug.log("documents_id = ", doc_id);
 		debug.assert(doc_id).typeOf('string');
 
 		//debug.log('opts = ', opts);
+
+		opts = opts || {};
+		opts.$documents_id = doc_id;
+
 		return do_select.call(self, ObjType, opts).then(get_results(ObjType)).then(save_result_to_queue(self)).then(function() { return self; });
 	}
 
