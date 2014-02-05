@@ -744,7 +744,7 @@ NoPg.prototype.search = function(type) {
 			traits.fields = [traits.fields];
 		}
 
-		debug.assert(traits.fields).typeOf('object').instanceOf(Array).length(1);
+		debug.assert(traits.fields).typeOf('object').instanceOf(Array);
 
 		/* Parse `traits.order` */
 
