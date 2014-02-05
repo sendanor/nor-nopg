@@ -56,14 +56,90 @@ function get_result(Type) {
 }
 
 /** Take all results from the database query and return an array of new instances of `Type` */
-function get_results(Type) {
+function get_results(Type, opts) {
+	opts = opts || {};
+
+	var field_map;
+	if(opts.fieldMap && typeof opts.fieldMap === 'function') {
+		field_map = opts.fieldMap;
+	} else if(opts.fieldMap && typeof opts.fieldMap === 'object') {
+		field_map = function(k) {
+			return opts.fieldMap[k];
+		};
+	}
+
+	/** Parse field */
+	function parse_field(obj, key, value) {
+		debug.assert(obj).typeOf('object');
+		debug.log('obj = ', obj);
+		debug.log('key = ', key);
+		debug.log('value = ', value);
+		
+		/* Parse full top level field */
+		function parse_field_top(obj, key, value) {
+			if(obj['$'+key] && (typeof obj['$'+key] === 'object') && (obj['$'+key] instanceof Array)) {
+				obj['$'+key] = obj['$'+key].concat(value);
+			} else if(obj['$'+key] && (typeof obj['$'+key] === 'object')) {
+				obj['$'+key] = merge(obj['$'+key], value);
+			} else {
+				obj['$'+key] = value;
+			}
+		}
+		
+		/* Parse property in top level field based on a key as an array `[datakey, property_name]` */
+		function parse_field_property(obj, key, value) {
+			debug.log('key = ', key);
+			var a = key[0];
+			var b = key[1];
+			debug.log('key_a = ', a);
+			debug.log('key_b = ', b);
+	
+			if(! (obj['$'+a] && (typeof obj['$'+a] === 'object')) ) {
+				obj['$'+a] = {};
+			}
+			
+			obj['$'+a][b] = value;
+		}
+
+		/* Parse property in top level field based on key in PostgreSQL JSON format */
+		function parse_field_property_pg(obj, key, value) {
+			debug.log('key = ', key);
+			var matches = /^([a-z][a-z0-9\_]*)\-\>\>'([^\']+)'$/.exec(key);
+			var a = matches[1];
+			var b = matches[2];
+			return parse_field_property_pg(obj, [a,b], value);
+		}
+
+		// 
+		var new_key;
+		if ( (typeof field_map === 'function') && (new_key = field_map(key)) ) {
+			if( (new_key) && (new_key !== key) ) {
+				return parse_field(obj, new_key, value);
+			}
+		}
+
+		if( key && (typeof key === 'object') && (key instanceof Array) ) {
+			parse_field_property(obj, key, value);
+		} else if( key && (typeof key === 'string') && (/^[a-z][a-z0-9\_]*$/.test(key)) ) {
+			parse_field_top(obj, key, value);
+		} else if ( key && (typeof key === 'string') && (/^([a-z][a-z0-9\_]*)\-\>\>'([^\']+)'$/.test(key)) ) {
+			parse_field_property_pg(obj, key, value);
+		} else {
+			debug.log('key = ', key);
+			throw new TypeError("Unknown field name: " + key);
+		}
+	}
+
+	/* Returns a function which will go through rows and convert them to NoPg format */
 	return function(rows) {
 		return rows.map(function(row, i) {
-			if(!row) { throw new TypeError("failed to parse result #" + i + " in an array"); }
+			if(!row) { throw new TypeError("failed to parse result #" + i + " from database!"); }
+			debug.log('input in row = ', row);
 			var obj = {};
 			Object.keys(row).forEach(function(key) {
-				obj['$'+key] = row[key];
+				parse_field(obj, key, row[key]);
 			});
+			debug.log('result in obj = ', obj);
 			return new Type(obj);
 		});
 	};
@@ -113,7 +189,16 @@ function get_predicate_datakey(Type) {
 }
 
 /** Returns PostgreSQL keyword for NoPg keyword. Converts `$foo` to `foo` and `foo` to `meta->'foo'` etc.  */
-function parse_predicate_key(Type, key) {
+function parse_predicate_key(Type, key, opts) {
+	opts = opts || {};
+	var as = opts.as ? true : false;
+	if( as && (typeof opts.as === 'function') ) {
+		as = opts.as;
+	} else if(as) {
+		as = function(a, b) {
+			return '' + a + '__' + b.replace(/^[a-zA-Z0-9\_\-\.]/, '_');
+		};
+	}
 	
 	var datakey = get_predicate_datakey(Type);
 
@@ -126,10 +211,17 @@ function parse_predicate_key(Type, key) {
 		// FIXME: Implement escape?
 		if(!(keyreg.test(key))) { throw new TypeError("Invalid keyword: " + key); }
 
+		if(typeof as === 'function') {
+			return "json_extract_path("+datakey+", '"+key+"') AS " + as(datakey, key);
+		}
+
 		return ""+datakey+"->>'"+key+"'";
 	}
 
 	function parse_top_key(key) {
+		if(typeof as === 'function') {
+			return ""+key.substr(1);
+		}
 		return key.substr(1);
 	}
 
@@ -642,6 +734,18 @@ NoPg.prototype.search = function(type) {
 
 		traits = traits || {};
 
+		/* Parse `traits.fields` */
+		if(!traits.fields) {
+			// FIXME: Check if `$created` exists in the ObjType!
+			traits.fields = ['$*'];
+		}
+
+		if(! (traits.fields && (typeof traits.fields === 'object') && (traits.fields instanceof Array) ) ) {
+			traits.fields = [traits.fields];
+		}
+
+		debug.assert(traits.fields).typeOf('object').instanceOf(Array).length(1);
+
 		/* Parse `traits.order` */
 
 		if(!traits.order) {
@@ -665,6 +769,31 @@ NoPg.prototype.search = function(type) {
 		}
 		//debug.log('opts = ', opts);
 
+		/* Transform `traits.fields` to internal database presentation */
+		debug.log('traits.fields = ', traits.fields);
+		var field_id = 0;
+		var field_map = {};
+
+		function field_as(a, b) {
+			field_id += 1;
+			var key;
+			if(!b) {
+				key = a;
+				field_map[key] = a;
+				return key;
+			} else {
+				key = a + '__' + field_id;
+				field_map[key] = [a, b];
+				return key;
+			}
+		}
+
+		var fields = traits.fields.map(function(f) {
+			return parse_predicate_key(ObjType, f, {as: field_as});
+		});
+		debug.log('fields = ', fields);
+		debug.log('field_map = ', field_map);
+
 		/* Build where */
 		var where = [];
 		var params = [];
@@ -687,7 +816,7 @@ NoPg.prototype.search = function(type) {
 
 		/* Build `query` */
 
-		var query = "SELECT * FROM "+(ObjType.meta.table);
+		var query = "SELECT " + fields.join(', ') + " FROM "+(ObjType.meta.table);
 
 		if(where.length >= 1) {
 			query += " WHERE (" + where.join(') AND (') + ')';
@@ -697,10 +826,12 @@ NoPg.prototype.search = function(type) {
 			query += ' ORDER BY ' + traits.order.map(parse_predicate_key.bind(undefined, ObjType)).join(', ');
 		}
 
-		//debug.log('query = ' + query);
-		//debug.log('params = ', params);
+		debug.log('query = ' + query);
+		debug.log('params = ', params);
 
-		return do_query.call(self, query, params).then(get_results(ObjType)).then(save_result_to_queue(self)).then(function() { return self; });
+		return do_query.call(self, query, params).then(get_results(ObjType, {
+			'fieldMap': field_map
+		})).then(save_result_to_queue(self)).then(function() { return self; });
 	}
 
 	return search2;

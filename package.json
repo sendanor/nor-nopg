@@ -35,7 +35,8 @@
     "nor-pg": "*",
     "nor-debug": "*",
     "optimist": "*",
-    "nor-fs": "*"
+    "nor-fs": "*",
+    "merge": "*"
   },
   "devDependencies": {
     "lint": "*",
