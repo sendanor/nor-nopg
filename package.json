@@ -35,8 +35,8 @@
     "nor-pg": "*",
     "nor-debug": "*",
     "optimist": "*",
-    "nor-is": "*",
-    "nor-fs": ">= 0.1.5",
+    "nor-is": ">= 0.1.5",
+    "nor-fs": ">= 0.1.4",
 	"tv4": "*",
     "merge": "*"
   },
