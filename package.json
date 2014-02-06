@@ -1,6 +1,6 @@
 {
   "name": "nor-nopg",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "NoPostgreSQL Client Module",
   "bin": {
     "nor-nopg-import": "./tools/import.js",
@@ -35,13 +35,14 @@
     "nor-pg": "*",
     "nor-debug": "*",
     "optimist": "*",
-    "nor-fs": "*",
+    "nor-is": "*",
+    "nor-fs": ">= 0.1.5",
+	"tv4": "*",
     "merge": "*"
   },
   "devDependencies": {
     "lint": "*",
     "mocha": "*",
-    "nor-is": "*",
     "nor-pgrunner": "sendanor/nor-pgrunner"
   },
   "author": "Jaakko-Heikki Heusala <jheusala@iki.fi>",

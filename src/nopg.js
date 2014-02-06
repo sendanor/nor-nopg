@@ -3,10 +3,12 @@
 var debug = require('nor-debug');
 var util = require('util');
 var Q = require('q');
+var is = require('nor-is');
 var fs = require('nor-fs');
 var pg = require('nor-pg');
 var extend = require('nor-extend').setup({useFunctionPromises:true});
 var orm = require('./orm');
+var merge = require('merge');
 var pghelpers = require('./pghelpers.js');
 
 /* ------------- HELPER FUNCTIONS --------------- */
@@ -47,6 +49,11 @@ function get_result(Type) {
 		if(!rows) { throw new TypeError("failed to parse result"); }
 		var doc = rows.shift();
 		if(!doc) { return; }
+
+		if(doc instanceof Type) {
+			return doc;
+		}
+
 		var obj = {};
 		Object.keys(doc).forEach(function(key) {
 			obj['$'+key] = doc[key];
@@ -60,9 +67,9 @@ function get_results(Type, opts) {
 	opts = opts || {};
 
 	var field_map;
-	if(opts.fieldMap && typeof opts.fieldMap === 'function') {
+	if(is.func(opts.fieldMap)) {
 		field_map = opts.fieldMap;
-	} else if(opts.fieldMap && typeof opts.fieldMap === 'object') {
+	} else if(is.obj(opts.fieldMap)) {
 		field_map = function(k) {
 			return opts.fieldMap[k];
 		};
@@ -71,15 +78,15 @@ function get_results(Type, opts) {
 	/** Parse field */
 	function parse_field(obj, key, value) {
 		debug.assert(obj).typeOf('object');
-		debug.log('obj = ', obj);
-		debug.log('key = ', key);
-		debug.log('value = ', value);
+		//debug.log('obj = ', obj);
+		//debug.log('key = ', key);
+		//debug.log('value = ', value);
 		
 		/* Parse full top level field */
 		function parse_field_top(obj, key, value) {
-			if(obj['$'+key] && (typeof obj['$'+key] === 'object') && (obj['$'+key] instanceof Array)) {
+			if( is.array(obj['$'+key]) ) {
 				obj['$'+key] = obj['$'+key].concat(value);
-			} else if(obj['$'+key] && (typeof obj['$'+key] === 'object')) {
+			} else if( is.obj(obj['$'+key]) ) {
 				obj['$'+key] = merge(obj['$'+key], value);
 			} else {
 				obj['$'+key] = value;
@@ -88,13 +95,13 @@ function get_results(Type, opts) {
 		
 		/* Parse property in top level field based on a key as an array `[datakey, property_name]` */
 		function parse_field_property(obj, key, value) {
-			debug.log('key = ', key);
+			//debug.log('key = ', key);
 			var a = key[0];
 			var b = key[1];
-			debug.log('key_a = ', a);
-			debug.log('key_b = ', b);
+			//debug.log('key_a = ', a);
+			//debug.log('key_b = ', b);
 	
-			if(! (obj['$'+a] && (typeof obj['$'+a] === 'object')) ) {
+			if(!is.obj(obj['$'+a])) {
 				obj['$'+a] = {};
 			}
 			
@@ -103,8 +110,10 @@ function get_results(Type, opts) {
 
 		/* Parse property in top level field based on key in PostgreSQL JSON format */
 		function parse_field_property_pg(obj, key, value) {
-			debug.log('key = ', key);
+			//debug.log('key = ', key);
+			/*jslint regexp: false*/
 			var matches = /^([a-z][a-z0-9\_]*)\-\>\>'([^\']+)'$/.exec(key);
+			/*jslint regexp: true*/
 			var a = matches[1];
 			var b = matches[2];
 			return parse_field_property_pg(obj, [a,b], value);
@@ -112,20 +121,22 @@ function get_results(Type, opts) {
 
 		// 
 		var new_key;
-		if ( (typeof field_map === 'function') && (new_key = field_map(key)) ) {
+		if( is.func(field_map) && (new_key = field_map(key)) ) {
 			if( (new_key) && (new_key !== key) ) {
 				return parse_field(obj, new_key, value);
 			}
 		}
 
-		if( key && (typeof key === 'object') && (key instanceof Array) ) {
+		if( is.array(key) ) {
 			parse_field_property(obj, key, value);
-		} else if( key && (typeof key === 'string') && (/^[a-z][a-z0-9\_]*$/.test(key)) ) {
+		} else if( is.string(key) && (/^[a-z][a-z0-9\_]*$/.test(key)) ) {
 			parse_field_top(obj, key, value);
-		} else if ( key && (typeof key === 'string') && (/^([a-z][a-z0-9\_]*)\-\>\>'([^\']+)'$/.test(key)) ) {
+		/*jslint regexp: false*/
+		} else if ( is.string(key) && (/^([a-z][a-z0-9\_]*)\-\>\>'([^\']+)'$/.test(key)) ) {
+		/*jslint regexp: true*/
 			parse_field_property_pg(obj, key, value);
 		} else {
-			debug.log('key = ', key);
+			//debug.log('key = ', key);
 			throw new TypeError("Unknown field name: " + key);
 		}
 	}
@@ -134,12 +145,17 @@ function get_results(Type, opts) {
 	return function(rows) {
 		return rows.map(function(row, i) {
 			if(!row) { throw new TypeError("failed to parse result #" + i + " from database!"); }
-			debug.log('input in row = ', row);
+			//debug.log('input in row = ', row);
+
+			if(row instanceof Type) {
+				return row;
+			}
+
 			var obj = {};
 			Object.keys(row).forEach(function(key) {
 				parse_field(obj, key, row[key]);
 			});
-			debug.log('result in obj = ', obj);
+			//debug.log('result in obj = ', obj);
 			return new Type(obj);
 		});
 	};
@@ -192,11 +208,11 @@ function get_predicate_datakey(Type) {
 function parse_predicate_key(Type, key, opts) {
 	opts = opts || {};
 	var as = opts.as ? true : false;
-	if( as && (typeof opts.as === 'function') ) {
+	if( is.func(opts.as) ) {
 		as = opts.as;
 	} else if(as) {
 		as = function(a, b) {
-			return '' + a + '__' + b.replace(/^[a-zA-Z0-9\_\-\.]/, '_');
+			return '' + a + '__' + b.replace(/[^a-zA-Z0-9\_\-\.]/g, '_');
 		};
 	}
 	
@@ -211,7 +227,7 @@ function parse_predicate_key(Type, key, opts) {
 		// FIXME: Implement escape?
 		if(!(keyreg.test(key))) { throw new TypeError("Invalid keyword: " + key); }
 
-		if(typeof as === 'function') {
+		if(is.func(as)) {
 			return "json_extract_path("+datakey+", '"+key+"') AS " + as(datakey, key);
 		}
 
@@ -219,7 +235,7 @@ function parse_predicate_key(Type, key, opts) {
 	}
 
 	function parse_top_key(key) {
-		if(typeof as === 'function') {
+		if(is.func(as)) {
 			return ""+key.substr(1);
 		}
 		return key.substr(1);
@@ -246,7 +262,7 @@ function parse_predicates(Type) {
 
 			// FIXME: Implement escape?
 			if(!(keyreg.test(key))) { throw new TypeError("Invalid keyword: " + key); }
-			if(typeof opts[key] === 'number') {
+			if(is.number(opts[key])) {
 				res["("+datakey+"->>'"+key+"')::numeric"] = opts[key];
 			} else {
 				res[""+datakey+"->>'"+key+"'"] = ''+opts[key];
@@ -281,42 +297,220 @@ function do_query(query, values) {
 	return extend.promise( [NoPg], self._db._query(query, values) );
 }
 
-/** Generic SELECT query */
-function do_select(ObjType, opts) {
-	//debug.log('ObjType=', ObjType, ', opts=', opts);
-	var self = this;
-	var query, keys, params = [];
-	var where = {};
+/* Returns the type condition and pushes new params to `params` */
+function get_type_condition(params, type) {
+	if(type !== undefined) {
+		if(is.string(type)) {
+			params.push(type);
+			return "types_id = get_type_id($"+(params.length)+")";
+		} else if(type instanceof NoPg.Type) {
+			params.push(type.$id);
+			return "types_id = $" + (params.length);
+		} else {
+			throw new TypeError("Unknown type: " + type);
+		}
+	}
+}
 
-	if(opts === undefined) {
-	} else if(opts instanceof NoPg.Type) {
-		where.id = opts.$id;
-	} else if(typeof opts === 'object') {
-		Object.keys(opts).filter(function(key) {
-			return key[0] === '$' ? true : false;
-		}).forEach(function(key) {
-			where[key.substr(1)] = opts[key];
-		});
-	} else {
-		where.name = ''+opts;
+/* Recursively parse predicates */
+function recursive_parse_predicates(ObjType, params, def_op, o) {
+
+	//debug.assert(params).typeOf('object');
+
+	function not_undefined(i) {
+		return i !== undefined;
 	}
 
-	keys = Object.keys(where);
-	params = keys.map(function(key) {
-		return where[key];
+	/* Returns match string */
+	function build_match(k,n) {
+		return '' + k + ' = $' + (n+1);
+	}
+
+	if(o === undefined) { return; }
+
+	if( is.array(o) ) {
+		var op = 'AND';
+		if( (o[0] === 'AND') || (o[0] === 'OR') ) {
+			op = o.shift();
+		}
+		return '(' + o.map(recursive_parse_predicates.bind(undefined, ObjType, params, def_op)).filter(not_undefined).join(') '+op+' (') + ')';
+	}
+
+	if( is.obj(o) ) {
+		o = parse_predicates(ObjType)(o, ObjType.meta.datakey.substr(1) );
+		return '(' + Object.keys(o).map(function(k) {
+			params.push(o[k]);
+			return '' + k + ' = $' + params.length;
+		}).join(') '+def_op+' (') + ')';
+	}
+
+	return ''+o;
+}
+
+/** Parse traits object */
+function parse_search_traits(traits) {
+	traits = traits || {};
+
+	/* Parse `traits.fields` */
+	if(!traits.fields) {
+		traits.fields = ['$*'];
+	}
+
+	if(!is.array(traits.fields)) {
+		traits.fields = [traits.fields];
+	}
+
+	debug.assert(traits.fields).typeOf('object').instanceOf(Array);
+
+	/* Parse `traits.order` */
+
+	if(!traits.order) {
+		// FIXME: Check if `$created` exists in the ObjType!
+		traits.order = ['$created'];
+	}
+
+	if(!is.array(traits.order)) {
+		traits.order = [traits.order];
+	}
+
+	debug.assert(traits.order).typeOf('object').instanceOf(Array);
+
+	return traits;
+}
+
+/** Parses internal fields from nopg style fields */
+function parse_internal_fields(ObjType, nopg_fields) {
+	debug.assert(ObjType).typeOf('function');
+	debug.assert(nopg_fields).typeOf('object').instanceOf(Array);
+
+	var field_id = 0;
+	var field_map = {};
+	
+	function field_as(a, b) {
+		field_id += 1;
+		var key;
+		if(!b) {
+			key = a;
+			field_map[key] = a;
+			return key;
+		} else {
+			key = a + '__' + field_id;
+			field_map[key] = [a, b];
+			return key;
+		}
+	}
+	
+	var fields = nopg_fields.map(function(f) {
+		return parse_predicate_key(ObjType, f, {as: field_as});
 	});
 
-	query = "SELECT * FROM " + (ObjType.meta.table);
+	//debug.log('fields = ', fields);
+	//debug.log('field_map = ', field_map);
 
-	if(keys && (keys.length >= 1) ) {
-		query += " WHERE (" + keys.map(function(key, i) { return key + ' = $' + (i+1); }).join(') AND (') + ')';
+	var result = { 
+		"keys": fields,
+		"map": field_map
+	};
+
+	return result;
+}
+
+/** Parse opts object */
+function parse_search_opts(opts, traits) {
+
+	if(opts === undefined) {
+	} else if(is.array(opts)) {
+		if( (opts.length >= 1) && is.obj(opts[0]) ) {
+			opts = [ ((traits.match === 'any') ? 'OR' : 'AND') ].concat(opts);
+		}
+	} else if(opts instanceof NoPg.Type) {
+		opts = [ "AND", { "$id": opts.$id } ];
+	} else if(is.obj(opts)) {
+		opts = [ ((traits.match === 'any') ? 'OR' : 'AND') , opts];
+	} else {
+		opts = [ "AND", {"$name": ''+opts} ];
 	}
+	//debug.log('opts = ', opts);
+
+	return opts;
+}
+
+/** Generic SELECT query */
+function do_select(types, opts, traits) {
+
+	//debug.log("types = ", types);
+	//debug.log("opts = ", opts);
+	//debug.log("traits = ", traits);
+
+	var ObjType, document_type;
+	if(is.array(types)) {
+		ObjType = types.shift();
+		document_type = types.shift();
+	} else {
+		ObjType = types;
+	}
+
+	//debug.log("ObjType = ", ObjType);
+	//debug.log("document_type = ", document_type);
+
+	//debug.log('ObjType=', ObjType, ', opts=', opts);
+	var self = this;
+
+	traits = parse_search_traits(traits);
+	opts = parse_search_opts(opts, traits);
+	var fields = parse_internal_fields(ObjType, traits.fields);
+
+	//debug.log('fields = ', fields);
+
+	/* Build `type_condition` */
+
+	var where = [], params = [];
+
+	var type_condition;
+	if(document_type) {
+		type_condition = get_type_condition(params, document_type);
+		//debug.log('type_condition = ', type_condition);
+		if(type_condition) { where.push( type_condition ); }
+	}
+
+	/* Parse `opts_condition` */
+
+	var opts_condition;
+	if(opts) {
+		opts_condition = recursive_parse_predicates(ObjType, params, ((traits.match === 'any') ? 'OR' : 'AND'), opts);
+		//debug.log('opts_condition = ', opts_condition);
+		where.push( opts_condition );
+	}
+
+	//debug.log('where = ', where);
+	var query = "SELECT " + fields.keys.join(', ') + " FROM " + (ObjType.meta.table);
+
+	//if(keys && (keys.length >= 1) ) {
+	//	query += " WHERE (" + keys.map(function(key, i) { return key + ' = $' + (i+1); }).join(') AND (') + ')';
+	//}
+
+	if(where.length >= 1) {
+		query += " WHERE (" + where.join(') AND (') + ')';
+	}
+
+	if(traits.order) {
+		query += ' ORDER BY ' + traits.order.map(parse_predicate_key.bind(undefined, ObjType)).join(', ');
+	}
+
+	//debug.log('query = ' + query);
+	//debug.log('params = ', params);
+
+	//debug.log('fields.map = ', fields.map);
+
+	return do_query.call(self, query, params).then(get_results(ObjType, {
+		'fieldMap': fields.map
+	}));
 
 	//debug.log('query = ', query);
 
 	//debug.log('params = ', params);
 
-	return do_query.call(self, query, params);
+	//return do_query.call(self, query, params);
 }
 
 /** Internal INSERT query */
@@ -636,7 +830,7 @@ NoPg.prototype.init = function() {
 			return self;
 		});
 	}).then(function() {
-		return self._importLib(__dirname + "/../libs/tv4/tv4.js").then(function() { return self; });
+		return self._importLib(require('path').resolve(__dirname, "../node_modules/tv4/tv4.js")).then(function() { return self; });
 	}).then(pg_query("SET plv8.start_proc = 'plv8_init'"));
 };
 
@@ -678,162 +872,9 @@ NoPg.prototype.search = function(type) {
 	//debug.log('type = ', type);
 	var self = this;
 	var ObjType = NoPg.Document;
-
-	/* Returns the type condition and pushes new params to `params` */
-	function get_type_condition(params, type) {
-		if(type !== undefined) {
-			if(typeof type === 'string') {
-				params.push(type);
-				return "types_id = get_type_id($"+(params.length)+")";
-			} else if(type instanceof NoPg.Type) {
-				params.push(type.$id);
-				return "types_id = $" + (params.length);
-			} else {
-				throw new TypeError("Unknown type: " + type);
-			}
-		}
-	}
-
-	/* Recursively parse predicates */
-	function recursive_parse_predicates(params, def_op, o) {
-
-		//debug.assert(params).typeOf('object');
-
-		function not_undefined(i) {
-			return i !== undefined;
-		}
-
-		/* Returns match string */
-		function build_match(k,n) {
-			return '' + k + ' = $' + (n+1);
-		}
-
-		if(o === undefined) { return; }
-
-		if( o && (typeof o === 'object') && (o instanceof Array) ) {
-			var op = 'AND';
-			if( (o[0] === 'AND') || (o[0] === 'OR') ) {
-				op = o.shift();
-			}
-			return '(' + o.map(recursive_parse_predicates.bind(undefined, params, def_op)).filter(not_undefined).join(') '+op+' (') + ')';
-		}
-
-		if( o && (typeof o === 'object') ) {
-			o = parse_predicates(ObjType)(o, ObjType.meta.datakey.substr(1) );
-			return '(' + Object.keys(o).map(function(k) {
-				params.push(o[k]);
-				return '' + k + ' = $' + params.length;
-			}).join(') '+def_op+' (') + ')';
-		}
-
-		return ''+o;
-	}
-
 	function search2(opts, traits) {
-		//debug.log('opts=', opts);
-
-		traits = traits || {};
-
-		/* Parse `traits.fields` */
-		if(!traits.fields) {
-			// FIXME: Check if `$created` exists in the ObjType!
-			traits.fields = ['$*'];
-		}
-
-		if(! (traits.fields && (typeof traits.fields === 'object') && (traits.fields instanceof Array) ) ) {
-			traits.fields = [traits.fields];
-		}
-
-		debug.assert(traits.fields).typeOf('object').instanceOf(Array);
-
-		/* Parse `traits.order` */
-
-		if(!traits.order) {
-			// FIXME: Check if `$created` exists in the ObjType!
-			traits.order = ['$created'];
-		}
-
-		if(! (traits.order && (typeof traits.order === 'object') && (traits.order instanceof Array) ) ) {
-			traits.order = [traits.order];
-		}
-
-		/* Parse `opts` */
-
-		if(opts === undefined) {
-		} else if(opts && (typeof opts === 'object') && (opts instanceof Array) ) {
-			if( (opts.length >= 1) && opts[0] && (typeof opts[0] === 'object') ) {
-				opts = [ ((traits.match === 'any') ? 'OR' : 'AND') ].concat(opts);
-			}
-		} else {
-			opts = [ ((traits.match === 'any') ? 'OR' : 'AND') , opts];
-		}
-		//debug.log('opts = ', opts);
-
-		/* Transform `traits.fields` to internal database presentation */
-		debug.log('traits.fields = ', traits.fields);
-		var field_id = 0;
-		var field_map = {};
-
-		function field_as(a, b) {
-			field_id += 1;
-			var key;
-			if(!b) {
-				key = a;
-				field_map[key] = a;
-				return key;
-			} else {
-				key = a + '__' + field_id;
-				field_map[key] = [a, b];
-				return key;
-			}
-		}
-
-		var fields = traits.fields.map(function(f) {
-			return parse_predicate_key(ObjType, f, {as: field_as});
-		});
-		debug.log('fields = ', fields);
-		debug.log('field_map = ', field_map);
-
-		/* Build where */
-		var where = [];
-		var params = [];
-
-		/* Build `type_condition` */
-
-		var type_condition = get_type_condition(params, type);
-		//debug.log('type_condition = ', type_condition);
-		if(type_condition) { where.push( type_condition ); }
-
-		/* Parse `opts_condition` */
-
-		if(opts) {
-			var opts_condition = recursive_parse_predicates(params, ((traits.match === 'any') ? 'OR' : 'AND'), opts);
-			//debug.log('opts_condition = ', opts_condition);
-			where.push( opts_condition );
-		}
-
-		//debug.log('where = ', where);
-
-		/* Build `query` */
-
-		var query = "SELECT " + fields.join(', ') + " FROM "+(ObjType.meta.table);
-
-		if(where.length >= 1) {
-			query += " WHERE (" + where.join(') AND (') + ')';
-		}
-
-		if(traits.order) {
-			query += ' ORDER BY ' + traits.order.map(parse_predicate_key.bind(undefined, ObjType)).join(', ');
-		}
-
-		debug.log('query = ' + query);
-		debug.log('params = ', params);
-
-		return do_query.call(self, query, params).then(get_results(ObjType, {
-			'fieldMap': field_map
-		})).then(save_result_to_queue(self)).then(function() { return self; });
+		return do_select.call(self, [ObjType, type], opts, traits).then(save_result_to_queue(self)).then(function() { return self; });
 	}
-
 	return search2;
 };
 
@@ -927,10 +968,10 @@ NoPg.prototype.typeExists = function(name) {
 };
 
 /** Get type directly */
-NoPg.prototype._getType = function(name) {
+NoPg.prototype._getType = function(name, traits) {
 	//debug.log('name = ', name);
 	var self = this;
-	return do_select.call(self, NoPg.Type, name).then(get_result(NoPg.Type));
+	return do_select.call(self, NoPg.Type, name, traits).then(get_result(NoPg.Type));
 };
 
 /** Get type and save it to result queue. */
@@ -977,7 +1018,7 @@ NoPg.prototype._importLib = function(file, opts) {
 	var self = this;
 	opts = JSON.parse( JSON.stringify( opts || {} ));
 
-	if( (typeof file === 'object') && (opts === undefined) ) {
+	if( is.obj(file) && (opts === undefined) ) {
 		opts = file;
 		file = undefined;
 	}
@@ -1021,9 +1062,9 @@ NoPg.prototype.importLib = function(file, opts) {
 NoPg.prototype._getObject = function(ObjType) {
 	var self = this;
 	//debug.log('ObjType = ', ObjType);
-	return function(opts) {
+	return function(opts, traits) {
 		//debug.log('opts = ', opts);
-		return do_select.call(self, ObjType, opts).then(get_result(ObjType));
+		return do_select.call(self, ObjType, opts, traits).then(get_result(ObjType));
 	};
 };
 
@@ -1042,12 +1083,12 @@ NoPg.prototype.getDocument = function(opts) {
 };
 
 /** Search types */
-NoPg.prototype.searchTypes = function(opts) {
+NoPg.prototype.searchTypes = function(opts, traits) {
 	var self = this;
 	//debug.log('ObjType = ', ObjType);
 	var ObjType = NoPg.Type;
 	//debug.log('opts = ', opts);
-	return do_select.call(self, ObjType, opts).then(get_results(ObjType)).then(save_result_to_queue(self)).then(function() { return self; });
+	return do_select.call(self, ObjType, opts, traits).then(save_result_to_queue(self)).then(function() { return self; });
 };
 
 /** Create an attachment from a file in the filesystem.
@@ -1067,7 +1108,7 @@ NoPg.prototype.createAttachment = function(doc) {
 			var file_is_buffer = false;
 
 			try {
-				if(file && (typeof file === 'string')) {
+				if(file && is.string(file)) {
 					debug.assert(file).typeOf('string');
 				} else {
 					debug.assert(file).typeOf('object').instanceOf(Buffer);
@@ -1116,7 +1157,7 @@ NoPg.prototype.createAttachment = function(doc) {
 
 			return do_insert.call(self, NoPg.Attachment, data).then(get_result(NoPg.Attachment)).then(save_result_to(self));
 		});
-	};
+	}
 	return createAttachment2;
 };
 
@@ -1127,7 +1168,7 @@ NoPg.prototype.searchAttachments = function(doc) {
 
 	//debug.log('ObjAttachment = ', ObjType);
 
-	function searchAttachments2(opts) {
+	function searchAttachments2(opts, traits) {
 		var ObjType = NoPg.Attachment;
 
 		if(doc === undefined) {
@@ -1153,7 +1194,7 @@ NoPg.prototype.searchAttachments = function(doc) {
 		opts = opts || {};
 		opts.$documents_id = doc_id;
 
-		return do_select.call(self, ObjType, opts).then(get_results(ObjType)).then(save_result_to_queue(self)).then(function() { return self; });
+		return do_select.call(self, ObjType, opts, traits).then(save_result_to_queue(self)).then(function() { return self; });
 	}
 
 	return searchAttachments2;
