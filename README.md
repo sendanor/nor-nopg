@@ -14,6 +14,11 @@ var nopg = require('nor-nopg');
 
 Before using the database you should initialize it by calling: `nor-nopg --pg=psql://localhost:5432/test init`
 
+TODO
+----
+
+We use [Trello board](https://trello.com/b/6qC63gw5/nor-nopg) to organize development and keep track on things to do.
+
 Internal Database Schema
 ------------------------
 
