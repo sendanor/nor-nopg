@@ -2,10 +2,7 @@
 
 var pghelpers = require('../pghelpers.js');
 var debug = require('nor-debug');
-
-function clone(obj) {
-	return JSON.parse(JSON.stringify(obj));
-}
+var copy = require('nor-data').copy;
 
 function meta(opts) {
 	opts = opts || {};
@@ -31,7 +28,7 @@ function meta(opts) {
 							self[key] = require('../fun.js').toFunction(data[key]);
 						}
 					} else {
-						self[key] = clone(data[key]);
+						self[key] = copy(data[key]);
 					}
 				}
 			});
@@ -45,7 +42,7 @@ function meta(opts) {
 			Object.keys(data).filter(function(key) {
 				return key[0] !== '$';
 			}).forEach(function(key) {
-				self[builder.datakey][key] = clone(data[key]);
+				self[builder.datakey][key] = copy(data[key]);
 				delete self[key];
 			});
 
@@ -62,7 +59,7 @@ function meta(opts) {
 
 			if(self[datakey]) {
 				Object.keys(self[datakey]).forEach(function(key) {
-					self[key] = clone(self[datakey][key]);
+					self[key] = copy(self[datakey][key]);
 				});
 				//debug.log("object after resolve(", datakey, ") is: ", self);
 			}
@@ -97,7 +94,7 @@ function meta(opts) {
 					self['$'+key] = require('../fun.js').toString(self['$'+key]);
 				}
 				
-				data[key] = clone(self['$'+key]);
+				data[key] = copy(self['$'+key]);
 			});
 
 			// Copy plain data
@@ -107,7 +104,7 @@ function meta(opts) {
 				if(!data[datakey]) {
 					data[datakey] = {};
 				}
-				data[datakey][key] = clone(self[key]);
+				data[datakey][key] = copy(self[key]);
 			});
 
 			//debug.log("data after unresolve: ", data);

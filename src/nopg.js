@@ -571,7 +571,7 @@ function do_update(ObjType, obj, orig_data) {
 	} else if(obj.$name) {
 		where.$name = obj.$name;
 	} else {
-		debug.log('obj = ', obj);
+		//debug.log('obj = ', obj);
 		throw new TypeError("Cannot know what to update!");
 	}
 	//debug.log('where = ', where);
