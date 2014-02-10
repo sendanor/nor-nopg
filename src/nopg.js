@@ -719,6 +719,12 @@ NoPg.prototype.fetch = function() {
 	return this._values.shift();
 };
 
+/** Push `value` to the queue. It makes it possible to implement your own functions. */
+NoPg.prototype.push = function(value) {
+	this._values.push(value);
+	return this;
+};
+
 /** Returns the latest value in the queue but does not remove it */
 NoPg.prototype._getLastValue = function() {
 	//debug.log('values = ', this._values);
