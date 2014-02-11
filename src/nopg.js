@@ -294,6 +294,10 @@ function do_query(query, values) {
 	//debug.log('query = ', query);
 	//debug.log('values = ', values);
 
+	debug.assert(self).is('object');
+	debug.assert(self._db).is('object');
+	debug.assert(self._db._query).is('function');
+
 	return extend.promise( [NoPg], self._db._query(query, values) );
 }
 
@@ -719,6 +723,34 @@ NoPg.prototype.fetch = function() {
 	return this._values.shift();
 };
 
+/** Assume the next value in the queue is an array with single value, and throws an exception if it has more than one value.
+ * @throws an error if the value is not an array or it has two or more values
+ * @returns The first value in the array or otherwise `undefined`
+ */
+NoPg.prototype.fetchSingle = function() {
+	var db = this;
+	var items = db.fetch();
+	debug.assert(items).is('array');
+	if(items.length >= 2) {
+		debug.assert(items).length(1);
+	} 
+	return items.shift();
+};
+
+/** Assume the next value in the queue is an array with single value, and prints an warning if it has more than one value.
+ * @throws an error if the value is not an array
+ * @returns The first value in the array or otherwise `undefined`
+ */
+NoPg.prototype.fetchFirst = function() {
+	var db = this;
+	var items = db.fetch();
+	debug.assert(items).is('array');
+	if(items.length >= 2) {
+		debug.log('Warning! nopg.fetchSingle() got an array with too many results (' + items.length + ')');
+	} 
+	return items.shift();
+};
+
 /** Push `value` to the queue. It makes it possible to implement your own functions. */
 NoPg.prototype.push = function(value) {
 	this._values.push(value);
@@ -880,6 +912,17 @@ NoPg.prototype.search = function(type) {
 	var ObjType = NoPg.Document;
 	function search2(opts, traits) {
 		return do_select.call(self, [ObjType, type], opts, traits).then(save_result_to_queue(self)).then(function() { return self; });
+	}
+	return search2;
+};
+
+/** Search single document */
+NoPg.prototype.searchSingle = function(type) {
+	//debug.log('type = ', type);
+	var self = this;
+	var ObjType = NoPg.Document;
+	function searchSingle2(opts, traits) {
+		return do_select.call(self, [ObjType, type], opts, traits).then(get_result(ObjType)).then(save_result_to_queue(self)).then(function() { return self; });
 	}
 	return search2;
 };
