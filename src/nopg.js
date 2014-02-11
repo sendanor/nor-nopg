@@ -1019,7 +1019,7 @@ NoPg.prototype.searchSingle = function(type) {
 	function searchSingle2(opts, traits) {
 		return do_select.call(self, [ObjType, type], opts, traits).then(get_result(ObjType)).then(save_result_to_queue(self)).then(function() { return self; });
 	}
-	return search2;
+	return searchSingle2;
 };
 
 /** Update document */
