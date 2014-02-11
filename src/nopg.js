@@ -701,12 +701,91 @@ function pg_query(query, params) {
 	};
 }
 
+/** Create watchdog timer */
+function create_watchdog(db, opts) {
+	debug.assert(db).is('object');
+
+	opts = opts || {};
+
+	debug.assert(opts).is('object');
+
+	opts.timeout = opts.timeout || 30000;
+	debug.assert(opts.timeout).is('number');
+
+	var w = {};
+	w.db = db;
+	w.opts = opts;
+
+	/* Setup */
+
+	w.timeout = setTimeout(function() {
+
+		var tr_open, tr_commit, tr_rollback, state;
+
+		debug.log('Got timeout.');
+
+		// NoPg instance
+		if(w.db === undefined) {
+			debug.warn("Timeout exceeded and database instance undefined. Nothing done.");
+		} else if(w.db && w.db._tr_state) {
+			state = w.db._tr_state;
+			tr_open = (state === 'open') ? true : false;
+			tr_commit = (state === 'commit') ? true : false;
+			tr_rollback = (state === 'rollback') ? true : false;
+			tr_unknown = ((!tr_open) && (!tr_commit) && (!tr_rollback)) ? true : false;
+
+			if(tr_unknown) {
+				debug.warn("Timeout exceeded and transaction state was unknown ("+state+"). Nothing done.");
+			} else if(tr_open) {
+				debug.warn("Timeout exceeded and transaction still open. Closing it by rollback.");
+				w.db.rollback().fail(function(err) {
+					debug.error("Rollback failed: " + err);
+				}).done();
+			} else {
+				if(tr_commit) {
+					debug.log('...but commit was already done.');
+				}
+				if(tr_rollback) {
+					debug.log('...but rollback was already done.');
+				}
+			}
+
+		} else {
+			debug.warn("Timeout exceeded but db was not NoPg instance.");
+		}
+
+		w.timeout = undefined;
+	}, opts.timeout);
+
+	/* Set object */
+	w.reset = function(o) {
+		debug.assert(o).is('object');
+		//debug.log('Resetting the watchdog.');
+		w.db = o;
+	};
+
+	/** Clear the timeout */
+	w.clear = function() {
+		if(w.timeout) {
+			//debug.log('Clearing the watchdog.');
+			clearTimeout(w.timeout);
+			w.timeout = undefined;
+		}
+	};
+
+	return w;
+}
+
 /** Start */
 NoPg.start = function(pgconfig) {
+	var w;
 	return extend.promise( [NoPg], pg.start(pgconfig).then(function(db) {
 		if(!db) { throw new TypeError("invalid db: " + util.inspect(db) ); }
+		w = create_watchdog(db, {"timeout": 30000});
 		return new NoPg(db);
 	}).then(function(db) {
+		w.reset(db);
+		db._watchdog = w;
 		return pg_query("SET plv8.start_proc = 'plv8_init'")(db);
 	})).then(function(db) {
 		return pg_table_exists.call(db, NoPg.DBVersion.meta.table).then(function(exists) {
@@ -766,8 +845,11 @@ NoPg.prototype._getLastValue = function() {
 /** Commit transaction */
 NoPg.prototype.commit = function() {
 	var self = this;
-	return extend.promise( [NoPg], this._db.commit().then(function() {
+	return extend.promise( [NoPg], self._db.commit().then(function() {
 		self._tr_state = 'commit';
+		if(is.obj(self._watchdog)) {
+			self._watchdog.clear();
+		}
 		return self;
 	}) );
 };
@@ -775,8 +857,11 @@ NoPg.prototype.commit = function() {
 /** Rollback transaction */
 NoPg.prototype.rollback = function() {
 	var self = this;
-	return extend.promise( [NoPg], this._db.rollback().then(function() {
+	return extend.promise( [NoPg], self._db.rollback().then(function() {
 		self._tr_state = 'rollback';
+		if(is.obj(self._watchdog)) {
+			self._watchdog.clear();
+		}
 		return self;
 	}) );
 };
