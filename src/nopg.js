@@ -776,12 +776,22 @@ function create_watchdog(db, opts) {
 	return w;
 }
 
+/* Defaults */
+NoPg.defaults = {};
+
+NoPg.defaults.timeout = 2000;
+
 /** Start */
-NoPg.start = function(pgconfig) {
+NoPg.start = function(pgconfig, opts) {
+	opts = opts || {};
+	debug.assert(opts).is('object');
+	if(opts.timeout) {
+		debug.assert(opts.timeout).is('number');
+	}
 	var w;
 	return extend.promise( [NoPg], pg.start(pgconfig).then(function(db) {
 		if(!db) { throw new TypeError("invalid db: " + util.inspect(db) ); }
-		w = create_watchdog(db, {"timeout": 30000});
+		w = create_watchdog(db, {"timeout": opts.timeout || NoPg.defaults.timeout});
 		return new NoPg(db);
 	}).then(function(db) {
 		w.reset(db);
