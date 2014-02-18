@@ -963,7 +963,7 @@ NoPg.prototype.init = function() {
 			return self;
 		});
 	}).then(function() {
-		return self._importLib(require('path').resolve(__dirname, "../node_modules/tv4/tv4.js")).then(function() { return self; });
+		return self._importLib( require.resolve('tv4') ).then(function() { return self; });
 	}).then(pg_query("SET plv8.start_proc = 'plv8_init'"));
 };
 
