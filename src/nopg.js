@@ -486,6 +486,16 @@ function do_select(types, opts, traits) {
 		where.push( opts_condition );
 	}
 
+	debug.assert(where).is('array');
+
+	if(!where.every(function(item) { return is.string(item) && (item.length >= 1); })) {
+		debug.warn('search() got unknown input: check debug logs.');
+		debug.log('where = ', where);
+		debug.log('types = ', types);
+		debug.log('traits = ', traits);
+		debug.log('opts = ', opts);
+	}
+
 	//debug.log('where = ', where);
 	var query = "SELECT " + fields.keys.join(', ') + " FROM " + (ObjType.meta.table);
 
