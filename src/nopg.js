@@ -451,6 +451,10 @@ function do_select(types, opts, traits) {
 	//debug.log("opts = ", opts);
 	//debug.log("traits = ", traits);
 
+	if( is.array(opts) && (opts.length === 1) && (['OR', 'AND'].indexOf(opts[0]) !== -1) ) {
+		throw new TypeError('opts invalid: ' + util.inspect(opts) );
+	}
+
 	var ObjType, document_type;
 	if(is.array(types)) {
 		ObjType = types.shift();
@@ -493,7 +497,12 @@ function do_select(types, opts, traits) {
 
 	debug.assert(where).is('array');
 
-	if(!where.every(function(item) { return is.string(item) && (item.length >= 1); })) {
+	if(NoPg.debug) {
+		debug.log('where = ', where);
+		debug.log('types = ', types);
+		debug.log('traits = ', traits);
+		debug.log('opts = ', opts);
+	} else if(!where.every(function(item) { return is.string(item) && (item.length >= 1); })) {
 		debug.warn('search() got unknown input: check debug logs.');
 		debug.log('where = ', where);
 		debug.log('types = ', types);
