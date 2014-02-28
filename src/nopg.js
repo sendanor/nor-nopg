@@ -24,6 +24,8 @@ function NoPg(db) {
 
 module.exports = NoPg;
 
+NoPg.debug = false;
+
 // Object constructors
 NoPg.Document = orm.Document;
 NoPg.Type = orm.Type;
@@ -291,7 +293,10 @@ function do_query(query, values) {
 	if(!self._db) { throw new TypeError("invalid: self._db: " + util.inspect(self._db)); }
 	if(!query) { throw new TypeError("invalid: query: " + util.inspect(query)); }
 
-	//debug.log('query = ', query);
+	if(NoPg.debug) {
+		debug.log('query = ', query);
+	}
+
 	//debug.log('values = ', values);
 
 	debug.assert(self).is('object');
