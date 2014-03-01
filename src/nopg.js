@@ -237,16 +237,21 @@ function parse_predicate_key(Type, key, opts) {
 	}
 
 	function parse_top_key(key) {
-		if(is.func(as)) {
-			return ""+key.substr(1);
-		}
-		
+
 		// $type is a special keyword for string-based $types_id for Documents
 		// FIXME: This probably should be implemented somewhere else (like inside Document)
 		if( (Type === NoPg.Document) && (key === '$type') ) {
 			return "get_type(types_id)->>'name' AS type";
 		}
 
+		//if(key === '$*') {
+		//	return "*, get_type(types_id)->>'name' AS type";
+		//}
+
+		if(is.func(as)) {
+			return ""+key.substr(1);
+		}
+		
 		return key.substr(1);
 	}
 
@@ -415,7 +420,14 @@ function parse_internal_fields(ObjType, nopg_fields) {
 			return key;
 		}
 	}
-	
+
+	// Append $type if it is not there and $* has been included
+	if((ObjType === NoPg.Document) && nopg_fields.some(function(f) { return f === '$*'; }) && 
+	   nopg_fields.every(function(f) { return f !== '$type'; }) ) {
+		nopg_fields.push('$type');
+	}
+
+	// 
 	var fields = nopg_fields.map(function(f) {
 		return parse_predicate_key(ObjType, f, {as: field_as});
 	});
@@ -539,7 +551,12 @@ function do_select(types, opts, traits) {
 
 	return do_query.call(self, query, params).then(get_results(ObjType, {
 		'fieldMap': fields.map
-	}));
+	})).then(function(results) {
+		if(NoPg.debug) {
+			debug.log('Returned: ', results);
+		}
+		return results;
+	});
 
 	//debug.log('query = ', query);
 
