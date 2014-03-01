@@ -240,6 +240,13 @@ function parse_predicate_key(Type, key, opts) {
 		if(is.func(as)) {
 			return ""+key.substr(1);
 		}
+		
+		// $type is a special keyword for string-based $types_id for Documents
+		// FIXME: This probably should be implemented somewhere else (like inside Document)
+		if( (Type === NoPg.Document) && (key === '$type') ) {
+			return "get_type(types_id)->>'name' AS type";
+		}
+
 		return key.substr(1);
 	}
 
@@ -744,7 +751,7 @@ function create_watchdog(db, opts) {
 
 	w.timeout = setTimeout(function() {
 
-		var tr_open, tr_commit, tr_rollback, state;
+		var tr_open, tr_commit, tr_rollback, state, tr_unknown;
 
 		debug.log('Got timeout.');
 
