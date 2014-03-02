@@ -517,9 +517,9 @@ function do_select(types, opts, traits) {
 	debug.assert(where).is('array');
 
 	if(NoPg.debug) {
-		debug.log('where = ', where);
-		debug.log('types = ', types);
-		debug.log('traits = ', traits);
+		//debug.log('where = ', where);
+		//debug.log('types = ', types);
+		//debug.log('traits = ', traits);
 		debug.log('opts = ', opts);
 	} else if(!where.every(function(item) { return is.string(item) && (item.length >= 1); })) {
 		debug.warn('search() got unknown input: check debug logs.');
@@ -552,9 +552,9 @@ function do_select(types, opts, traits) {
 	return do_query.call(self, query, params).then(get_results(ObjType, {
 		'fieldMap': fields.map
 	})).then(function(results) {
-		if(NoPg.debug) {
-			debug.log('Returned: ', results);
-		}
+		//if(NoPg.debug) {
+		//	debug.log('Returned: ', results);
+		//}
 		return results;
 	});
 
