@@ -27,7 +27,9 @@ module.exports = NoPg;
 NoPg.debug = false;
 
 // Addons
-NoPg.strip = require('./strip.js')
+NoPg.strip = require('./strip.js');
+NoPg.types = require('./types.js');
+NoPg.ResourceView = require('./ResourceView.js');
 
 // Object constructors
 NoPg.Document = orm.Document;
