@@ -26,6 +26,9 @@ module.exports = NoPg;
 
 NoPg.debug = false;
 
+// Addons
+NoPg.strip = require('./strip.js')
+
 // Object constructors
 NoPg.Document = orm.Document;
 NoPg.Type = orm.Type;
@@ -328,7 +331,7 @@ function get_type_condition(params, type) {
 			params.push(type.$id);
 			return "types_id = $" + (params.length);
 		} else {
-			throw new TypeError("Unknown type: " + type);
+			throw new TypeError("Unknown type: " + util.inspect(type));
 		}
 	}
 }
