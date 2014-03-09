@@ -4,7 +4,7 @@
 
 var $Q = require('q');
 var util = require('util');
-var NoPg = require('nor-nopg');
+var NoPg = require('./nopg.js');
 var debug = require('nor-debug');
 
 module.exports = function get_database_types(opts) {

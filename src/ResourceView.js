@@ -6,7 +6,7 @@ var merge = require('merge');
 var copy = require('nor-data').copy;
 var is = require('nor-is');
 var debug = require('nor-debug');
-var strip = require('nor-nopg').strip;
+var strip = require('./strip.js');
 var ref = require('nor-ref');
 
 /** Render `path` with optional `params` */
@@ -39,6 +39,8 @@ function ResourceView(opts) {
 	//debug.log("view.opts = ", view.opts);
 }
 
+ResourceView.views = {};
+
 /** Returns build function for a data view of REST element */
 ResourceView.prototype.element = function(req, res, opts) {
 	var view = this;
@@ -49,7 +51,7 @@ ResourceView.prototype.element = function(req, res, opts) {
 	debug.assert(view.opts).is('object');
 	opts = merge(view.opts, opts || {});
 	//debug.log('(after) opts = ', opts);
-	var views = require('./views/index.js');
+	var views = opts.views || ResourceView.views;
 	return function(item) {
 
 		if(is.string(item)) {
