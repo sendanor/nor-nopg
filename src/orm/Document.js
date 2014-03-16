@@ -2,6 +2,8 @@
 
 var fs = require('nor-fs');
 var debug = require('nor-debug');
+var util = require("util");
+var events = require("events");
 
 var meta = require('./meta.js')({
 	"table": "documents",
@@ -13,11 +15,12 @@ var meta = require('./meta.js')({
 function NoPgDocument(opts) {
 	var self = this;
 	opts = opts || {};
-
 	//debug.log("NoPg.Document(opts = ", opts, ")");
-
+	events.EventEmitter.call(this);
 	meta(self).set_meta_keys(opts).resolve();
 }
+
+util.inherits(NoPgDocument, events.EventEmitter);
 
 NoPgDocument.meta = meta;
 

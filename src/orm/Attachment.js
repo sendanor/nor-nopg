@@ -1,6 +1,8 @@
 /* nor-nopg -- NoPg.Attachment object implementation */
 
 var debug = require('nor-debug');
+var util = require("util");
+var events = require("events");
 
 var meta = require('./meta.js')({
 	"table": "attachments",
@@ -12,9 +14,11 @@ var meta = require('./meta.js')({
 function NoPgAttachment(opts) {
 	var self = this;
 	opts = opts || {};
-
+	events.EventEmitter.call(this);
 	meta(self).set_meta_keys(opts).resolve();
 }
+
+util.inherits(NoPgAttachment, events.EventEmitter);
 
 /** Get internal database object */
 NoPgAttachment.prototype.valueOf = function() {
