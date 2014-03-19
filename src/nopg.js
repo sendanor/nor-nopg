@@ -834,6 +834,10 @@ NoPg.defaults = {};
 
 NoPg.defaults.timeout = 2000;
 
+if(process.env.NOPG_TIMEOUT !== undefined) {
+	NoPg.defaults.timeout = parseInt(process.env.NOPG_TIMEOUT, 10) || NoPg.defaults.timeout;
+}
+
 /** Start */
 NoPg.start = function(pgconfig, opts) {
 	opts = opts || {};
