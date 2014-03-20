@@ -495,7 +495,7 @@ describe('nopg', function(){
 				assert.strictEqual(point.x, 10);
 				assert.strictEqual(point.y, 20);
 				
-				var failed;
+				var failed = false;
 				return db.create(type)({"x":200, "y":200}).fail(function(err) {
 					debug.log("Expected error was: " + err);
 					failed = true;
@@ -510,6 +510,9 @@ describe('nopg', function(){
 				done();
 			}).fail(function(err) {
 				debug.log('Database query failed: ' + err);
+				if(err.stack) {
+					debug.log('stack:\n---\n' + err.stack + '\n---\n');
+				}
 				done(err);
 			}).done();
 		});

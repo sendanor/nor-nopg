@@ -3,6 +3,7 @@
 var debug = require('nor-debug');
 var util = require("util");
 var events = require("events");
+var NoPgORM = require("./ORM.js");
 
 var meta = require('./meta.js')({
 	"table": "libs",
@@ -14,11 +15,11 @@ var meta = require('./meta.js')({
 function NoPgLib(opts) {
 	var self = this;
 	opts = opts || {};
-	events.EventEmitter.call(this);
+	NoPgORM.call(self);
 	meta(self).set_meta_keys(opts).resolve();
 }
 
-util.inherits(NoPgLib, events.EventEmitter);
+util.inherits(NoPgLib, NoPgORM);
 
 NoPgLib.meta = meta;
 

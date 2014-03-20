@@ -3,6 +3,7 @@
 var debug = require('nor-debug');
 var util = require("util");
 var events = require("events");
+var NoPgORM = require("./ORM.js");
 
 var meta = require('./meta.js')({
 	"table": "dbversions",
@@ -13,11 +14,11 @@ var meta = require('./meta.js')({
 function NoPgDBVersion(opts) {
 	var self = this;
 	opts = opts || {};
-	events.EventEmitter.call(this);
+	NoPgORM.call(this);
 	meta(self).set_meta_keys(opts).resolve();
 }
 
-util.inherits(NoPgDBVersion, events.EventEmitter);
+util.inherits(NoPgDBVersion, NoPgORM);
 
 NoPgDBVersion.meta = meta;
 

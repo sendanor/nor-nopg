@@ -3,7 +3,7 @@
 var fs = require('nor-fs');
 var debug = require('nor-debug');
 var util = require("util");
-var events = require("events");
+var NoPgORM = require("./ORM.js");
 
 var meta = require('./meta.js')({
 	"table": "documents",
@@ -16,11 +16,11 @@ function NoPgDocument(opts) {
 	var self = this;
 	opts = opts || {};
 	//debug.log("NoPg.Document(opts = ", opts, ")");
-	events.EventEmitter.call(this);
+	NoPgORM.call(this);
 	meta(self).set_meta_keys(opts).resolve();
 }
 
-util.inherits(NoPgDocument, events.EventEmitter);
+util.inherits(NoPgDocument, NoPgORM);
 
 NoPgDocument.meta = meta;
 

@@ -1,4 +1,5 @@
 module.exports = {
+	'ORM': require('./ORM.js'),
 	'Document': require('./Document.js'),
 	'Type': require('./Type.js'),
 	'Attachment': require('./Attachment.js'),

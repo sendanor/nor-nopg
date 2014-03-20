@@ -1,6 +1,7 @@
 /* nor-nopg -- Implementation of meta objects for `NoPg.Document`, `NoPg.Type`, `NoPg.Attachment` and `NoPg.Lib`. */
 
 var pghelpers = require('../pghelpers.js');
+var is = require('nor-is');
 var debug = require('nor-debug');
 var copy = require('nor-data').copy;
 
@@ -10,6 +11,8 @@ function meta(opts) {
 	if(!opts.parsers) { opts.parsers = {}; }
 
 	function builder(self) {
+		debug.assert(self).is('object');
+
 		//debug.log("meta::builder(self=", self, ")");
 		var obj = {};
 
@@ -35,13 +38,23 @@ function meta(opts) {
 
 			// Move normal keys to default JSON object ($content or $meta depending of type)
 
-			if(! self[builder.datakey] ) {
+			debug.assert(builder.datakey).is('string');
+
+			if(!is.obj(self[builder.datakey])) {
 				self[builder.datakey] = {};
 			}
 
+			debug.assert(self[builder.datakey]).is('object');
+
+			//debug.log('First: self[builder.datakey] = ', self[builder.datakey]);
+
 			Object.keys(data).filter(function(key) {
-				return key[0] !== '$';
+				return key[0] !== '$' ? true : false;
 			}).forEach(function(key) {
+				//debug.log('key = ', key);
+				//debug.log('self = ', self);
+				//debug.log('builder.datakey = ', builder.datakey);
+				//debug.log('self[builder.datakey] = ', self[builder.datakey]);
 				self[builder.datakey][key] = copy(data[key]);
 				delete self[key];
 			});
