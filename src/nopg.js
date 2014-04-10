@@ -792,7 +792,7 @@ function create_watchdog(db, opts) {
 			} else if(tr_open) {
 				debug.warn("Timeout exceeded and transaction still open. Closing it by rollback.");
 				w.db.rollback().fail(function(err) {
-					debug.error("Rollback failed: " + err);
+					debug.error("Rollback failed: " + (err.stack || err) );
 				}).done();
 			} else {
 				if(tr_commit) {
