@@ -123,7 +123,7 @@ ResourceView.prototype.collection = function(req, res, opts) {
 	opts = merge(view.opts, opts || {});
 	//debug.log("(after) opts = ", opts);
 	return function(items) {
-		debug.assert(items).typeOf('object').instanceOf(Array);
+		debug.assert(items).is('array');
 		var element_opts = copy(opts);
 		var rendered_path = render_path(element_opts.path, element_opts.params);
 		var path = [req].concat(rendered_path);

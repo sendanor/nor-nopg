@@ -174,16 +174,11 @@ function get_results(Type, opts) {
  * fetched using `self.fetch()`.
  */
 function save_result_to(self) {
-	if( (self instanceof NoPg.Document) ||
-	    (self instanceof NoPg.Type) || 
-	    (self instanceof NoPg.Attachment) || 
-	    (self instanceof NoPg.Lib) || 
-	    (self instanceof NoPg.DBVersion)
-	  ) {
+	if( is.obj(self) && is.func(self.nopg) ) {
 		return function(doc) { return self.update(doc); };
 	}
 
-	if(self._values) {
+	if( is.obj(self) && is.array(self._values) ) {
 		return function(doc) {
 			self._values.push( doc );
 			return self;
@@ -386,7 +381,7 @@ function parse_search_traits(traits) {
 		traits.fields = [traits.fields];
 	}
 
-	debug.assert(traits.fields).typeOf('object').instanceOf(Array);
+	debug.assert(traits.fields).is('array');
 
 	/* Parse `traits.order` */
 
@@ -399,7 +394,7 @@ function parse_search_traits(traits) {
 		traits.order = [traits.order];
 	}
 
-	debug.assert(traits.order).typeOf('object').instanceOf(Array);
+	debug.assert(traits.order).is('array');
 
 	return traits;
 }
@@ -407,7 +402,7 @@ function parse_search_traits(traits) {
 /** Parses internal fields from nopg style fields */
 function parse_internal_fields(ObjType, nopg_fields) {
 	debug.assert(ObjType).typeOf('function');
-	debug.assert(nopg_fields).typeOf('object').instanceOf(Array);
+	debug.assert(nopg_fields).is('array');
 
 	var field_id = 0;
 	var field_map = {};

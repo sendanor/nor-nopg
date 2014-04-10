@@ -21,6 +21,13 @@ function NoPgAttachment(opts) {
 
 util.inherits(NoPgAttachment, NoPgORM);
 
+/* Universal typing information */
+NoPgAttachment.prototype.nopg = function() {
+	return {
+		'orm_type': 'Attachment'
+	};
+};
+
 /** Get internal database object */
 NoPgAttachment.prototype.valueOf = function() {
 	var self = this;

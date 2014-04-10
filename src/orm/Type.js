@@ -24,6 +24,13 @@ function NoPgType(opts) {
 
 util.inherits(NoPgType, NoPgORM);
 
+/* Universal typing information */
+NoPgType.prototype.nopg = function() {
+	return {
+		'orm_type': 'Type'
+	};
+};
+
 /** Get internal database object */
 NoPgType.prototype.valueOf = function() {
 	var self = this;

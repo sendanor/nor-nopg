@@ -100,15 +100,20 @@ describe('nopg', function(){
 
 		it('typeless document update by chaining object', function(done){
 			var doc;
-			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
+			nopg.start(PGCONFIG).create()({"foo":123, "hello":"world"}).then(function(db) {
 				doc = db.fetch();
 				debug.log('before doc = ' + util.inspect(doc));
 				doc.hello = "another";
+				doc.hello2 = "world";
+				delete doc.foo;
+				debug.assert(doc.$id).is('uuid');
+				debug.assert(doc.$content).is('object');
 				return db.update(doc);
 			}).then(function(db) {
 				debug.log('updated doc = ' + util.inspect(doc));
 				assert.strictEqual(typeof doc.hello, 'string');
 				assert.strictEqual(doc.hello, 'another');
+				assert.strictEqual(doc.hello2, 'world');
 				return db.commit();
 			}).then(function(db) {
 				done();

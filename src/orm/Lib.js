@@ -23,6 +23,13 @@ util.inherits(NoPgLib, NoPgORM);
 
 NoPgLib.meta = meta;
 
+/* Universal typing information */
+NoPgLib.prototype.nopg = function() {
+	return {
+		'orm_type': 'Lib'
+	};
+};
+
 /** Get internal database object */
 NoPgLib.prototype.valueOf = function() {
 	var self = this;

@@ -22,6 +22,13 @@ function NoPgDocument(opts) {
 
 util.inherits(NoPgDocument, NoPgORM);
 
+/* Universal typing information */
+NoPgDocument.prototype.nopg = function() {
+	return {
+		'orm_type': 'Document'
+	};
+};
+
 NoPgDocument.meta = meta;
 
 module.exports = NoPgDocument;

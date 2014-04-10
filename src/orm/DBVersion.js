@@ -22,6 +22,13 @@ util.inherits(NoPgDBVersion, NoPgORM);
 
 NoPgDBVersion.meta = meta;
 
+/* Universal typing information */
+NoPgDBVersion.prototype.nopg = function() {
+	return {
+		'orm_type': 'DBVersion'
+	};
+};
+
 /** Get internal database object */
 NoPgDBVersion.prototype.valueOf = function() {
 	var self = this;
