@@ -9,6 +9,15 @@ var debug = require('nor-debug');
 var strip = require('./strip.js');
 var ref = require('nor-ref');
 
+/** */
+function fix_object_ids(o) {
+	if(is.obj(o) && is.uuid(o.$id)) {
+		debug.log('entry in path: ', o);
+		return o.$id;
+	}
+	return o;
+}
+
 /** Render `path` with optional `params` */
 function render_path(path, params) {
 	params = params || {};
@@ -17,7 +26,7 @@ function render_path(path, params) {
 			if(params[key] === undefined) {
 				return ':'+key;
 			}
-			return ''+params[key];
+			return ''+fix_object_ids(params[key]);
 		});
 	});
 }
@@ -75,6 +84,7 @@ ResourceView.prototype.element = function(req, res, opts) {
 
 		var body = strip(item).specials().get();
 		opts.keys.forEach(function(key) {
+
 			var path = [req].concat(render_path(opts.path, params)).concat([item.$id]);
 			//debug.log("path = ", ref.apply(undefined , path));
 
