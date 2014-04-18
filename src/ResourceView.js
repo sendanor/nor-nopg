@@ -9,6 +9,17 @@ var debug = require('nor-debug');
 var strip = require('./strip.js');
 var ref = require('nor-ref');
 
+/** Compute keys */
+function compute_keys(o, opts) {
+	debug.assert(o).is('object');
+	debug.assert(opts).is('object');
+	Object.keys(opts).forEach(function(key) {
+		debug.assert(opts[key]).is('function');
+		o[key] = opts[key].call(o);
+	});
+	return o;
+}
+
 /** */
 function fix_object_ids(o) {
 	if(is.obj(o) && is.uuid(o.$id)) {
@@ -117,6 +128,10 @@ ResourceView.prototype.element = function(req, res, opts) {
 
 		if(!body.$type) {
 			body.$type = view.Type;
+		}
+
+		if(opts.compute_keys) {
+			body = compute_keys(body, opts.compute_keys);
 		}
 
 		return body;
