@@ -2,6 +2,7 @@
 
 "use strict";
 
+var debug = require('nor-debug');
 var merge = require('merge');
 var copy = require('nor-data').copy;
 var is = require('nor-is');
@@ -55,6 +56,10 @@ function ResourceView(opts) {
 	view.opts.path = opts.path;
 
 	view.Type = opts.Type;
+
+	if(is.obj(opts.compute_keys)) {
+		view.compute_keys = opts.compute_keys;
+	}
 
 	//debug.log("view.opts = ", view.opts);
 }
@@ -130,7 +135,11 @@ ResourceView.prototype.element = function(req, res, opts) {
 			body.$type = view.Type;
 		}
 
-		if(opts.compute_keys) {
+		if(is.obj(view.compute_keys)) {
+			body = compute_keys(body, view.compute_keys);
+		}
+
+		if(is.obj(opts.compute_keys)) {
 			body = compute_keys(body, opts.compute_keys);
 		}
 
@@ -160,6 +169,15 @@ ResourceView.prototype.collection = function(req, res, opts) {
 		body.$ref = ref.apply(undefined, path);
 		body.$ = items.map(view.element(req, res, element_opts));
 		//debug.log('body = ', body);
+
+		if(is.obj(view.compute_keys)) {
+			body = compute_keys(body, view.compute_keys);
+		}
+
+		if(is.obj(opts.compute_keys)) {
+			body = compute_keys(body, opts.compute_keys);
+		}
+
 		return body;
 	};
 };
