@@ -24,7 +24,7 @@ function compute_keys(o, opts) {
 /** */
 function fix_object_ids(o) {
 	if(is.obj(o) && is.uuid(o.$id)) {
-		debug.log('entry in path: ', o);
+		//debug.log('entry in path: ', o);
 		return o.$id;
 	}
 	return o;
@@ -94,7 +94,7 @@ ResourceView.prototype.element = function(req, res, opts) {
 		//debug.log('params = ', params);
 
 		if(is.array(item)) {
-			debug.log("Warning! ResourceView.prototype.element() called with an Array. Is that what you intended?");
+			debug.warn("ResourceView.prototype.element() called with an Array. Is that what you intended?");
 		}
 
 
