@@ -1,6 +1,6 @@
 {
   "name": "nor-nopg",
-  "version": "0.1.39",
+  "version": "0.1.40",
   "description": "NoPostgreSQL Client Module",
   "bin": {
     "nor-nopg-import": "./tools/import.js",
@@ -31,13 +31,13 @@
   ],
   "dependencies": {
     "q": ">= 1.0.1 <1.1.0",
-    "nor-extend": ">= 0.1.16 <0.2.0",
-    "nor-pg": ">= 0.1.5 <0.2.0",
+    "nor-extend": ">= 0.1.17 <0.2.0",
+    "nor-pg": ">= 0.1.7 <0.2.0",
     "nor-debug": ">= 0.1.32 < 0.2.0",
     "optimist": ">= 0.6.1 <0.7.0",
     "nor-is": ">= 0.1.11 <0.2.0",
-    "nor-fs": ">= 0.1.5 <0.2.0",
-    "nor-data": ">= 0.0.5 <0.1.0",
+    "nor-fs": ">= 0.1.6 <0.2.0",
+    "nor-data": ">= 0.0.6 <0.1.0",
     "tv4": ">= 1.0.16 <1.1.0",
     "merge": ">= 1.1.2 <1.2.0",
     "nor-ref": ">= 0.1.0 <0.2.0"
