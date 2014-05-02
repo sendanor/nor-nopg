@@ -1,4 +1,9 @@
-/** Builder for data views */
+/** Builder for data views
+ * 
+ * ***Please note:*** This is obsolete synchronous version of REST resource 
+ * view. See `nor-rest-view` module for newer asynchronous implementation.
+ * 
+ */
 
 "use strict";
 
@@ -11,12 +16,12 @@ var strip = require('./strip.js');
 var ref = require('nor-ref');
 
 /** Compute keys */
-function compute_keys(o, opts) {
+function compute_keys(o, opts, req, res) {
 	debug.assert(o).is('object');
 	debug.assert(opts).is('object');
 	Object.keys(opts).forEach(function(key) {
 		debug.assert(opts[key]).is('function');
-		o[key] = opts[key].call(o);
+		o[key] = opts[key].call(o, req, res);
 	});
 	return o;
 }
@@ -136,11 +141,11 @@ ResourceView.prototype.element = function(req, res, opts) {
 		}
 
 		if(is.obj(view.compute_keys)) {
-			body = compute_keys(body, view.compute_keys);
+			body = compute_keys(body, view.compute_keys, req, res);
 		}
 
 		if(is.obj(opts.compute_keys)) {
-			body = compute_keys(body, opts.compute_keys);
+			body = compute_keys(body, opts.compute_keys, req, res);
 		}
 
 		return body;
@@ -171,11 +176,11 @@ ResourceView.prototype.collection = function(req, res, opts) {
 		//debug.log('body = ', body);
 
 		if(is.obj(view.compute_keys)) {
-			body = compute_keys(body, view.compute_keys);
+			body = compute_keys(body, view.compute_keys, req, res);
 		}
 
 		if(is.obj(opts.compute_keys)) {
-			body = compute_keys(body, opts.compute_keys);
+			body = compute_keys(body, opts.compute_keys, req, res);
 		}
 
 		return body;
