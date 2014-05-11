@@ -42,8 +42,11 @@ function log_time(sample) {
 	}
 	if(sample.query) {
 		msg += 'query=' + util.inspect(sample.query);
+		if(sample.params) {
+			msg += ', ';
+		}
 	}
-	if(sample.query) {
+	if(sample.params) {
 		msg += 'params=' + util.inspect(sample.params);
 	}
 	debug.log(msg); 
