@@ -356,7 +356,20 @@ function do_query(query, values) {
 	debug.assert(self._db).is('object');
 	debug.assert(self._db._query).is('function');
 
-	return extend.promise( [NoPg], self._db._query(query, values) );
+	var start_time = new Date();
+	return extend.promise( [NoPg], self._db._query(query, values).then(function(db) {
+		var end_time = new Date();
+			
+		self._record_sample({
+			'event': 'query',
+			'start': start_time,
+			'end': end_time,
+			'query': query,
+			'params': values
+		});
+
+		return db;
+	}) );
 }
 
 /* Returns the type condition and pushes new params to `params` */
