@@ -13,6 +13,43 @@ var pghelpers = require('./pghelpers.js');
 
 /* ------------- HELPER FUNCTIONS --------------- */
 
+/** Returns seconds between two date values
+ * @returns {number} Time between two values (ms)
+ */
+function get_ms(a, b) {
+	debug.assert(a).is('date');
+	debug.assert(b).is('date');
+	if(a < b) {
+		return b.getTime() - a.getTime();
+	}
+	return a.getTime() - b.getTime();
+}
+
+/** Optionally log time */
+function log_time(sample) {
+
+	debug.assert(sample).is('object');
+	debug.assert(sample.event).is('string');
+	debug.assert(sample.start).is('date');
+	debug.assert(sample.end).is('date');
+	debug.assert(sample.duration).ignore(undefined).is('number');
+	debug.assert(sample.query).ignore(undefined).is('string');
+	debug.assert(sample.params).ignore(undefined).is('array');
+
+	var msg = 'NoPg event ' + sample.event + ' in ' + sample.duration + ' ms';
+	if(sample.query || sample.params) {
+		msg += ': ';
+	}
+	if(sample.query) {
+		msg += 'query=' + util.inspect(sample.query);
+	}
+	if(sample.query) {
+		msg += 'params=' + util.inspect(sample.params);
+	}
+	debug.log(msg); 
+
+}
+
 /** The constructor */
 function NoPg(db) {
 	var self = this;
@@ -20,6 +57,7 @@ function NoPg(db) {
 	self._db = db;
 	self._values = [];
 	self._tr_state = 'open';
+	self._stats = [];
 }
 
 module.exports = NoPg;
@@ -742,10 +780,53 @@ NoPg.getObjectType = function(doc) {
 	return ObjType;
 };
 
+/** Record internal timing statistic object */
+NoPg.prototype._record_sample = function(data) {
+	var self = this;
+
+	var stats_enabled = is.array(self._stats);
+	var log_times = process.env.NOPG_EVENT_TIMES !== undefined;
+
+	if( (!stats_enabled) && (!log_times) ) {
+		return;
+	}
+
+	debug.assert(data).is('object');
+	debug.assert(data.event).is('string');
+	debug.assert(data.start).is('date');
+	debug.assert(data.end).is('date');
+	debug.assert(data.query).ignore(undefined).is('string');
+	debug.assert(data.params).ignore(undefined).is('array');
+
+	data.duration = get_ms(data.start, data.end);
+
+	if(stats_enabled) {
+		self._stats.push(data);
+	}
+
+	if(log_times) {
+		log_time(data);
+	}
+};
+
 /** Run query `SET $key = $value` on the PostgreSQL server */
 function pg_query(query, params) {
 	return function(db) {
-		return do_query.call(db, query, params).then(function() { return db; });
+		var start_time = new Date();
+		return do_query.call(db, query, params).then(function() {
+
+			var end_time = new Date();
+			
+			db._record_sample({
+				'event': 'query',
+				'start': start_time,
+				'end': end_time,
+				'query': query,
+				'params': params
+			});
+
+			return db;
+		});
 	};
 }
 
@@ -841,10 +922,21 @@ NoPg.start = function(pgconfig, opts) {
 		debug.assert(opts.timeout).is('number');
 	}
 	var w;
+	var start_time = new Date();
 	return extend.promise( [NoPg], pg.start(pgconfig).then(function(db) {
+		var end_time = new Date();
+
 		if(!db) { throw new TypeError("invalid db: " + util.inspect(db) ); }
 		w = create_watchdog(db, {"timeout": opts.timeout || NoPg.defaults.timeout});
-		return new NoPg(db);
+		var nopg_db = new NoPg(db);
+
+		nopg_db._record_sample({
+			'event': 'start',
+			'start': start_time,
+			'end': end_time
+		});
+
+		return nopg_db;
 	}).then(function(db) {
 		w.reset(db);
 		db._watchdog = w;
