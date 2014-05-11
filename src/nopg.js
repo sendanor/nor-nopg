@@ -798,10 +798,13 @@ NoPg.prototype._record_sample = function(data) {
 	debug.assert(data.event).is('string');
 	debug.assert(data.start).is('date');
 	debug.assert(data.end).is('date');
+	debug.assert(data.duration).ignore(undefined).is('number');
 	debug.assert(data.query).ignore(undefined).is('string');
 	debug.assert(data.params).ignore(undefined).is('array');
 
-	data.duration = get_ms(data.start, data.end);
+	if(data.duration === undefined) {
+		data.duration = get_ms(data.start, data.end);
+	}
 
 	if(stats_enabled) {
 		self._stats.push(data);
@@ -810,6 +813,46 @@ NoPg.prototype._record_sample = function(data) {
 	if(log_times) {
 		log_time(data);
 	}
+};
+
+/** Record internal timing statistic object */
+NoPg.prototype._finish_samples = function(data) {
+	var self = this;
+
+	var stats_enabled = is.array(self._stats);
+	var log_times = process.env.NOPG_EVENT_TIMES !== undefined;
+
+	if( (!stats_enabled) && (!log_times) ) {
+		return;
+	}
+
+	var start = self._stats[0];
+	var end = self._stats[self._stats.length-1];
+
+	debug.assert(start).is('object');
+	debug.assert(start.event).is('string').equals('start');
+
+	debug.assert(end).is('object');
+	debug.assert(end.event).is('string');
+
+	var server_duration = 0;
+	self._stats.forEach(function(sample) {
+		server_duration += sample.duration;
+	});
+
+	self._record_sample({
+		'event': 'transaction',
+		'start': start.start,
+		'end': end.end
+	});
+
+	self._record_sample({
+		'event': 'transaction:server',
+		'start': start.start,
+		'end': end.end,
+		'duration': server_duration
+	});
+
 };
 
 /** Run query `SET $key = $value` on the PostgreSQL server */
@@ -1002,7 +1045,17 @@ NoPg.prototype._getLastValue = function() {
 /** Commit transaction */
 NoPg.prototype.commit = function() {
 	var self = this;
+	var start_time = new Date();
 	return extend.promise( [NoPg], self._db.commit().then(function() {
+		var end_time = new Date();
+		self._record_sample({
+			'event': 'commit',
+			'start': start_time,
+			'end': end_time
+		});
+
+		self._finish_samples();
+
 		self._tr_state = 'commit';
 		if(is.obj(self._watchdog)) {
 			self._watchdog.clear();
@@ -1014,7 +1067,17 @@ NoPg.prototype.commit = function() {
 /** Rollback transaction */
 NoPg.prototype.rollback = function() {
 	var self = this;
+	var start_time = new Date();
 	return extend.promise( [NoPg], self._db.rollback().then(function() {
+		var end_time = new Date();
+		self._record_sample({
+			'event': 'rollback',
+			'start': start_time,
+			'end': end_time
+		});
+
+		self._finish_samples();
+
 		self._tr_state = 'rollback';
 		if(is.obj(self._watchdog)) {
 			self._watchdog.clear();
