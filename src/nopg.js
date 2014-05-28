@@ -65,7 +65,7 @@ function NoPg(db) {
 
 module.exports = NoPg;
 
-NoPg.debug = false;
+NoPg.debug = (process.env.DEBUG_NOPG ? true : false);
 
 // Addons
 NoPg.strip = require('./strip.js');
