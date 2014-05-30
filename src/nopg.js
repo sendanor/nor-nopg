@@ -1,5 +1,11 @@
 /* nor-nopg */
 
+// Make NOPG_EVENT_TIMES as obsolete
+if( (process.env.NOPG_EVENT_TIMES !== undefined) && (process.env.DEBUG_NOPG_EVENT_TIMES === undefined) ) {
+	debug.warn('Please use DEBUG_NOPG_EVENT_TIMES instead of obsolete NOPG_EVENT_TIMES');
+	process.env.DEBUG_NOPG_EVENT_TIMES = process.env.NOPG_EVENT_TIMES;
+}
+
 var debug = require('nor-debug');
 var util = require('util');
 var Q = require('q');
@@ -311,16 +317,24 @@ function parse_predicates(Type) {
 		
 		// Parse meta properties
 		Object.keys(opts).filter(function(k) { return k[0] !== '$'; }).forEach(function(key) {
-			/*jslint regexp: false*/
-			var keyreg = /^[^']+$/;
-			/*jslint regexp: true*/
+			var keyreg = /^[a-zA-Z0-9_\-\.]+$/;
 
 			// FIXME: Implement escape?
 			if(!(keyreg.test(key))) { throw new TypeError("Invalid keyword: " + key); }
-			if(is.number(opts[key])) {
-				res["("+datakey+"->>'"+key+"')::numeric"] = opts[key];
+
+			var keyref;
+			if(key.indexOf('.') === -1) {
+				keyref = "" + datakey + "->>'" + key + "'";
 			} else {
-				res[""+datakey+"->>'"+key+"'"] = ''+opts[key];
+				keyref = "" + datakey + "#>>'{" + key.split('.').join(',') +"}'";
+			}
+
+			if(is.boolean(opts[key])) {
+				res["("+keyref+")::boolean IS TRUE"] = (opts[key] === true) ? 'true' : 'false';
+			} else if(is.number(opts[key])) {
+				res["("+keyref+")::numeric"] = opts[key];
+			} else {
+				res[keyref] = ''+opts[key];
 			}
 		});
 		
@@ -801,7 +815,7 @@ NoPg.prototype._record_sample = function(data) {
 	var self = this;
 
 	var stats_enabled = is.array(self._stats);
-	var log_times = process.env.NOPG_EVENT_TIMES !== undefined;
+	var log_times = process.env.DEBUG_NOPG_EVENT_TIMES !== undefined;
 
 	if( (!stats_enabled) && (!log_times) ) {
 		return;
