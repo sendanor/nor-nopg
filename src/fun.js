@@ -9,6 +9,11 @@ fun.toString = function(f) {
 		throw new TypeError("argument is not Function");
 	}
 	var s = ''+f;
+
+	if(s.substr(0, 8) !== 'function') {
+		throw new TypeError('Failed to serialize function: ' + f);
+	}
+
 	//debug.log('Function serialized as ', s);
 	return s;
 };

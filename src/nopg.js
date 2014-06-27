@@ -280,7 +280,8 @@ function parse_predicate_key(Type, key, opts) {
 			return "json_extract_path("+datakey+", '"+key+"') AS " + as(datakey, key);
 		}
 
-		return ""+datakey+"->>'"+key+"'";
+		//return ""+datakey+"->>'"+key+"'";
+		return "json_extract_path("+datakey+", '"+key+"')";
 	}
 
 	function parse_top_key(key) {
@@ -288,7 +289,11 @@ function parse_predicate_key(Type, key, opts) {
 		// $type is a special keyword for string-based $types_id for Documents
 		// FIXME: This probably should be implemented somewhere else (like inside Document)
 		if( (Type === NoPg.Document) && (key === '$type') ) {
-			return "get_type(types_id)->>'name' AS type";
+			if(as) {
+				return "get_type(types_id)->>'name' AS type";
+			} else {
+				return "get_type(types_id)->>'name'";
+			}
 		}
 
 		//if(key === '$*') {
@@ -311,6 +316,8 @@ function parse_predicate_key(Type, key, opts) {
  */
 function parse_predicates(Type) {
 	function parse_data(opts) {
+		debug.assert(opts).ignore(undefined).is('object');
+
 		opts = opts || {};
 		var datakey = get_predicate_datakey(Type);
 		var res = {};
@@ -401,28 +408,78 @@ function get_type_condition(params, type) {
 	}
 }
 
-/* Recursively parse predicates */
+/** Returns true if `i` is not `undefined` */
+function not_undefined(i) {
+	return i !== undefined;
+}
+
+/** Parse array predicate */
+function parse_function_predicate(ObjType, arg_params, def_op, o) {
+	debug.assert(o).is('array');
+
+	var keys, func, params, i;
+
+	func = o.filter(function(x) {
+		return is.func(x);
+	}).shift();
+	debug.assert(func).is('function');
+
+	i = o.indexOf(func);
+	debug.assert(i).is('number');
+
+	keys = o.slice(0, i);
+	params = o.slice(i+1);
+
+	debug.assert(keys).is('array');
+	debug.assert(params).is('array');
+
+	//debug.log('keys = ', keys);
+	//debug.log('func = ', func);
+	//debug.log('params = ', params);
+
+	var parsed_keys = keys.map(parse_predicate_key.bind(undefined, ObjType));
+
+	//debug.log('parsed_keys = ', parsed_keys);
+	debug.assert(parsed_keys).is('array');
+
+	var n = arg_params.length;
+	
+	arg_params.push(JSON.stringify(require('./fun.js').toString(func)));
+	arg_params.push(JSON.stringify(params));
+
+	return '(nopg.call_func(array_to_json(ARRAY['+parsed_keys.join(', ')+']), $'+(n+1)+'::json, $'+(n+2)+"::json)::text = 'true')";
+
+}
+
+/** Parse array predicate */
+function parse_array_predicate(ObjType, params, def_op, o) {
+
+	var op = 'AND';
+	if( (o[0] === 'AND') || (o[0] === 'OR') || (o[0] === 'BIND') ) {
+		op = o.shift();
+	}
+
+	if(op === 'BIND') {
+		return parse_function_predicate(ObjType, params, def_op, o);
+	}
+
+	return '(' + o.map(recursive_parse_predicates.bind(undefined, ObjType, params, def_op)).filter(not_undefined).join(') '+op+' (') + ')';
+}
+
+/** Recursively parse predicates */
 function recursive_parse_predicates(ObjType, params, def_op, o) {
 
 	//debug.assert(params).typeOf('object');
 
-	function not_undefined(i) {
-		return i !== undefined;
-	}
-
 	/* Returns match string */
-	function build_match(k,n) {
-		return '' + k + ' = $' + (n+1);
-	}
+	//function build_match(k,n) {
+	//	return '' + k + ' = $' + (n+1);
+	//}
 
 	if(o === undefined) { return; }
 
 	if( is.array(o) ) {
-		var op = 'AND';
-		if( (o[0] === 'AND') || (o[0] === 'OR') ) {
-			op = o.shift();
-		}
-		return '(' + o.map(recursive_parse_predicates.bind(undefined, ObjType, params, def_op)).filter(not_undefined).join(') '+op+' (') + ')';
+		return parse_array_predicate(ObjType, params, def_op, o);
 	}
 
 	if( is.obj(o) ) {
@@ -538,7 +595,7 @@ function do_select(types, opts, traits) {
 	//debug.log("opts = ", opts);
 	//debug.log("traits = ", traits);
 
-	if( is.array(opts) && (opts.length === 1) && (['OR', 'AND'].indexOf(opts[0]) !== -1) ) {
+	if( is.array(opts) && (opts.length === 1) && (['OR', 'AND', 'BIND'].indexOf(opts[0]) !== -1) ) {
 		throw new TypeError('opts invalid: ' + util.inspect(opts) );
 	}
 
@@ -609,7 +666,8 @@ function do_select(types, opts, traits) {
 	}
 
 	if(traits.order) {
-		query += ' ORDER BY ' + traits.order.map(parse_predicate_key.bind(undefined, ObjType)).join(', ');
+		// FIXME: Make correct casts from json to text, integer or something else that can be ordered based on the JSON type
+		query += ' ORDER BY ' + traits.order.map(parse_predicate_key.bind(undefined, ObjType)).map(function(x) { return x + '::text'; }).join(', ');
 	}
 
 	//debug.log('query = ' + query);

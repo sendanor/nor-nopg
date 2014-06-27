@@ -962,6 +962,40 @@ describe('nopg', function(){
 			}).done();
 		});
 
+		/* */
+		it('typed document search using custom function', function(done){
+			nopg.start(PGCONFIG)
+			  .createType("Test2jiArvj8")()
+			  .create("Test2jiArvj8")({"foo":1})
+			  .create("Test2jiArvj8")({"foo":2})
+			  .create("Test2jiArvj8")({"foo":3})
+			  .search("Test2jiArvj8")(["BIND", "foo", function(foo, limit) { return foo >= limit; }, 2])
+			  .then(function(db) {
+				var type = db.fetch();
+				var item0 = db.fetch();
+				var item1 = db.fetch();
+				var item2 = db.fetch();
+				var items = db.fetch();
+
+				assert.strictEqual(type.$name, "Test2jiArvj8");
+
+				assert.strictEqual(item0.foo, 1);
+				assert.strictEqual(item1.foo, 2);
+				assert.strictEqual(item2.foo, 3);
+
+				assert.strictEqual(items.length, 2);
+				assert.strictEqual(item1.foo, items[0].foo);
+				assert.strictEqual(item2.foo, items[1].foo);
+
+				return db.commit();
+			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
+				done(err);
+			}).done();
+		});
+
 // End of tests
 
 	});
