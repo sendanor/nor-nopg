@@ -588,6 +588,26 @@ function parse_search_opts(opts, traits) {
 	return opts;
 }
 
+/** Parse `traits.order` */
+function parse_traits_order(ObjType, order) {
+	debug.assert(ObjType).typeOf('function');
+	debug.assert(order).is('array');
+
+	return order.map(function(o) {
+		var key, rest;
+		if(is.array(o)) {
+			key = o[0];
+			rest = o.slice(1);
+		} else {
+			key = o;
+			rest = [];
+		}
+		
+		return [parse_predicate_key(ObjType, key) + '::text'].concat(rest).join(' ');
+
+	}).join(', ');
+}
+
 /** Generic SELECT query */
 function do_select(types, opts, traits) {
 
@@ -667,7 +687,7 @@ function do_select(types, opts, traits) {
 
 	if(traits.order) {
 		// FIXME: Make correct casts from json to text, integer or something else that can be ordered based on the JSON type
-		query += ' ORDER BY ' + traits.order.map(parse_predicate_key.bind(undefined, ObjType)).map(function(x) { return x + '::text'; }).join(', ');
+		query += ' ORDER BY ' + parse_traits_order(ObjType, traits.order);
 	}
 
 	//debug.log('query = ' + query);
