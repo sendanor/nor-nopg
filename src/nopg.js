@@ -1659,4 +1659,9 @@ NoPg.prototype.searchAttachments = function(doc) {
 	return searchAttachments2;
 };
 
+/** Get value of internal PG connection */
+NoPg.prototype.valueOf = function nopg_prototype_valueof() {
+	return this._db;
+};
+
 /* EOF */
