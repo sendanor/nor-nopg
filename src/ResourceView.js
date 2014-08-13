@@ -59,6 +59,7 @@ function ResourceView(opts) {
 	view.opts = {};
 	view.opts.keys = opts.keys || ['$id', '$type', '$ref'];
 	view.opts.path = opts.path;
+	view.opts.elementPath = opts.elementPath;
 
 	view.Type = opts.Type;
 
@@ -79,7 +80,13 @@ ResourceView.prototype.element = function(req, res, opts) {
 	//debug.log('view.opts = ', view.opts);
 	//debug.log('opts = ', opts);
 	debug.assert(view.opts).is('object');
-	opts = merge(view.opts, opts || {});
+
+	var no_local_path = (opts && opts.path && (!opts.elementPath)) ? true : false;
+	opts = merge(copy(view.opts), copy(opts || {}));
+	if(no_local_path && opts.elementPath) {
+		opts.path = opts.elementPath;
+	}
+
 	//debug.log('(after) opts = ', opts);
 	var views = opts.views || ResourceView.views;
 	return function(item) {
@@ -105,7 +112,6 @@ ResourceView.prototype.element = function(req, res, opts) {
 
 		var body = strip(item).specials().get();
 		opts.keys.forEach(function(key) {
-
 			var path = [req].concat(render_path(opts.path, params)).concat([item.$id]);
 			//debug.log("path = ", ref.apply(undefined , path));
 
@@ -166,6 +172,9 @@ ResourceView.prototype.collection = function(req, res, opts) {
 		var element_opts = copy(opts);
 		var rendered_path = render_path(element_opts.path, element_opts.params);
 		var path = [req].concat(rendered_path);
+		if(view.opts.elementPath) {
+			element_opts.path = view.opts.elementPath;
+		}
 		if(opts.elementPath) {
 			element_opts.path = opts.elementPath;
 		}
