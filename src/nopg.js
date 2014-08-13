@@ -666,7 +666,7 @@ function parse_traits_order(types, order) {
 		//debug.log('pgtype = ', pgtype);
 
 		if(pgtype === 'boolean') {
-			pgtype += ' IS TRUE';
+			pgtype = 'text::boolean IS TRUE';
 		}
 
 		if(pgtype === 'numeric') {
