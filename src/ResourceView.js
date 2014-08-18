@@ -51,8 +51,8 @@ function render_path(path, params) {
 /** Builds a builder for REST data views */
 function ResourceView(opts) {
 	var view = this;
-	opts = opts || {};
-	
+	opts = copy(opts || {});
+
 	debug.assert(opts).is('object');
 	debug.assert(opts.path).is('string');
 
@@ -81,7 +81,7 @@ ResourceView.prototype.element = function(req, res, opts) {
 	//debug.log('opts = ', opts);
 	debug.assert(view.opts).is('object');
 
-	var no_local_path = (opts && opts.path && (!opts.elementPath)) ? true : false;
+	var no_local_path = !(opts && opts.path && opts.elementPath);
 	opts = merge(copy(view.opts), copy(opts || {}));
 	if(no_local_path && opts.elementPath) {
 		opts.path = opts.elementPath;
@@ -115,25 +115,25 @@ ResourceView.prototype.element = function(req, res, opts) {
 			var path = [req].concat(render_path(opts.path, params)).concat([item.$id]);
 			//debug.log("path = ", ref.apply(undefined , path));
 
-			// 
+			//
 			if( (key === '$ref') && is.uuid(item.$id) ) {
 				body.$ref = ref.apply(undefined, path);
 				return;
 			}
 
-			// 
+			//
 			if( is.uuid(item[key]) && is.object(views[(''+key).toLowerCase()]) ) {
 				body[key] = views[key].element(req, res)(item[key]);
 				return;
 			}
 
-			// 
+			//
 			if( is.object(item[key]) && is.uuid(item[key].$id) && is.undef(item[key].$ref) && is.object(views[(''+key).toLowerCase()]) ) {
 				body[key] = views[key].element(req, res)(item[key]);
 				return;
 			}
 
-			// 
+			//
 			if(item[key] !== undefined) {
 				body[key] = item[key];
 				return;
@@ -165,7 +165,7 @@ ResourceView.prototype.collection = function(req, res, opts) {
 	debug.assert(res).is('object');
 	//debug.log("view.opts = ", view.opts);
 	//debug.log("opts = ", opts);
-	opts = merge(view.opts, opts || {});
+	opts = merge(copy(view.opts), copy(opts || {}));
 	//debug.log("(after) opts = ", opts);
 	return function(items) {
 		debug.assert(items).is('array');
