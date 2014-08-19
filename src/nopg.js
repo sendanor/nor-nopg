@@ -50,8 +50,9 @@ function nr_fcall(name, fun) {
 	debug.assert(fun).is('function');
 	var tracer = nr.createTracer(name, function() {});
 	debug.assert(tracer).is('function');
-	return Q.fcall(fun).then(function() {
-		tracer();
+	return Q.fcall(fun).then(function(result) {
+		tracer(undefined, result);
+		return result;
 	}).fail(function(err) {
 		tracer(err);
 		throw err;
