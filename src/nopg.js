@@ -68,6 +68,10 @@ function NoPg(db) {
 	self._values = [];
 	self._tr_state = 'open';
 	self._stats = [];
+	self._cache = {
+		'types': {},
+		'objects': {}
+	};
 }
 
 module.exports = NoPg;
@@ -132,7 +136,7 @@ function get_results(Type, opts) {
 
 	/** Parse field */
 	function parse_field(obj, key, value) {
-		debug.assert(obj).typeOf('object');
+		debug.assert(obj).is('object');
 		//debug.log('obj = ', obj);
 		//debug.log('key = ', key);
 		//debug.log('value = ', value);
@@ -474,7 +478,7 @@ _parsers.parse_array_predicate = function parse_array_predicate(ObjType, params,
 /** Recursively parse predicates */
 _parsers.recursive_parse_predicates = function recursive_parse_predicates(ObjType, params, def_op, o) {
 
-	//debug.assert(params).typeOf('object');
+	//debug.assert(params).is('object');
 
 	/* Returns match string */
 	//function build_match(k,n) {
@@ -535,7 +539,7 @@ function parse_search_traits(traits) {
 
 /** Parses internal fields from nopg style fields */
 function parse_internal_fields(ObjType, nopg_fields) {
-	debug.assert(ObjType).typeOf('function');
+	debug.assert(ObjType).is('function');
 	debug.assert(nopg_fields).is('array');
 
 	var field_id = 0;
@@ -1513,6 +1517,9 @@ NoPg.prototype.createOrReplaceType = function(name) {
 NoPg.prototype._typeExists = function(name) {
 	//debug.log('name = ', name);
 	var self = this;
+	if(is.string(name) && self._cache.types.hasOwnProperty(name)) {
+		return true;
+	}
 	return do_select.call(self, NoPg.Type, name).then(function(types) {
 		return (types.length >= 1) ? true : false;
 	});
@@ -1536,9 +1543,22 @@ NoPg.prototype.typeExists = function(name) {
 
 /** Get type directly */
 NoPg.prototype._getType = function(name, traits) {
-	//debug.log('name = ', name);
 	var self = this;
-	return do_select.call(self, NoPg.Type, name, traits).then(get_result(NoPg.Type));
+	if(!is.string(name)) {
+		return do_select.call(self, NoPg.Type, name, traits).then(get_result(NoPg.Type));
+	}
+	if(self._cache.types.hasOwnProperty(name)) {
+		return Q.when(self._cache.types[name]);
+	}
+	return self._cache.types[name] = do_select.call(self, NoPg.Type, name, traits).then(get_result(NoPg.Type)).then(function(result) {
+		if(is.obj(result)) {
+			self._cache.types[name] = result;
+			if(is.uuid(result.$id)) {
+				self._cache.objects[result.$id] = result;
+			}
+		}
+		return result;
+	});
 };
 
 /** Get type and save it to result queue. */
@@ -1567,7 +1587,7 @@ function _latestDBVersion() {
 			return parseInt(obj.version, 10);
 		});
 	}).then(function(db_version) {
-		if(db_version < -1 ) { 
+		if(db_version < -1 ) {
 			throw new TypeError("Database version " + db_version + " is not between accepted range (-1 ..)");
 		}
 		return db_version;
@@ -1676,7 +1696,7 @@ NoPg.prototype.createAttachment = function(doc) {
 
 			try {
 				if(file && is.string(file)) {
-					debug.assert(file).typeOf('string');
+					debug.assert(file).is('string');
 				} else {
 					debug.assert(file).typeOf('object').instanceOf(Buffer);
 					file_is_buffer = true;
@@ -1684,7 +1704,7 @@ NoPg.prototype.createAttachment = function(doc) {
 			} catch(e) {
 				throw new TypeError("Argument not String or Buffer: " + e);
 			}
-			debug.assert(opts).typeOf('object');
+			debug.assert(opts).is('object');
 
 			if(doc === undefined) {
 				doc = self._getLastValue();
@@ -1700,7 +1720,7 @@ NoPg.prototype.createAttachment = function(doc) {
 			}
 
 			//debug.log("documents_id = ", doc_id);
-			debug.assert(doc_id).typeOf('string');
+			debug.assert(doc_id).is('string');
 
 			if(file_is_buffer) {
 				return file;
@@ -1717,7 +1737,7 @@ NoPg.prototype.createAttachment = function(doc) {
 				$meta: opts
 			};
 
-			debug.assert(data.$documents_id).typeOf('string');
+			debug.assert(data.$documents_id).is('string');
 
 			//debug.log("data.$documents_id = ", data.$documents_id);
 			//debug.log("data.$meta = ", data.$meta);

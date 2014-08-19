@@ -6,7 +6,7 @@ module.exports = [
 	function(db) {
 		function call_func(data, fun, params) {
 			try {
-				
+
 				// Parse data
 				if(!(data && (data instanceof Array))) {
 					throw new TypeError("First argument is not an array");
@@ -19,7 +19,7 @@ module.exports = [
 				} else {
 					throw new TypeError("Second argument is not valid serialized function");
 				}
-	
+
 				// Parse params
 				if(!(params && (params instanceof Array))) {
 					throw new TypeError("Third argument is not an array");
