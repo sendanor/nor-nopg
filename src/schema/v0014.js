@@ -1,4 +1,6 @@
 /** Database schema creation functions */
+/*global ERROR*/
+
 var NoPg = require('../index.js');
 module.exports = [
 

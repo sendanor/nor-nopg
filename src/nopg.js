@@ -18,6 +18,46 @@ var orm = require('./orm');
 var merge = require('merge');
 var pghelpers = require('./pghelpers.js');
 
+/* ------- (OPTIONAL) NEWRELIC SUPPORT ---------- */
+
+/** Returns true if module exists */
+function module_exists(name) {
+	try {
+		require.resolve(name);
+		return true;
+	} catch(e) {
+		return false;
+	}
+}
+
+var nr;
+if(module_exists("newrelic") && (!process.env.DISABLE_NEWRELIC)) {
+	debug.info('Enabled newrelic instrumentation for nor-pg.');
+	try {
+		nr = require("newrelic");
+	} catch(e) {
+		debug.warn('Failed to setup NewRelic support: ' + e);
+		nr = undefined;
+	}
+}
+
+/** NewRelic `createTracer()` as `Q.fcall({function})` style implementation */
+function nr_fcall(name, fun) {
+	if(!nr) {
+		return Q.fcall(fun);
+	}
+	debug.assert(name).is('string');
+	debug.assert(fun).is('function');
+	var tracer = nr.createTracer(name, function() {});
+	debug.assert(tracer).is('function');
+	return Q.fcall(fun).then(function() {
+		tracer();
+	}).fail(function(err) {
+		tracer(err);
+		throw err;
+	});
+}
+
 /* ------------- HELPER FUNCTIONS --------------- */
 
 /** Returns seconds between two date values
@@ -1179,39 +1219,41 @@ if(process.env.NOPG_TIMEOUT !== undefined) {
 
 /** Start */
 NoPg.start = function(pgconfig, opts) {
-	opts = opts || {};
-	debug.assert(opts).is('object');
-	if(opts.timeout) {
-		debug.assert(opts.timeout).is('number');
-	}
-	var w;
-	var start_time = new Date();
-	return extend.promise( [NoPg], pg.start(pgconfig).then(function(db) {
-		var end_time = new Date();
+	return extend.promise( [NoPg], nr_fcall("nopg:start", function() {
+		opts = opts || {};
+		debug.assert(opts).is('object');
+		if(opts.timeout) {
+			debug.assert(opts.timeout).is('number');
+		}
+		var w;
+		var start_time = new Date();
+		return pg.start(pgconfig).then(function(db) {
+			var end_time = new Date();
 
-		if(!db) { throw new TypeError("invalid db: " + util.inspect(db) ); }
-		w = create_watchdog(db, {"timeout": opts.timeout || NoPg.defaults.timeout});
-		var nopg_db = new NoPg(db);
+			if(!db) { throw new TypeError("invalid db: " + util.inspect(db) ); }
+			w = create_watchdog(db, {"timeout": opts.timeout || NoPg.defaults.timeout});
+			var nopg_db = new NoPg(db);
 
-		nopg_db._record_sample({
-			'event': 'start',
-			'start': start_time,
-			'end': end_time
+			nopg_db._record_sample({
+				'event': 'start',
+				'start': start_time,
+				'end': end_time
+			});
+
+			return nopg_db;
+		}).then(function(db) {
+			w.reset(db);
+			db._watchdog = w;
+			return pg_query("SET plv8.start_proc = 'plv8_init'")(db);
+		}).then(function(db) {
+			return pg_table_exists.call(db, NoPg.DBVersion.meta.table).then(function(exists) {
+				if(!exists) {
+					debug.log('Warning! Detected uninitialized database.');
+				}
+				return db;
+			});
 		});
-
-		return nopg_db;
-	}).then(function(db) {
-		w.reset(db);
-		db._watchdog = w;
-		return pg_query("SET plv8.start_proc = 'plv8_init'")(db);
-	})).then(function(db) {
-		return pg_table_exists.call(db, NoPg.DBVersion.meta.table).then(function(exists) {
-			if(!exists) {
-				debug.log('Warning! Detected uninitialized database.');
-			}
-			return db;
-		});
-	});
+	}));
 };
 
 /** Fetch next value from queue */
@@ -1263,43 +1305,47 @@ NoPg.prototype._getLastValue = function() {
 NoPg.prototype.commit = function() {
 	var self = this;
 	var start_time = new Date();
-	return extend.promise( [NoPg], self._db.commit().then(function() {
-		var end_time = new Date();
-		self._record_sample({
-			'event': 'commit',
-			'start': start_time,
-			'end': end_time
+	return extend.promise( [NoPg], nr_fcall("nopg:commit", function() {
+		return self._db.commit().then(function() {
+			var end_time = new Date();
+			self._record_sample({
+				'event': 'commit',
+				'start': start_time,
+				'end': end_time
+			});
+
+			self._finish_samples();
+
+			self._tr_state = 'commit';
+			if(is.obj(self._watchdog)) {
+				self._watchdog.clear();
+			}
+			return self;
 		});
-
-		self._finish_samples();
-
-		self._tr_state = 'commit';
-		if(is.obj(self._watchdog)) {
-			self._watchdog.clear();
-		}
-		return self;
-	}) );
+	}));
 };
 
 /** Rollback transaction */
 NoPg.prototype.rollback = function() {
 	var self = this;
 	var start_time = new Date();
-	return extend.promise( [NoPg], self._db.rollback().then(function() {
-		var end_time = new Date();
-		self._record_sample({
-			'event': 'rollback',
-			'start': start_time,
-			'end': end_time
+	return extend.promise( [NoPg], nr_fcall("nopg:rollback", function() {
+		return self._db.rollback().then(function() {
+			var end_time = new Date();
+			self._record_sample({
+				'event': 'rollback',
+				'start': start_time,
+				'end': end_time
+			});
+
+			self._finish_samples();
+
+			self._tr_state = 'rollback';
+			if(is.obj(self._watchdog)) {
+				self._watchdog.clear();
+			}
+			return self;
 		});
-
-		self._finish_samples();
-
-		self._tr_state = 'rollback';
-		if(is.obj(self._watchdog)) {
-			self._watchdog.clear();
-		}
-		return self;
 	}) );
 };
 
@@ -1433,7 +1479,9 @@ NoPg.prototype.search = function(type) {
 	var self = this;
 	var ObjType = NoPg.Document;
 	function search2(opts, traits) {
-		return do_select.call(self, [ObjType, type], opts, traits).then(save_result_to_queue(self)).then(function() { return self; });
+		return extend.promise( [NoPg], nr_fcall("nopg:search", function() {
+			return do_select.call(self, [ObjType, type], opts, traits).then(save_result_to_queue(self)).then(function() { return self; });
+		}));
 	}
 	return search2;
 };
@@ -1444,7 +1492,12 @@ NoPg.prototype.searchSingle = function(type) {
 	var self = this;
 	var ObjType = NoPg.Document;
 	function searchSingle2(opts, traits) {
-		return do_select.call(self, [ObjType, type], opts, traits).then(get_result(ObjType)).then(save_result_to_queue(self)).then(function() { return self; });
+		return extend.promise( [NoPg], nr_fcall("nopg:search", function() {
+			return do_select.call(self, [ObjType, type], opts, traits)
+				.then(get_result(ObjType))
+				.then(save_result_to_queue(self))
+				.then(function() { return self; });
+		}));
 	}
 	return searchSingle2;
 };
@@ -1453,7 +1506,9 @@ NoPg.prototype.searchSingle = function(type) {
 NoPg.prototype.update = function(obj, data) {
 	var self = this;
 	var ObjType = NoPg.getObjectType(obj);
-	return do_update.call(self, ObjType, obj, data).then(get_result(ObjType)).then(save_result_to(self));
+	return extend.promise( [NoPg], nr_fcall("nopg:update", function() {
+		return do_update.call(self, ObjType, obj, data).then(get_result(ObjType)).then(save_result_to(self));
+	}));
 };
 
 /** Delete resource */
@@ -1461,7 +1516,9 @@ NoPg.prototype.del = function(obj) {
 	if(!obj.$id) { throw new TypeError("opts.$id invalid: " + util.inspect(obj) ); }
 	var self = this;
 	var ObjType = NoPg.getObjectType(obj);
-	return do_delete.call(self, ObjType, obj).then(function() { return self; });
+	return extend.promise( [NoPg], nr_fcall("nopg:del", function() {
+		return do_delete.call(self, ObjType, obj).then(function() { return self; });
+	}));
 };
 
 NoPg.prototype['delete'] = NoPg.prototype.del;
@@ -1471,12 +1528,14 @@ NoPg.prototype.createType = function(name) {
 	//debug.log('name = ', name);
 	var self = this;
 	function createType2(data) {
-		data = data || {};
-		//debug.log('data = ', data);
-		if(name !== undefined) {
-			data.$name = ''+name;
-		}
-		return do_insert.call(self, NoPg.Type, data).then(get_result(NoPg.Type)).then(save_result_to(self));
+		return extend.promise( [NoPg], nr_fcall("nopg:createType", function() {
+			data = data || {};
+			//debug.log('data = ', data);
+			if(name !== undefined) {
+				data.$name = ''+name;
+			}
+			return do_insert.call(self, NoPg.Type, data).then(get_result(NoPg.Type)).then(save_result_to(self));
+		}));
 	}
 	return createType2;
 };
@@ -1486,23 +1545,25 @@ NoPg.prototype.declareType = function(name) {
 	//debug.log('name = ', name);
 	var self = this;
 	function createOrReplaceType2(data) {
-		data = data || {};
-		//debug.log('data = ', data);
-		var where = {};
-		if(name !== undefined) {
-			if(name instanceof NoPg.Type) {
-				where.$types_id = name.$id;
-			} else {
-				where.$name = ''+name;
+		return extend.promise( [NoPg], nr_fcall("nopg:declareType", function() {
+			data = data || {};
+			//debug.log('data = ', data);
+			var where = {};
+			if(name !== undefined) {
+				if(name instanceof NoPg.Type) {
+					where.$types_id = name.$id;
+				} else {
+					where.$name = ''+name;
+				}
 			}
-		}
-		return self._getType(where).then(function(type) {
-			if(type) {
-				return self.update(type, data);
-			} else {
-				return self.createType(name)(data);
-			}
-		});
+			return self._getType(where).then(function(type) {
+				if(type) {
+					return self.update(type, data);
+				} else {
+					return self.createType(name)(data);
+				}
+			});
+		}));
 	}
 	return createOrReplaceType2;
 };
@@ -1538,7 +1599,9 @@ NoPg.prototype._libExists = function(name) {
 NoPg.prototype.typeExists = function(name) {
 	//debug.log('name = ', name);
 	var self = this;
-	return self._typeExists(name).then(save_result_to(self));
+	return extend.promise( [NoPg], nr_fcall("nopg:typeExists", function() {
+		return self._typeExists(name).then(save_result_to(self));
+	}));
 };
 
 /** Get type directly */
@@ -1550,7 +1613,9 @@ NoPg.prototype._getType = function(name, traits) {
 	if(self._cache.types.hasOwnProperty(name)) {
 		return Q.when(self._cache.types[name]);
 	}
-	return self._cache.types[name] = do_select.call(self, NoPg.Type, name, traits).then(get_result(NoPg.Type)).then(function(result) {
+
+	var cached = do_select.call(self, NoPg.Type, name, traits).then(get_result(NoPg.Type));
+	cached = self._cache.types[name] = cached.then(function(result) {
 		if(is.obj(result)) {
 			self._cache.types[name] = result;
 			if(is.uuid(result.$id)) {
@@ -1559,13 +1624,16 @@ NoPg.prototype._getType = function(name, traits) {
 		}
 		return result;
 	});
+	return cached;
 };
 
 /** Get type and save it to result queue. */
 NoPg.prototype.getType = function(name) {
 	//debug.log('name = ', name);
 	var self = this;
-	return self._getType(name).then(save_result_to(self));
+	return extend.promise( [NoPg], nr_fcall("nopg:getType", function() {
+		return self._getType(name).then(save_result_to(self));
+	}));
 };
 
 /** Alias for `pghelpers.escapeFunction()` */
@@ -1597,7 +1665,9 @@ function _latestDBVersion() {
 /** Returns the latest database server version as a integer number */
 NoPg.prototype.latestDBVersion = function() {
 	var self = this;
-	return _latestDBVersion.call(self).then(save_result_to(self));
+	return extend.promise( [NoPg], nr_fcall("nopg:latestDBVersion", function() {
+		return _latestDBVersion.call(self).then(save_result_to(self));
+	}));
 };
 
 /** Import javascript file into database as a library by calling `.importLib(FILE, [OPT(S)])` or `.importLib(OPT(S))` with `$content` property. */
@@ -1642,7 +1712,9 @@ NoPg.prototype._importLib = function(file, opts) {
 /** Import javascript file into database as a library by calling `.importLib(FILE, [OPT(S)])` or `.importLib(OPT(S))` with `$content` property. */
 NoPg.prototype.importLib = function(file, opts) {
 	var self = this;
-	return self._importLib(file, opts).then(get_result(NoPg.Lib)).then(save_result_to(self));
+	return extend.promise( [NoPg], nr_fcall("nopg:importLib", function() {
+		return self._importLib(file, opts).then(get_result(NoPg.Lib)).then(save_result_to(self));
+	}));
 };
 
 /** Get specified object directly */
@@ -1666,7 +1738,9 @@ NoPg.prototype._getDocument = function(opts) {
 NoPg.prototype.getDocument = function(opts) {
 	//debug.log('opts = ', opts);
 	var self = this;
-	return self._getDocument(opts).then(save_result_to(self));
+	return extend.promise( [NoPg], nr_fcall("nopg:getDocument", function() {
+		return self._getDocument(opts).then(save_result_to(self));
+	}));
 };
 
 /** Search types */
@@ -1675,7 +1749,9 @@ NoPg.prototype.searchTypes = function(opts, traits) {
 	//debug.log('ObjType = ', ObjType);
 	var ObjType = NoPg.Type;
 	//debug.log('opts = ', opts);
-	return do_select.call(self, ObjType, opts, traits).then(save_result_to_queue(self)).then(function() { return self; });
+	return extend.promise( [NoPg], nr_fcall("nopg:searchTypes", function() {
+		return do_select.call(self, ObjType, opts, traits).then(save_result_to_queue(self)).then(function() { return self; });
+	}));
 };
 
 /** Create an attachment from a file in the filesystem.
@@ -1688,62 +1764,63 @@ NoPg.prototype.createAttachment = function(doc) {
 	var doc_id;
 
 	function createAttachment2(file, opts) {
-		opts = opts || {};
+		return extend.promise( [NoPg], nr_fcall("nopg:createAttachment", function() {
+			return Q.fcall(function() {
+				opts = opts || {};
 
-		return Q.fcall(function() {
+				var file_is_buffer = false;
 
-			var file_is_buffer = false;
-
-			try {
-				if(file && is.string(file)) {
-					debug.assert(file).is('string');
-				} else {
-					debug.assert(file).typeOf('object').instanceOf(Buffer);
-					file_is_buffer = true;
+				try {
+					if(file && is.string(file)) {
+						debug.assert(file).is('string');
+					} else {
+						debug.assert(file).typeOf('object').instanceOf(Buffer);
+						file_is_buffer = true;
+					}
+				} catch(e) {
+					throw new TypeError("Argument not String or Buffer: " + e);
 				}
-			} catch(e) {
-				throw new TypeError("Argument not String or Buffer: " + e);
-			}
-			debug.assert(opts).is('object');
+				debug.assert(opts).is('object');
 
-			if(doc === undefined) {
-				doc = self._getLastValue();
-				//debug.log("last doc was = ", doc);
-			}
+				if(doc === undefined) {
+					doc = self._getLastValue();
+					//debug.log("last doc was = ", doc);
+				}
 
-			if(doc && (doc instanceof NoPg.Document)) {
-				doc_id = doc.$id;
-			} else if(doc && (doc instanceof NoPg.Attachment)) {
-				doc_id = doc.$documents_id;
-			} else {
-				throw new TypeError("Could not detect document ID!");
-			}
+				if(doc && (doc instanceof NoPg.Document)) {
+					doc_id = doc.$id;
+				} else if(doc && (doc instanceof NoPg.Attachment)) {
+					doc_id = doc.$documents_id;
+				} else {
+					throw new TypeError("Could not detect document ID!");
+				}
 
-			//debug.log("documents_id = ", doc_id);
-			debug.assert(doc_id).is('string');
+				//debug.log("documents_id = ", doc_id);
+				debug.assert(doc_id).is('string');
 
-			if(file_is_buffer) {
-				return file;
-			}
+				if(file_is_buffer) {
+					return file;
+				}
 
-			return fs.readFile(file, {'encoding':'hex'});
+				return fs.readFile(file, {'encoding':'hex'});
 
-		}).then(function(buffer) {
-			//debug.log("typeof data = ", typeof data);
+			}).then(function(buffer) {
+				//debug.log("typeof data = ", typeof data);
 
-			var data = {
-				$documents_id: doc_id,
-				$content: '\\x' + buffer,
-				$meta: opts
-			};
+				var data = {
+					$documents_id: doc_id,
+					$content: '\\x' + buffer,
+					$meta: opts
+				};
 
-			debug.assert(data.$documents_id).is('string');
+				debug.assert(data.$documents_id).is('string');
 
-			//debug.log("data.$documents_id = ", data.$documents_id);
-			//debug.log("data.$meta = ", data.$meta);
+				//debug.log("data.$documents_id = ", data.$documents_id);
+				//debug.log("data.$meta = ", data.$meta);
 
-			return do_insert.call(self, NoPg.Attachment, data).then(get_result(NoPg.Attachment)).then(save_result_to(self));
-		});
+				return do_insert.call(self, NoPg.Attachment, data).then(get_result(NoPg.Attachment)).then(save_result_to(self));
+			}); // q_fcall
+		})); // nr_fcall
 	}
 	return createAttachment2;
 };
@@ -1768,33 +1845,36 @@ NoPg.prototype.searchAttachments = function(doc) {
 	}
 
 	function searchAttachments2(opts, traits) {
-		var ObjType = NoPg.Attachment;
-		opts = opts || {};
+		return extend.promise( [NoPg], nr_fcall("nopg:searchAttachments", function() {
 
-		//debug.log('doc = ', doc);
+			var ObjType = NoPg.Attachment;
+			opts = opts || {};
 
-		if(doc === undefined) {
-			doc = self._getLastValue();
-		}
+			//debug.log('doc = ', doc);
 
-		if(is.array(doc)) {
-			opts = doc.map(get_documents_id).map(function(id) {
-				if(is.uuid(id)) {
-					return {'$documents_id': id};
-				} else {
-					return id;
-				}
-			});
-		} else if(is.obj(doc)) {
-			if(!is.obj(opts)) {
-				opts = {};
+			if(doc === undefined) {
+				doc = self._getLastValue();
 			}
-			opts.$documents_id = get_documents_id(doc);
-		}
 
-		//debug.log('opts = ', opts);
+			if(is.array(doc)) {
+				opts = doc.map(get_documents_id).map(function(id) {
+					if(is.uuid(id)) {
+						return {'$documents_id': id};
+					} else {
+						return id;
+					}
+				});
+			} else if(is.obj(doc)) {
+				if(!is.obj(opts)) {
+					opts = {};
+				}
+				opts.$documents_id = get_documents_id(doc);
+			}
 
-		return do_select.call(self, ObjType, opts, traits).then(save_result_to_queue(self)).then(function() { return self; });
+			//debug.log('opts = ', opts);
+
+			return do_select.call(self, ObjType, opts, traits).then(save_result_to_queue(self)).then(function() { return self; });
+		}));
 	}
 
 	return searchAttachments2;
