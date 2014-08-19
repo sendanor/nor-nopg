@@ -56,7 +56,7 @@ function log_time(sample) {
 	if(sample.params) {
 		msg += 'params=' + util.inspect(sample.params);
 	}
-	debug.log(msg); 
+	debug.log(msg);
 
 }
 
@@ -136,7 +136,7 @@ function get_results(Type, opts) {
 		//debug.log('obj = ', obj);
 		//debug.log('key = ', key);
 		//debug.log('value = ', value);
-		
+
 		/* Parse full top level field */
 		function parse_field_top(obj, key, value) {
 			if( is.array(obj['$'+key]) ) {
@@ -147,7 +147,7 @@ function get_results(Type, opts) {
 				obj['$'+key] = value;
 			}
 		}
-		
+
 		/* Parse property in top level field based on a key as an array `[datakey, property_name]` */
 		function parse_field_property(obj, key, value) {
 			//debug.log('key = ', key);
@@ -155,11 +155,11 @@ function get_results(Type, opts) {
 			var b = key[1];
 			//debug.log('key_a = ', a);
 			//debug.log('key_b = ', b);
-	
+
 			if(!is.obj(obj['$'+a])) {
 				obj['$'+a] = {};
 			}
-			
+
 			obj['$'+a][b] = value;
 		}
 
@@ -174,7 +174,7 @@ function get_results(Type, opts) {
 			return parse_field_property_pg(obj, [a,b], value);
 		}
 
-		// 
+		//
 		var new_key;
 		if( is.func(field_map) && (new_key = field_map(key)) ) {
 			if( (new_key) && (new_key !== key) ) {
@@ -265,7 +265,7 @@ function parse_predicate_key(Type, key, opts) {
 			return '' + a + '__' + b.replace(/[^a-zA-Z0-9\_\-\.]/g, '_');
 		};
 	}
-	
+
 	var datakey = get_predicate_datakey(Type);
 
 	function parse_meta_key(datakey, key) {
@@ -304,7 +304,7 @@ function parse_predicate_key(Type, key, opts) {
 		if(is.func(as)) {
 			return ""+key.substr(1);
 		}
-		
+
 		return key.substr(1);
 	}
 
@@ -322,7 +322,7 @@ function parse_predicates(Type) {
 		opts = opts || {};
 		var datakey = get_predicate_datakey(Type);
 		var res = {};
-		
+
 		// Parse meta properties
 		Object.keys(opts).filter(function(k) { return k[0] !== '$'; }).forEach(function(key) {
 			var keyreg = /^[a-zA-Z0-9_\-\.]+$/;
@@ -345,13 +345,13 @@ function parse_predicates(Type) {
 				res[keyref] = ''+opts[key];
 			}
 		});
-		
+
 		// Parse top level properties
 		Object.keys(opts).filter(function(k) { return k[0] === '$'; }).forEach(function(key) {
 			var k = key.substr(1);
 			res[k] = opts[key];
 		});
-	
+
 		return res;
 	}
 	return parse_data;
@@ -381,7 +381,7 @@ function do_query(query, values) {
 	var start_time = new Date();
 	return extend.promise( [NoPg], self._db._query(query, values).then(function(db) {
 		var end_time = new Date();
-			
+
 		self._record_sample({
 			'event': 'query',
 			'start': start_time,
@@ -540,7 +540,7 @@ function parse_internal_fields(ObjType, nopg_fields) {
 
 	var field_id = 0;
 	var field_map = {};
-	
+
 	function field_as(a, b) {
 		field_id += 1;
 		var key;
@@ -556,12 +556,12 @@ function parse_internal_fields(ObjType, nopg_fields) {
 	}
 
 	// Append $type if it is not there and $* has been included
-	if((ObjType === NoPg.Document) && nopg_fields.some(function(f) { return f === '$*'; }) && 
+	if((ObjType === NoPg.Document) && nopg_fields.some(function(f) { return f === '$*'; }) &&
 	   nopg_fields.every(function(f) { return f !== '$type'; }) ) {
 		nopg_fields.push('$type');
 	}
 
-	// 
+	//
 	var fields = nopg_fields.map(function(f) {
 		return parse_predicate_key(ObjType, f, {as: field_as});
 	});
@@ -569,7 +569,7 @@ function parse_internal_fields(ObjType, nopg_fields) {
 	//debug.log('fields = ', fields);
 	//debug.log('field_map = ', field_map);
 
-	var result = { 
+	var result = {
 		"keys": fields,
 		"map": field_map
 	};
@@ -613,7 +613,7 @@ function parse_predicate_pgtype(ObjType, document_type, key) {
 		if(key === '$version') {
 			return 'numeric';
 		}
-	
+
 		if( (key === '$created') || (key === '$updated') ) {
 			return 'text';
 		}
@@ -779,7 +779,7 @@ function do_select(types, opts, traits) {
 		//debug.log('query = ' + query);
 		//debug.log('params = ', params);
 		//debug.log('fields.map = ', fields.map);
-		
+
 		return do_query.call(self, query, params).then(get_results(ObjType, {
 			'fieldMap': fields.map
 		}));
@@ -912,7 +912,7 @@ function do_update(ObjType, obj, orig_data) {
 	//debug.log('keys = ', keys);
 
 	// Return with the current object if there is no keys to update
-	if(keys.length === 0) { 
+	if(keys.length === 0) {
 		//debug.log("Warning! No data to update! Fetching current object from database.");
 		return do_select.call(self, ObjType, where);
 	}
@@ -1075,7 +1075,7 @@ function pg_query(query, params) {
 		return do_query.call(db, query, params).then(function() {
 
 			var end_time = new Date();
-			
+
 			db._record_sample({
 				'event': 'query',
 				'start': start_time,
@@ -1375,7 +1375,7 @@ NoPg.prototype.init = function() {
 
 		// Call upgrade steps
 		return builders.reduce(function(so_far, f) {
-		    return so_far.then(function(db) {
+			return so_far.then(function(db) {
 				db.fetchAll();
 				return db;
 			}).then(f);
@@ -1751,7 +1751,7 @@ NoPg.prototype.searchAttachments = function(doc) {
 		var ObjType = NoPg.Attachment;
 		opts = opts || {};
 
-		debug.log('doc = ', doc);
+		//debug.log('doc = ', doc);
 
 		if(doc === undefined) {
 			doc = self._getLastValue();
@@ -1772,7 +1772,7 @@ NoPg.prototype.searchAttachments = function(doc) {
 			opts.$documents_id = get_documents_id(doc);
 		}
 
-		debug.log('opts = ', opts);
+		//debug.log('opts = ', opts);
 
 		return do_select.call(self, ObjType, opts, traits).then(save_result_to_queue(self)).then(function() { return self; });
 	}
