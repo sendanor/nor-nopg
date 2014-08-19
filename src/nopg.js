@@ -444,7 +444,7 @@ function parse_function_predicate(ObjType, arg_params, def_op, o) {
 	debug.assert(parsed_keys).is('array');
 
 	var n = arg_params.length;
-	
+
 	arg_params.push(JSON.stringify(require('./fun.js').toString(func)));
 	arg_params.push(JSON.stringify(params));
 
@@ -460,6 +460,7 @@ _parsers.parse_array_predicate = function parse_array_predicate(ObjType, params,
 
 	var op = 'AND';
 	if( (o[0] === 'AND') || (o[0] === 'OR') || (o[0] === 'BIND') ) {
+		o = [].concat(o);
 		op = o.shift();
 	}
 
@@ -1224,7 +1225,7 @@ NoPg.prototype.fetchSingle = function() {
 	debug.assert(items).is('array');
 	if(items.length >= 2) {
 		debug.assert(items).length(1);
-	} 
+	}
 	return items.shift();
 };
 
@@ -1238,7 +1239,7 @@ NoPg.prototype.fetchFirst = function() {
 	debug.assert(items).is('array');
 	if(items.length >= 2) {
 		debug.log('Warning! nopg.fetchSingle() got an array with too many results (' + items.length + ')');
-	} 
+	}
 	return items.shift();
 };
 
@@ -1684,12 +1685,12 @@ NoPg.prototype.createAttachment = function(doc) {
 				throw new TypeError("Argument not String or Buffer: " + e);
 			}
 			debug.assert(opts).typeOf('object');
-			
+
 			if(doc === undefined) {
 				doc = self._getLastValue();
 				//debug.log("last doc was = ", doc);
 			}
-			
+
 			if(doc && (doc instanceof NoPg.Document)) {
 				doc_id = doc.$id;
 			} else if(doc && (doc instanceof NoPg.Attachment)) {
@@ -1697,25 +1698,25 @@ NoPg.prototype.createAttachment = function(doc) {
 			} else {
 				throw new TypeError("Could not detect document ID!");
 			}
-	
+
 			//debug.log("documents_id = ", doc_id);
 			debug.assert(doc_id).typeOf('string');
-			
+
 			if(file_is_buffer) {
 				return file;
 			}
-			
+
 			return fs.readFile(file, {'encoding':'hex'});
 
 		}).then(function(buffer) {
 			//debug.log("typeof data = ", typeof data);
-			
+
 			var data = {
 				$documents_id: doc_id,
 				$content: '\\x' + buffer,
 				$meta: opts
 			};
-			
+
 			debug.assert(data.$documents_id).typeOf('string');
 
 			//debug.log("data.$documents_id = ", data.$documents_id);
@@ -1730,35 +1731,48 @@ NoPg.prototype.createAttachment = function(doc) {
 /** Search attachments */
 NoPg.prototype.searchAttachments = function(doc) {
 	var self = this;
-	var doc_id;
 
-	//debug.log('ObjAttachment = ', ObjType);
+	function get_documents_id(item) {
+		if(item instanceof NoPg.Document) {
+			return item.$id;
+		} else if(item instanceof NoPg.Attachment) {
+			return item.$documents_id;
+		} else if(item && item.$documents_id) {
+			return item.$documents_id;
+		} else if(item && item.$id) {
+			return item.$id;
+		} else {
+			return item;
+			//throw new TypeError("Could not detect document ID!");
+		}
+	}
 
 	function searchAttachments2(opts, traits) {
 		var ObjType = NoPg.Attachment;
+		opts = opts || {};
+
+		debug.log('doc = ', doc);
 
 		if(doc === undefined) {
 			doc = self._getLastValue();
-			//debug.log("last doc was = ", doc);
-		}
-		
-		if(doc && (doc instanceof NoPg.Document)) {
-			doc_id = doc.$id;
-		} else if(doc && (doc instanceof NoPg.Attachment)) {
-			doc_id = doc.$documents_id;
-		} else if(doc.$id) {
-			doc_id = doc.$id;
-		} else {
-			throw new TypeError("Could not detect document ID!");
 		}
 
-		//debug.log("documents_id = ", doc_id);
-		debug.assert(doc_id).typeOf('string');
+		if(is.array(doc)) {
+			opts = doc.map(get_documents_id).map(function(id) {
+				if(is.uuid(id)) {
+					return {'$documents_id': id};
+				} else {
+					return id;
+				}
+			});
+		} else if(is.obj(doc)) {
+			if(!is.obj(opts)) {
+				opts = {};
+			}
+			opts.$documents_id = get_documents_id(doc);
+		}
 
-		//debug.log('opts = ', opts);
-
-		opts = opts || {};
-		opts.$documents_id = doc_id;
+		debug.log('opts = ', opts);
 
 		return do_select.call(self, ObjType, opts, traits).then(save_result_to_queue(self)).then(function() { return self; });
 	}
