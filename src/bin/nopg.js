@@ -1,6 +1,7 @@
 #!/usr/bin/env node
+"use strict";
 
-var Q = require('q');
+var $Q = require('q');
 var argv = require('optimist').boolean('v').argv;
 var util = require('util');
 var NoPg = require('../');
@@ -42,7 +43,7 @@ actions.init = function action_init() {
 function markdown_table(headers, table) {
 	// FIXME: Implement better markdown table formating
 	return [headers, [ "---", "---" ]].concat(table).map(function(cols) {
-		return  '| ' + cols.join(' | ') + ' |';
+		return '| ' + cols.join(' | ') + ' |';
 	}).join('\n');
 }
 
@@ -81,11 +82,11 @@ actions.test = function action_test() {
 };
 
 /* Do actions */
-Q.fcall(function() {
+$Q.fcall(function() {
 
 	/* Test arguments */
 	if (argv._.length === 0) {
-		return Q.fcall(actions.help);
+		return $Q.fcall(actions.help);
 	}
 
 	var funcs = argv._.map(function(action) {
@@ -96,7 +97,7 @@ Q.fcall(function() {
 		//debug.log("Scheduled action for ", action);
 
 		return function() {
-			return Q.fcall(actions[action]).fail(function(err) {
+			return $Q.fcall(actions[action]).fail(function(err) {
 				throw ""+action + ": Failed: " + err;
 			});
 		};
@@ -105,8 +106,8 @@ Q.fcall(function() {
 	//debug.log("funcs loaded ", funcs.length);
 
 	return funcs.reduce(function (soFar, f) {
-	    return soFar.then(f);
-	}, Q(undefined));
+		return soFar.then(f);
+	}, $Q(undefined));
 
 }).then(function() {
 	// FIXME: Implement automatic shutdown, now pg still listens.

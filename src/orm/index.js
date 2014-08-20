@@ -1,3 +1,4 @@
+"use strict";
 module.exports = {
 	'ORM': require('./ORM.js'),
 	'Document': require('./Document.js'),

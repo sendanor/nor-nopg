@@ -1,8 +1,9 @@
 /* nor-nopg -- NoPg.Attachment object implementation */
+"use strict";
 
 var debug = require('nor-debug');
 var util = require("util");
-var events = require("events");
+//var events = require("events");
 var NoPgORM = require("./ORM.js");
 
 var meta = require('./meta.js')({
@@ -56,7 +57,7 @@ NoPgAttachment.prototype.getBuffer = function() {
 		return self.$content;
 	}
 
-	debug.assert(self.$content).typeOf('object').instanceOf(Array);
+	debug.assert(self.$content).is('array');
 	return new Buffer( self.$content );
 
 };

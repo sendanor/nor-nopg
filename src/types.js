@@ -2,10 +2,10 @@
 
 "use strict";
 
-var $Q = require('q');
-var util = require('util');
-var NoPg = require('./nopg.js');
-var debug = require('nor-debug');
+var $Q = require("q");
+var util = require("util");
+var NoPg = require("./nopg.js");
+var debug = require("nor-debug");
 
 module.exports = function get_database_types(opts) {
 	//debug.log("nopg-types.js: get_database_types(opts=", opts, ")");

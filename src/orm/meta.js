@@ -1,6 +1,7 @@
 /* nor-nopg -- Implementation of meta objects for `NoPg.Document`, `NoPg.Type`, `NoPg.Attachment` and `NoPg.Lib`. */
+"use strict";
 
-var pghelpers = require('../pghelpers.js');
+//var pghelpers = require('../pghelpers.js');
 var is = require('nor-is');
 var debug = require('nor-debug');
 var copy = require('nor-data').copy;

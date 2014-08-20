@@ -1,8 +1,9 @@
 /* nor-nopg -- NoPg.DBVersion implementation */
+"use strict";
 
-var debug = require('nor-debug');
+//var debug = require('nor-debug');
 var util = require("util");
-var events = require("events");
+//var events = require("events");
 var NoPgORM = require("./ORM.js");
 
 var meta = require('./meta.js')({

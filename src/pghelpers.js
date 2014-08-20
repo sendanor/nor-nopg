@@ -1,6 +1,7 @@
 /** PostgreSQL helpers */
+'use strict';
 
-var debug = require('nor-debug');
+//var debug = require('nor-debug');
 var pghelpers = module.exports = {};
 
 /** Escape JavaScript function into PostgreSQL block.
@@ -12,10 +13,7 @@ var pghelpers = module.exports = {};
 pghelpers.escapeFunction = function escape_function(f, args) {
 	args = args || [];
 	f = ''+f;
-	//debug.log('f = ', f);
-	//debug.log('args = ', args);
 	var ret = '$js$\nreturn (' + f + ').call(' + ['this'].concat(args).join(', ') + ')\n$js$';
-	//debug.log('returns: ', ret);
 	return ret;
 };
 

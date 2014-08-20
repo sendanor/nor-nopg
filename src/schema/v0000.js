@@ -1,5 +1,4 @@
 /** Database schema creation functions */
-
 module.exports = [
 	function(db) {
 		return db.query([

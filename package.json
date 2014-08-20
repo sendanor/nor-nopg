@@ -16,7 +16,8 @@
     "test-min": "mocha -u bdd -c -R min tests/test-*.js",
     "test-markdown": "mocha -u bdd -c -R markdown tests/test-*.js",
     "build-tests.md": "npm run test-markdown > tests.md",
-	"lint": "node-lint src/ --config=lint.json"
+	"lint": "node-lint src/ --config=lint.json",
+	"jshint": "jshint src/"
   },
   "repository": {
     "type": "git",
@@ -47,6 +48,7 @@
   },
   "devDependencies": {
     "lint"         : "*",
+    "jshint"       : "*",
     "mocha"        : "*",
     "nor-pgrunner" : "sendanor/nor-pgrunner"
   },

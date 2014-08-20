@@ -1,5 +1,4 @@
 /** Database schema creation functions */
-
 module.exports = [
 
 	/** Used to insert documents */

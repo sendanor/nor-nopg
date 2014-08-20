@@ -3,8 +3,8 @@
 
 "use strict";
 
-var debug = require('nor-debug');
-var copy = require('nor-data').copy;
+var debug = require("nor-debug");
+var copy = require("nor-data").copy;
 
 /** Interface to strip properties from objects
  * @param data {object} The object which properties you want to manipulate
@@ -20,7 +20,7 @@ module.exports = function(data) {
 	 */
 	strip.specials = function strip_specials () {
 		Object.keys(data).filter(function(key) {
-			return ( (key.substr(0, 1) === '$') || (key.substr(0, 1) === '_') ) ? true : false;
+			return ( (key.substr(0, 1) === "$") || (key.substr(0, 1) === "_") ) ? true : false;
 		}).forEach(function(key) {
 			delete data[key];
 		});
@@ -31,7 +31,7 @@ module.exports = function(data) {
 	 * @returns {object} The copy of data without any properties named as `key`.
 	 */
 	strip.unset = function strip_specials (key) {
-		debug.assert(key).typeOf('string');
+		debug.assert(key).is("string");
 		if(data[key] !== undefined) {
 			delete data[key];
 		}

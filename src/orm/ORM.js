@@ -1,8 +1,9 @@
 /* nor-nopg -- NoPg.Document implementation */
+"use strict";
 
-var fs = require('nor-fs');
-var debug = require('nor-debug');
-var util = require("util");
+//var fs = require('nor-fs');
+//var debug = require('nor-debug');
+//var util = require("util");
 var events = require("events");
 
 /** The constructor */

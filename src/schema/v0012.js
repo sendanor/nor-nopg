@@ -1,5 +1,4 @@
 /** Database schema creation functions */
-
 module.exports = [
 
 	/** To get JSON object of the type */

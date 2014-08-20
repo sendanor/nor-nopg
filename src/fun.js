@@ -1,6 +1,7 @@
 /* Function Helpers */
+"use strict";
 
-var debug = require('nor-debug');
+//var debug = require('nor-debug');
 var fun = module.exports = {};
 
 /** Serialize JavaScript function as string */
@@ -14,7 +15,6 @@ fun.toString = function(f) {
 		throw new TypeError('Failed to serialize function: ' + f);
 	}
 
-	//debug.log('Function serialized as ', s);
 	return s;
 };
 
@@ -26,7 +26,7 @@ fun.toFunction = function(s) {
 		throw new TypeError('Invalid input: ' + s);
 	}
 
-	//debug.log('Serialized function is: ', s);
+	/*jslint evil: true */
 	return new Function('return (' + s + ')')();
 };
 
