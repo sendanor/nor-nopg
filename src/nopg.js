@@ -7,6 +7,7 @@
 "use strict";
 
 var debug = require('nor-debug');
+var ARRAY = require('nor-array');
 
 // Make NOPG_EVENT_TIMES as obsolete
 if( (process.env.NOPG_EVENT_TIMES !== undefined) && (process.env.DEBUG_NOPG_EVENT_TIMES === undefined) ) {
@@ -38,7 +39,7 @@ function module_exists(name) {
 
 var nr;
 if(module_exists("newrelic") && (!process.env.DISABLE_NEWRELIC)) {
-	debug.info('Enabled newrelic instrumentation for nor-pg.');
+	debug.info('Enabled newrelic instrumentation for nor-nopg.');
 	try {
 		nr = require("newrelic");
 	} catch(e) {
@@ -165,7 +166,7 @@ function get_result(Type) {
 		}
 
 		var obj = {};
-		Object.keys(doc).forEach(function(key) {
+		ARRAY(Object.keys(doc)).forEach(function(key) {
 			obj['$'+key] = doc[key];
 		});
 		return new Type(obj);
@@ -253,7 +254,7 @@ function get_results(Type, opts) {
 
 	/* Returns a function which will go through rows and convert them to NoPg format */
 	return function(rows) {
-		return rows.map(function(row, i) {
+		return ARRAY(rows).map(function(row, i) {
 			if(!row) { throw new TypeError("failed to parse result #" + i + " from database!"); }
 			//debug.log('input in row = ', row);
 
@@ -262,12 +263,13 @@ function get_results(Type, opts) {
 			}
 
 			var obj = {};
-			Object.keys(row).forEach(function(key) {
+			ARRAY(Object.keys(row)).forEach(function(key) {
 				parse_field(obj, key, row[key]);
 			});
+
 			//debug.log('result in obj = ', obj);
 			return new Type(obj);
-		});
+		}).valueOf();
 	};
 }
 
@@ -367,48 +369,70 @@ function parse_predicate_key(Type, key, opts) {
 	return ( (key[0] === '$') ? parse_top_key : parse_meta_key.bind(undefined, datakey) ) (key);
 }
 
+/** Returns true if first letter is dollar */
+function first_letter_is_dollar(k) {
+	return k[0] === '$';
+}
+
+/** @FIXME Implement escape? */
+function is_valid_key(key) {
+	var keyreg = /^[a-zA-Z0-9_\-\.]+$/;
+	return keyreg.test(key);
+}
+
 /** Convert properties like {"$foo":123} -> "foo = 123" and {foo:123} -> "(meta->'foo')::numeric = 123" and {foo:"123"} -> "meta->'foo' = '123'"
  * Usage: `var where = parse_predicates(NoPg.Document)({"$foo":123})`
  */
 function parse_predicates(Type) {
+
+	//function first_letter_not_dollar(k) {
+	//	return k[0] !== '$';
+	//}
+
+	/** */
+	function parse_keyref(datakey, key) {
+		if(key.indexOf('.') === -1) {
+			return "" + datakey + "->>'" + key + "'";
+		} else {
+			return "" + datakey + "#>>'{" + key.split('.').join(',') +"}'";
+		}
+	}
+
+	function parse_meta_properties(res, opts, datakey, key) {
+		if(!is_valid_key(key)) { throw new TypeError("Invalid keyword: " + key); }
+		var keyref = parse_keyref(datakey, key);
+		if(is.boolean(opts[key])) {
+			res["("+keyref+")::boolean IS TRUE"] = (opts[key] === true) ? 'true' : 'false';
+		} else if(is.number(opts[key])) {
+			res["("+keyref+")::numeric"] = opts[key];
+		} else {
+			res[keyref] = ''+opts[key];
+		}
+	}
+
+	function parse_top_level_properties(res, opts, key) {
+		var k = key.substr(1);
+		res[k] = opts[key];
+	}
+
 	function parse_data(opts) {
 		debug.assert(opts).ignore(undefined).is('object');
 
 		opts = opts || {};
 		var datakey = get_predicate_datakey(Type);
 		var res = {};
-
-		// Parse meta properties
-		Object.keys(opts).filter(function(k) { return k[0] !== '$'; }).forEach(function(key) {
-			var keyreg = /^[a-zA-Z0-9_\-\.]+$/;
-
-			// FIXME: Implement escape?
-			if(!(keyreg.test(key))) { throw new TypeError("Invalid keyword: " + key); }
-
-			var keyref;
-			if(key.indexOf('.') === -1) {
-				keyref = "" + datakey + "->>'" + key + "'";
+		ARRAY(Object.keys(opts)).forEach(function(i) {
+			if(first_letter_is_dollar(i)) {
+				// Parse top level properties
+				parse_top_level_properties(res, opts, i);
 			} else {
-				keyref = "" + datakey + "#>>'{" + key.split('.').join(',') +"}'";
-			}
-
-			if(is.boolean(opts[key])) {
-				res["("+keyref+")::boolean IS TRUE"] = (opts[key] === true) ? 'true' : 'false';
-			} else if(is.number(opts[key])) {
-				res["("+keyref+")::numeric"] = opts[key];
-			} else {
-				res[keyref] = ''+opts[key];
+				// Parse meta properties
+				parse_meta_properties(res, opts, datakey, i);
 			}
 		});
-
-		// Parse top level properties
-		Object.keys(opts).filter(function(k) { return k[0] === '$'; }).forEach(function(key) {
-			var k = key.substr(1);
-			res[k] = opts[key];
-		});
-
 		return res;
 	}
+
 	return parse_data;
 }
 
@@ -472,9 +496,9 @@ function parse_function_predicate(ObjType, arg_params, def_op, o) {
 
 	var keys, func, params, i;
 
-	func = o.filter(function(x) {
-		return is.func(x);
-	}).shift();
+	// FIXME: This loop could be optimized to return directly once first function is found! #performance
+	func = ARRAY(o).filter(is.func).valueOf().shift();
+
 	debug.assert(func).is('function');
 
 	i = o.indexOf(func);
@@ -490,7 +514,7 @@ function parse_function_predicate(ObjType, arg_params, def_op, o) {
 	//debug.log('func = ', func);
 	//debug.log('params = ', params);
 
-	var parsed_keys = keys.map(parse_predicate_key.bind(undefined, ObjType));
+	var parsed_keys = ARRAY(keys).map(parse_predicate_key.bind(undefined, ObjType)).valueOf();
 
 	//debug.log('parsed_keys = ', parsed_keys);
 	debug.assert(parsed_keys).is('array');
@@ -520,7 +544,7 @@ _parsers.parse_array_predicate = function parse_array_predicate(ObjType, params,
 		return parse_function_predicate(ObjType, params, def_op, o);
 	}
 
-	return '(' + o.map(_parsers.recursive_parse_predicates.bind(undefined, ObjType, params, def_op)).filter(not_undefined).join(') '+op+' (') + ')';
+	return '(' + ARRAY(o).map(_parsers.recursive_parse_predicates.bind(undefined, ObjType, params, def_op)).filter(not_undefined).join(') '+op+' (') + ')';
 };
 
 /** Recursively parse predicates */
@@ -534,7 +558,7 @@ _parsers.recursive_parse_predicates = function recursive_parse_predicates(ObjTyp
 
 	if( is.obj(o) ) {
 		o = parse_predicates(ObjType)(o, ObjType.meta.datakey.substr(1) );
-		return '(' + Object.keys(o).map(function(k) {
+		return '(' + ARRAY(Object.keys(o)).map(function(k) {
 			params.push(o[k]);
 			return '' + k + ' = $' + params.length;
 		}).join(') '+def_op+' (') + ')';
@@ -601,15 +625,16 @@ function parse_internal_fields(ObjType, nopg_fields) {
 	}
 
 	// Append $type if it is not there and $* has been included
-	if((ObjType === NoPg.Document) && nopg_fields.some(function(f) { return f === '$*'; }) &&
-	   nopg_fields.every(function(f) { return f !== '$type'; }) ) {
+	var nopg_fields_ = ARRAY(nopg_fields);
+	if((ObjType === NoPg.Document) && nopg_fields_.some(function(f) { return f === '$*'; }) &&
+	   nopg_fields_.every(function(f) { return f !== '$type'; }) ) {
 		nopg_fields.push('$type');
 	}
 
 	//
-	var fields = nopg_fields.map(function(f) {
+	var fields = nopg_fields_.map(function(f) {
 		return parse_predicate_key(ObjType, f, {as: field_as});
-	});
+	}).valueOf();
 
 	var result = {
 		"keys": fields,
@@ -816,31 +841,34 @@ function do_select(self, types, opts, traits) {
 	});
 }
 
+/** Returns the keyword name without first letter */
+function parse_keyword_name(key) {
+	return key.substr(1);
+}
+
 /** Internal INSERT query */
 function do_insert(self, ObjType, data) {
 	return nr_fcall("nopg:do_insert", function() {
 
 		data = (new ObjType(data)).valueOf();
 
-		var query, params;
+		function get_data(key) {
+			return data[key];
+		}
+
+		// FIXME: These array loops could be joined as one loop. #performance
 
 		// Filter only $-keys which are not the datakey
-		var keys = ObjType.meta.keys.filter(function(key) {
-			return (key[0] === '$') ? true : false;
-		}).map(function(key) {
-			return key.substr(1);
-		}).filter(function(key) {
-			return data[key] ? true : false;
-		});
+		var keys = ARRAY(ObjType.meta.keys).filter(first_letter_is_dollar).map(parse_keyword_name).filter(get_data);
 
-		if(keys.length === 0) { throw new TypeError("No data to submit: keys array is empty."); }
+		if(keys.valueOf().length === 0) { throw new TypeError("No data to submit: keys array is empty."); }
 
-		query = "INSERT INTO " + (ObjType.meta.table) + " ("+ keys.join(', ') +") VALUES ("+ keys.map(function(k, i) { return '$' + (i+1); }).join(', ') +") RETURNING *";
+		var query = "INSERT INTO " + (ObjType.meta.table) +
+		      " ("+ keys.join(', ') +
+		      ") VALUES (" + keys.map(function(k, i) { return '$' + (i+1); }).join(', ') +
+		      ") RETURNING *";
 
-		params = keys.map(function(key) {
-			return data[key];
-		});
-
+		var params = keys.map(get_data).valueOf();
 		return do_query(self, query, params);
 	});
 }
@@ -874,24 +902,20 @@ function do_update(self, ObjType, obj, orig_data) {
 		}
 
 		// Select only keys that start with $
-		var keys = ObjType.meta.keys.filter(function(key) {
-			return (key[0] === '$') ? true : false;
-
-		// Remove leading '$' character from keys
-		}).map(function(key) {
-			return key.substr(1);
-
-		// Ignore keys that aren't going to be changed
-		}).filter(function(key) {
-			return data[key] ? true : false;
-
-		// Ignore keys that were not changed
-		}).filter(function(key) {
-			return json_cmp(data[key], obj['$'+key]) ? false : true;
-		});
+		var keys = ARRAY(ObjType.meta.keys)
+			// Remove leading '$' character from keys
+			.filter(first_letter_is_dollar)
+			.map( parse_keyword_name )
+			// Ignore keys that aren't going to be changed
+			.filter(function(key) {
+				return data[key];
+			// Ignore keys that were not changed
+			}).filter(function(key) {
+				return json_cmp(data[key], obj['$'+key]) ? false : true;
+			});
 
 		// Return with the current object if there is no keys to update
-		if(keys.length === 0) {
+		if(keys.valueOf().length === 0) {
 			return do_select(self, ObjType, where);
 		}
 
@@ -899,9 +923,9 @@ function do_update(self, ObjType, obj, orig_data) {
 		query = "UPDATE " + (ObjType.meta.table) + " SET "+ keys.map(function(k, i) { return k + ' = $' + (i+1); }).join(', ') +" WHERE ";
 
 		if(where.$id) {
-			query += "id = $"+ (keys.length+1);
+			query += "id = $"+ (keys.valueOf().length+1);
 		} else if(where.$name) {
-			query += "name = $"+ (keys.length+1);
+			query += "name = $"+ (keys.valueOf().length+1);
 		} else {
 			throw new TypeError("Cannot know what to update!");
 		}
@@ -910,7 +934,7 @@ function do_update(self, ObjType, obj, orig_data) {
 
 		params = keys.map(function(key) {
 			return data[key];
-		});
+		}).valueOf();
 
 		if(where.$id) {
 			params.push(where.$id);
@@ -1021,7 +1045,7 @@ NoPg.prototype._finish_samples = function() {
 	debug.assert(end.event).is('string');
 
 	var server_duration = 0;
-	self._stats.forEach(function(sample) {
+	ARRAY(self._stats).forEach(function(sample) {
 		server_duration += sample.duration;
 	});
 
@@ -1766,13 +1790,13 @@ NoPg.prototype.searchAttachments = function(doc) {
 			}
 
 			if(is.array(doc)) {
-				opts = doc.map(get_documents_id).map(function(id) {
+				opts = ARRAY(doc).map(get_documents_id).map(function(id) {
 					if(is.uuid(id)) {
 						return {'$documents_id': id};
 					} else {
 						return id;
 					}
-				});
+				}).valueOf();
 			} else if(is.obj(doc)) {
 				if(!is.obj(opts)) {
 					opts = {};

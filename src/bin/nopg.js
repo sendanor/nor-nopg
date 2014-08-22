@@ -4,6 +4,7 @@
 var $Q = require('q');
 var argv = require('optimist').boolean('v').argv;
 var util = require('util');
+var ARRAY = require('nor-array');
 var NoPg = require('../');
 var debug = require('nor-debug');
 
@@ -42,8 +43,8 @@ actions.init = function action_init() {
 /** Returns markdown formated table */
 function markdown_table(headers, table) {
 	// FIXME: Implement better markdown table formating
-	return [headers, [ "---", "---" ]].concat(table).map(function(cols) {
-		return '| ' + cols.join(' | ') + ' |';
+	return ARRAY([headers, [ "---", "---" ]]).concat(table).map(function(cols) {
+		return '| ' + ARRAY(cols).join(' | ') + ' |';
 	}).join('\n');
 }
 
@@ -52,7 +53,7 @@ actions.types = function action_types() {
 	//debug.log("Executing");
 	var keys = ['_', 'v', '$0'];
 	var opts = {};
-	Object.keys(argv).filter(function(k) {
+	ARRAY(Object.keys(argv)).filter(function(k) {
 		return keys.indexOf(k) === -1 ? true : false;
 	}).forEach(function(key) {
 		if (key[0] === '-') {
@@ -67,9 +68,9 @@ actions.types = function action_types() {
 	debug.log('opts = ', opts);
 	return NoPg.start(PGCONFIG).searchTypes(opts).commit().then(function(db) {
 		var types = db.fetch();
-		var table = types.map(function(type) {
+		var table = ARRAY(types).map(function(type) {
 			return [type.$id, type.$name];
-		});
+		}).valueOf();
 		console.log( markdown_table([ "$id", "$name" ], table) );
 
 	});
@@ -89,7 +90,7 @@ $Q.fcall(function() {
 		return $Q.fcall(actions.help);
 	}
 
-	var funcs = argv._.map(function(action) {
+	var funcs = ARRAY(argv._).map(function(action) {
 		if(actions[action] === undefined) {
 			throw ""+action + ": Unknown action";
 		}
@@ -101,7 +102,7 @@ $Q.fcall(function() {
 				throw ""+action + ": Failed: " + err;
 			});
 		};
-	});
+	}).valueOf();
 
 	//debug.log("funcs loaded ", funcs.length);
 
@@ -115,6 +116,11 @@ $Q.fcall(function() {
 	process.exit(0);
 }).fail(function(err) {
 	util.error(''+err);
+
+	if(argv.v && err.stack) {
+		util.error(err.stack);
+	}
+
 	process.exit(1);
 }).done();
 

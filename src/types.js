@@ -6,6 +6,7 @@ var $Q = require("q");
 var util = require("util");
 var NoPg = require("./nopg.js");
 var debug = require("nor-debug");
+var ARRAY = require('nor-array');
 
 module.exports = function get_database_types(opts) {
 	//debug.log("nopg-types.js: get_database_types(opts=", opts, ")");
@@ -31,7 +32,7 @@ module.exports = function get_database_types(opts) {
 		}
 
 		var funcs = [];
-		Object.keys(types).forEach(function(key) {
+		ARRAY(Object.keys(types)).forEach(function(key) {
 			funcs.push( build_step(key, types[key]) );
 		});
 

@@ -7,6 +7,7 @@
 
 "use strict";
 
+var ARRAY = require('nor-array');
 var debug = require('nor-debug');
 var merge = require('merge');
 var copy = require('nor-data').copy;
@@ -19,7 +20,7 @@ var ref = require('nor-ref');
 function compute_keys(o, opts, req, res) {
 	debug.assert(o).is('object');
 	debug.assert(opts).is('object');
-	Object.keys(opts).forEach(function(key) {
+	ARRAY(Object.keys(opts)).forEach(function(key) {
 		debug.assert(opts[key]).is('function');
 		o[key] = opts[key].call(o, req, res);
 	});
@@ -38,14 +39,14 @@ function fix_object_ids(o) {
 /** Render `path` with optional `params` */
 function render_path(path, params) {
 	params = params || {};
-	return [].concat(is.array(path) ? path : [path]).map(function(p) {
+	return ARRAY( is.array(path) ? path : [path] ).map(function(p) {
 		return p.replace(/:([a-z0-9A-Z\_]+)/g, function(match, key) {
 			if(params[key] === undefined) {
 				return ':'+key;
 			}
 			return ''+fix_object_ids(params[key]);
 		});
-	});
+	}).valueOf();
 }
 
 /** Builds a builder for REST data views */
@@ -111,7 +112,7 @@ ResourceView.prototype.element = function(req, res, opts) {
 
 
 		var body = strip(item).specials().get();
-		opts.keys.forEach(function(key) {
+		ARRAY(opts.keys).forEach(function(key) {
 			var path = [req].concat(render_path(opts.path, params)).concat([item.$id]);
 			//debug.log("path = ", ref.apply(undefined , path));
 
@@ -181,7 +182,7 @@ ResourceView.prototype.collection = function(req, res, opts) {
 		//debug.log("element_opts = ", element_opts);
 		var body = {};
 		body.$ref = ref.apply(undefined, path);
-		body.$ = items.map(view.element(req, res, element_opts));
+		body.$ = ARRAY(items).map(view.element(req, res, element_opts)).valueOf();
 		//debug.log('body = ', body);
 
 		if(is.obj(view.compute_keys)) {

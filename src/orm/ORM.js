@@ -4,6 +4,7 @@
 //var fs = require('nor-fs');
 //var debug = require('nor-debug');
 //var util = require("util");
+var ARRAY = require('nor-array');
 var events = require("events");
 
 /** The constructor */
@@ -14,7 +15,7 @@ function NoPgORM(opts) {
 }
 
 /** */
-['addListenter', 'on', 'once', 'removeListener', 'removeAllListeners', 'setMaxListeners', 'listeners', 'emit', 'listenerCount'].forEach(function(method) {
+ARRAY(['addListenter', 'on', 'once', 'removeListener', 'removeAllListeners', 'setMaxListeners', 'listeners', 'emit', 'listenerCount']).forEach(function(method) {
 	NoPgORM.prototype[method] = function() {
 		var self = this;
 		var args = Array.prototype.slice.call(arguments);

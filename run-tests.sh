@@ -6,6 +6,6 @@ export PGCONFIG='postgresql://nopgtest:ng8SxY7ugQCmXwvu5sSd4C9hdvYboX4d@localhos
 
 psql "$PGCONFIG" < scripts/cleanup.sql;
 
-./src/bin/nopg.js init
+./src/bin/nopg.js -v init
 
 npm test

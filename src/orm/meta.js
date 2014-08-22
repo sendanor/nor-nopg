@@ -4,6 +4,7 @@
 //var pghelpers = require('../pghelpers.js');
 var is = require('nor-is');
 var debug = require('nor-debug');
+var ARRAY = require('nor-array');
 var copy = require('nor-data').copy;
 
 function meta(opts) {
@@ -25,15 +26,16 @@ function meta(opts) {
 			//debug.log("self = ", self);
 
 			// Search initial meta keys
-			builder.keys.forEach(function(key) {
-				if(data[key] !== undefined) {
-					if(opts.parsers[key] === 'function') {
-						if(data[key]) {
-							self[key] = require('../fun.js').toFunction(data[key]);
-						}
-					} else {
-						self[key] = copy(data[key]);
+			ARRAY(builder.keys).forEach(function(key) {
+				if(data[key] === undefined) {
+					return;
+				}
+				if(opts.parsers[key] === 'function') {
+					if(data[key]) {
+						self[key] = require('../fun.js').toFunction(data[key]);
 					}
+				} else {
+					self[key] = copy(data[key]);
 				}
 			});
 
@@ -49,8 +51,8 @@ function meta(opts) {
 
 			//debug.log('First: self[builder.datakey] = ', self[builder.datakey]);
 
-			Object.keys(data).filter(function(key) {
-				return key[0] !== '$' ? true : false;
+			ARRAY(Object.keys(data)).filter(function(key) {
+				return key[0] !== '$';
 			}).forEach(function(key) {
 				//debug.log('key = ', key);
 				//debug.log('self = ', self);
@@ -63,7 +65,7 @@ function meta(opts) {
 			//debug.log("object after set_meta_keys(", data, ") is: ", self);
 			return obj;
 		};
-		
+
 		/** Resolve single object key into top level */
 		obj.resolve = function(datakey) {
 			//debug.log("meta.resolve(datakey=", datakey, ")");
@@ -72,7 +74,7 @@ function meta(opts) {
 			//debug.log("self = ", self);
 
 			if(self[datakey]) {
-				Object.keys(self[datakey]).forEach(function(key) {
+				ARRAY(Object.keys(self[datakey])).forEach(function(key) {
 					self[key] = copy(self[datakey][key]);
 				});
 				//debug.log("object after resolve(", datakey, ") is: ", self);
@@ -90,30 +92,32 @@ function meta(opts) {
 
 			var data = {};
 
+			// FIXME: These test functions could be in internal shared helper module with nopg.js
+
 			// Copy table columns
-			builder.keys.filter(function(key) {
-				return key[0] === '$' ? true : false;
+			ARRAY(builder.keys).filter(function(key) {
+				return key[0] === '$';
 			}).map(function(key) {
 				return key.substr(1);
 			}).forEach(function(key) {
 				if(self['$'+key] === undefined) {
 					return;
 				}
-				
+
 				//if(self['$'+key] instanceof Function) {
 				//	self['$'+key] = pghelpers.escapeFunction(self['$'+key]);
 				//}
-				
+
 				if(self['$'+key] instanceof Function) {
 					self['$'+key] = require('../fun.js').toString(self['$'+key]);
 				}
-				
+
 				data[key] = copy(self['$'+key]);
 			});
 
 			// Copy plain data
-			Object.keys(self).filter(function(key) {
-				return key[0] !== '$' ? true : false;
+			ARRAY(Object.keys(self)).filter(function(key) {
+				return key[0] !== '$';
 			}).forEach(function(key) {
 				if(!data[datakey]) {
 					data[datakey] = {};
@@ -127,7 +131,7 @@ function meta(opts) {
 
 		return obj;
 	}
-	
+
 	/** Internal meta values */
 
 	builder.keys = opts.keys || [];
