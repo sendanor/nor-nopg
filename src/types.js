@@ -31,12 +31,9 @@ module.exports = function get_database_types(opts) {
 			};
 		}
 
-		var funcs = [];
-		ARRAY(Object.keys(types)).forEach(function(key) {
-			funcs.push( build_step(key, types[key]) );
-		});
-
-		return funcs.reduce(function (soFar, f) {
+		return ARRAY(Object.keys(types)).map(function(key) {
+			return build_step(key, types[key]);
+		}).reduce(function (soFar, f) {
 			return soFar.then(f);
 		}, $Q(db));
 

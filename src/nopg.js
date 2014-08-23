@@ -27,44 +27,7 @@ var pghelpers = require('./pghelpers.js');
 
 /* ------- (OPTIONAL) NEWRELIC SUPPORT ---------- */
 
-/** Returns true if module exists */
-function module_exists(name) {
-	try {
-		require.resolve(name);
-		return true;
-	} catch(e) {
-		return false;
-	}
-}
-
-var nr;
-if(module_exists("newrelic") && (!process.env.DISABLE_NEWRELIC)) {
-	debug.info('Enabled newrelic instrumentation for nor-nopg.');
-	try {
-		nr = require("newrelic");
-	} catch(e) {
-		debug.warn('Failed to setup NewRelic support: ' + e);
-		nr = undefined;
-	}
-}
-
-/** NewRelic `createTracer()` as `$Q.fcall({function})` style implementation */
-function nr_fcall(name, fun) {
-	if(!nr) {
-		return $Q.fcall(fun);
-	}
-	debug.assert(name).is('string');
-	debug.assert(fun).is('function');
-	var tracer = nr.createTracer(name, function() {});
-	debug.assert(tracer).is('function');
-	return $Q.fcall(fun).then(function(result) {
-		tracer(undefined, result);
-		return result;
-	}).fail(function(err) {
-		tracer(err);
-		throw err;
-	});
-}
+var nr_fcall = require('nor-newrelic/src/fcall');
 
 /* ------------- HELPER FUNCTIONS --------------- */
 
@@ -1359,7 +1322,7 @@ NoPg.prototype.init = function() {
 		return self.test().latestDBVersion().then(function(db) {
 			var code_version = require('./schema/latest.js');
 			var db_version = db.fetch();
-			if(! ((db_version >= -1) && (db_version<=code_version)) ) { 
+			if(! ((db_version >= -1) && (db_version<=code_version)) ) {
 				throw new TypeError("Database version " + db_version + " is not between accepted range (-1 .. " + code_version + ")");
 			}
 			var builders = [];
@@ -1383,7 +1346,7 @@ NoPg.prototype.init = function() {
 			}
 
 			// Call upgrade steps
-			return builders.reduce(function(so_far, f) {
+			return ARRAY(builders).reduce(function(so_far, f) {
 				return so_far.then(function(db) {
 					db.fetchAll();
 					return db;

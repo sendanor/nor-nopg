@@ -90,7 +90,7 @@ $Q.fcall(function() {
 		return $Q.fcall(actions.help);
 	}
 
-	var funcs = ARRAY(argv._).map(function(action) {
+	return ARRAY(argv._).map(function(action) {
 		if(actions[action] === undefined) {
 			throw ""+action + ": Unknown action";
 		}
@@ -102,11 +102,7 @@ $Q.fcall(function() {
 				throw ""+action + ": Failed: " + err;
 			});
 		};
-	}).valueOf();
-
-	//debug.log("funcs loaded ", funcs.length);
-
-	return funcs.reduce(function (soFar, f) {
+	}).reduce(function (soFar, f) {
 		return soFar.then(f);
 	}, $Q(undefined));
 
