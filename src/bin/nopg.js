@@ -2,7 +2,7 @@
 "use strict";
 
 // Workaround since the CLI command does not yet support NewRelic
-process.env.DISABLE_NEWRELIC = 'yes';
+process.env.NEW_RELIC_ENABLED = 'FALSE';
 
 var $Q = require('q');
 var argv = require('optimist').boolean('v').argv;
