@@ -1,6 +1,6 @@
 {
   "name": "nor-nopg",
-  "version": "0.1.66",
+  "version": "0.1.67",
   "description": "NoSQL Library for PostgreSQL",
   "bin": {
     "nor-nopg-import": "./tools/import.js",
@@ -33,7 +33,7 @@
   "dependencies": {
     "q"            : ">= 1.0.1  < 1.1.0",
     "nor-extend"   : ">= 0.1.21 < 0.2.0",
-    "nor-pg"       : ">= 0.1.16 < 0.2.0",
+    "nor-pg"       : ">= 0.1.17 < 0.2.0",
     "nor-debug"    : ">= 0.1.41 < 0.2.0",
     "nor-is"       : ">= 0.1.13 < 0.2.0",
     "nor-fs"       : ">= 0.1.9  < 0.2.0",

@@ -27,6 +27,10 @@ var pghelpers = require('./pghelpers.js');
 
 /* ------- (OPTIONAL) NEWRELIC SUPPORT ---------- */
 
+var NEW_RELIC_ENABLED = ((''+process.env.NEW_RELIC_ENABLED).toUpperCase() === 'TRUE') ? true : false;
+if(NEW_RELIC_ENABLED) {
+	require('nor-newrelic/src/nr').enable();
+}
 var nr_fcall = require('nor-newrelic/src/fcall');
 
 /* ------------- HELPER FUNCTIONS --------------- */
