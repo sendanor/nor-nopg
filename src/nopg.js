@@ -562,6 +562,22 @@ function parse_search_traits(traits) {
 
 	debug.assert(traits.order).is('array');
 
+	if(traits.limit) {
+		if(!traits.order) {
+			debug.warn('Limit without ordering will yeald unpredictable results!');
+		}
+
+		if((''+traits.limit).toLowerCase() === 'all') {
+			traits.limit = 'ALL';
+		} else {
+			traits.limit = '' + parseInt(traits.limit, 10);
+		}
+	}
+
+	if(traits.offset) {
+		traits.offset = parseInt(traits.offset, 10);
+	}
+
 	return traits;
 }
 
@@ -780,6 +796,14 @@ function do_select(self, types, opts, traits) {
 
 			if(traits.order) {
 				query += ' ORDER BY ' + parse_traits_order([ObjType, document_type_obj], traits.order);
+			}
+
+			if(traits.limit) {
+				query += ' LIMIT ' + traits.limit;
+			}
+
+			if(traits.offset) {
+				query += ' OFFSET ' + traits.offset;
 			}
 
 			return do_query(self, query, params).then(get_results(ObjType, {

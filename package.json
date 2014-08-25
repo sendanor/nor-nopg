@@ -1,6 +1,6 @@
 {
   "name": "nor-nopg",
-  "version": "0.1.71",
+  "version": "0.1.72",
   "description": "NoSQL Library for PostgreSQL",
   "bin": {
     "nor-nopg-import": "./tools/import.js",
