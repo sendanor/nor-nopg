@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 "use strict";
 
+// Workaround since the CLI command does not yet support NewRelic
+process.env.DISABLE_NEWRELIC = 'yes';
+
 var $Q = require('q');
 var argv = require('optimist').boolean('v').argv;
 var util = require('util');
