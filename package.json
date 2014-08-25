@@ -1,10 +1,10 @@
 {
   "name": "nor-nopg",
-  "version": "0.1.65",
+  "version": "0.1.66",
   "description": "NoSQL Library for PostgreSQL",
   "bin": {
     "nor-nopg-import": "./tools/import.js",
-	"nor-nopg": "./src/bin/nopg.js"
+    "nor-nopg": "./src/bin/nopg.js"
   },
   "main": "src/index.js",
   "scripts": {
@@ -16,8 +16,8 @@
     "test-min": "mocha -u bdd -c -R min tests/test-*.js",
     "test-markdown": "mocha -u bdd -c -R markdown tests/test-*.js",
     "build-tests.md": "npm run test-markdown > tests.md",
-	"lint": "node-lint src/ --config=lint.json",
-	"jshint": "jshint src/"
+    "lint": "node-lint src/ --config=lint.json",
+    "jshint": "jshint src/"
   },
   "repository": {
     "type": "git",
@@ -32,21 +32,21 @@
   ],
   "dependencies": {
     "q"            : ">= 1.0.1  < 1.1.0",
-    "nor-extend"   : ">= 0.1.20 < 0.2.0",
-    "nor-pg"       : ">= 0.1.15 < 0.2.0",
-    "nor-debug"    : ">= 0.1.39 < 0.2.0",
+    "nor-extend"   : ">= 0.1.21 < 0.2.0",
+    "nor-pg"       : ">= 0.1.16 < 0.2.0",
+    "nor-debug"    : ">= 0.1.41 < 0.2.0",
     "nor-is"       : ">= 0.1.13 < 0.2.0",
-    "nor-fs"       : ">= 0.1.7  < 0.2.0",
-    "nor-data"     : ">= 0.0.9  < 0.1.0",
+    "nor-fs"       : ">= 0.1.9  < 0.2.0",
+    "nor-data"     : ">= 0.0.10  < 0.1.0",
     "nor-ref"      : ">= 0.1.0  < 0.2.0",
-    "nor-array"    : ">= 0.1.2  < 0.2.0",
-    "nor-newrelic" : ">= 0.1.5  < 0.2.0",
+    "nor-array"    : ">= 0.1.4  < 0.2.0",
+    "nor-newrelic" : ">= 0.1.6  < 0.2.0",
     "optimist"     : ">= 0.6.1  < 0.7.0",
     "tv4"          : ">= 1.0.18 < 1.1.0",
     "merge"        : ">= 1.1.2  < 1.2.0"
   },
   "optionalDependencies": {
-    "newrelic"   : ">= 1.10.0 < 1.11.0"
+    "newrelic"   : ">= 1.10.1 < 1.11.0"
   },
   "devDependencies": {
     "lint"         : "*",
