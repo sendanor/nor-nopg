@@ -1,5 +1,5 @@
 /** Database schema creation functions */
-var NoPg = require('../index.js');
+var NoPg = require('nor-nopg');
 module.exports = [
 
 	/* CHECK constraint helper for tv4. Acceps json data column and types table id as arguments. */

@@ -1,4 +1,7 @@
 /** Database schema creation functions */
+var uuid = require('node-uuid');
+var debug = require('nor-debug');
+
 module.exports = [
 
 	/*************************************   #3  **************************************************/
@@ -8,10 +11,12 @@ module.exports = [
 	 * There is a manually generated "namespace" UUID for UUIDv5 generator
 	 */
 	function(db) {
+		var types_uuid = uuid.v4();
+		debug.assert(types_uuid).is('uuid');
 		return db.query('CREATE SEQUENCE types_seq')
 			.query([
 				'CREATE TABLE IF NOT EXISTS types (',
-				"	id uuid PRIMARY KEY NOT NULL default uuid_generate_v5('639a8bcf-06b1-4504-94fd-db0419a2db76', nextval('types_seq'::regclass)::text),",
+				"	id uuid PRIMARY KEY NOT NULL default uuid_generate_v5('"+types_uuid+"', nextval('types_seq'::regclass)::text),",
 				'	name text,',
 				'	schema json,',
 				'	validator text,',

@@ -1,5 +1,5 @@
 /** Database schema creation functions */
-var NoPg = require('../index.js');
+var NoPg = require('nor-nopg');
 module.exports = [
 	/** #1 Function for checking that only valid javascript goes into libs table (01_js_library_environment.sql) */
 	function(db) {

@@ -1,13 +1,17 @@
 /** Database schema creation functions */
-var NoPg = require('../index.js');
+var NoPg = require('nor-nopg');
+var uuid = require('node-uuid');
+var debug = require('nor-debug');
 module.exports = [
 
 	/** #2 Table for storing JS libraries (01_js_library_environment.sql) */
 	function(db) {
+		var libs_uuid = uuid.v4();
+		debug.assert(libs_uuid).is('uuid');
 		return db.query('CREATE SEQUENCE libs_seq'
 			).query([
 				"CREATE TABLE IF NOT EXISTS libs (",
-				"	id uuid PRIMARY KEY NOT NULL default uuid_generate_v5('df4c8342-6be5-11e3-9eca-3c07543b96e1', nextval('libs_seq'::regclass)::text),",
+				"	id uuid PRIMARY KEY NOT NULL default uuid_generate_v5('" + libs_uuid +"', nextval('libs_seq'::regclass)::text),",
 				"	name text UNIQUE NOT NULL,",
 				"	content text NOT NULL,",
 				"	meta json,",

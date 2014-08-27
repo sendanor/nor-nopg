@@ -1,5 +1,7 @@
 /** Database schema creation functions */
-var NoPg = require('../index.js');
+var NoPg = require('nor-nopg');
+var uuid = require('node-uuid');
+var debug = require('nor-debug');
 module.exports = [
 
 	/*************************************   #4  **************************************************/
@@ -52,10 +54,14 @@ module.exports = [
 
 	/** The json documents */
 	function(db) {
+
+		var documents_uuid = uuid.v4();
+		debug.assert(documents_uuid).is('uuid');
+
 		return db.query('CREATE SEQUENCE documents_seq')
 			.query([
 					'CREATE TABLE IF NOT EXISTS documents (',
-					"	id uuid PRIMARY KEY NOT NULL default uuid_generate_v5('10c9e34c-1ed9-4e3d-bc58-280baf2b0648', nextval('documents_seq'::regclass)::text),",
+					"	id uuid PRIMARY KEY NOT NULL default uuid_generate_v5('"+documents_uuid+"', nextval('documents_seq'::regclass)::text),",
 					'	content json NOT NULL,',
 					'	types_id uuid REFERENCES types,',
 					'	created timestamptz NOT NULL default now(),',
@@ -70,10 +76,13 @@ module.exports = [
 
 	/** #4 */
 	function(db) {
+		var attachments_uuid = uuid.v4();
+		debug.assert(attachments_uuid).is('uuid');
+
 		return db.query('CREATE SEQUENCE attachments_seq')
 			.query([
 				'CREATE TABLE IF NOT EXISTS attachments (',
-				"	id uuid PRIMARY KEY NOT NULL default uuid_generate_v5('7ff10638-7ede-4748-8732-c602754c10cc', nextval('attachments_seq'::regclass)::text),",
+				"	id uuid PRIMARY KEY NOT NULL default uuid_generate_v5('"+attachments_uuid+"', nextval('attachments_seq'::regclass)::text),",
 				'	documents_id uuid NOT NULL REFERENCES documents ON DELETE CASCADE,',
 				'	content bytea NOT NULL,',
 				'	meta json,',

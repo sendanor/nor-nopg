@@ -1589,7 +1589,7 @@ function _latestDBVersion(self) {
 		if(!exists) {
 			return -1;
 		}
-		var query = 'SELECT MAX(version) AS version FROM ' + table;
+		var query = 'SELECT COALESCE(MAX(version), 0) AS version FROM ' + table;
 		return do_query(self, query).then(function(rows) {
 			if(!(rows instanceof Array)) { throw new TypeError("Unexpected result from rows: " + util.inspect(rows) ); }
 			var obj = rows.shift();
