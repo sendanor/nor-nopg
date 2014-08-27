@@ -817,7 +817,13 @@ function do_select(self, types, opts, traits) {
 			return do_query(self, "SELECT * FROM types WHERE name = $1", [document_type]).then(get_results(NoPg.Type, {
 				'fieldMap': type_fields.map
 			})).then(function(results) {
-				debug.assert(results).is('array').length(1);
+				debug.assert(results).is('array');
+				if(results.length !== 1) {
+					if(results.length === 0) {
+						throw new TypeError("Database has no type: " + document_type);
+					}
+					throw new TypeError("Database has multiple types: " + document_type + " (" + results.length + ")");
+				}
 				var result = results.shift();
 				debug.assert(result).is('object');
 				document_type_obj = result;
