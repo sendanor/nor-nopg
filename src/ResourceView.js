@@ -52,6 +52,12 @@ function render_path(path, params) {
 /** Builds a builder for REST data views */
 function ResourceView(opts) {
 	var view = this;
+
+	var compute_keys;
+	if(opts && opts.compute_keys) {
+		compute_keys = opts.compute_keys;
+	}
+
 	opts = copy(opts || {});
 
 	debug.assert(opts).is('object');
@@ -64,8 +70,8 @@ function ResourceView(opts) {
 
 	view.Type = opts.Type;
 
-	if(is.obj(opts.compute_keys)) {
-		view.compute_keys = opts.compute_keys;
+	if(is.obj(compute_keys)) {
+		view.compute_keys = compute_keys;
 	}
 
 	//debug.log("view.opts = ", view.opts);
