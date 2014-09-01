@@ -325,6 +325,14 @@ function parse_predicate_key(Type, key, opts) {
 			return ""+key.substr(1);
 		}
 
+		if(key === '$created') {
+			return "to_json(extract(epoch from created)*1000)";
+		}
+
+		if(key === '$updated') {
+			return "to_json(extract(epoch from updated)*1000)";
+		}
+
 		return key.substr(1);
 	}
 
