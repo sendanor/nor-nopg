@@ -691,6 +691,19 @@ function parse_predicate_pgtype(ObjType, document_type, key) {
 	return 'text';
 }
 
+/** Returns the correct cast from JSON to PostgreSQL type */
+function parse_predicate_pgcast(ObjType, document_type, key) {
+	var pgtype = parse_predicate_pgtype(ObjType, document_type, key);
+	//debug.log('pgtype = ', pgtype);
+	if(pgtype === 'boolean') {
+		return 'text::boolean IS TRUE';
+	}
+	if(pgtype === 'numeric') {
+		return 'text::numeric';
+	}
+	return pgtype;
+}
+
 /** Parse `traits.order` */
 function parse_traits_order(types, order) {
 
@@ -716,18 +729,10 @@ function parse_traits_order(types, order) {
 
 		var parsed_key = parse_predicate_key(ObjType, key);
 		//debug.log('parsed_key = ', parsed_key);
-		var pgtype = document_type ? parse_predicate_pgtype(ObjType, document_type, key) : 'text';
+		var pgcast = document_type ? parse_predicate_pgcast(ObjType, document_type, key) : 'text';
 		//debug.log('pgtype = ', pgtype);
 
-		if(pgtype === 'boolean') {
-			pgtype = 'text::boolean IS TRUE';
-		}
-
-		if(pgtype === 'numeric') {
-			pgtype = 'text::numeric';
-		}
-
-		return [ '(' + parsed_key + ')::' + pgtype].concat(rest).join(' ');
+		return [ '(' + parsed_key + ')::' + pgcast].concat(rest).join(' ');
 	}).join(', ');
 }
 
@@ -963,13 +968,47 @@ function do_delete(self, ObjType, obj) {
  * @todo Implement this in nor-pg and use here.
  */
 function pg_table_exists(self, name) {
-	return do_query(self, 'SELECT * FROM information_schema.tables WHERE table_name = $1', [name]).then(function(rows) {
+	return do_query(self, 'SELECT * FROM information_schema.tables WHERE table_name = $1 LIMIT 1', [name]).then(function(rows) {
 		if(!rows) { throw new TypeError("Unexpected result from query: " + util.inspect(rows)); }
-		if(rows.length === 0) {
-			return false;
-		} else {
-			return true;
-		}
+		return rows.length !== 0;
+	});
+}
+
+/**
+ * Returns `true` if PostgreSQL database relation exists.
+ * @todo Implement this in nor-pg and use here.
+ */
+function pg_relation_exists(self, name) {
+	return do_query(self, 'SELECT * FROM pg_class WHERE relname = $1 LIMIT 1', [name]).then(function(rows) {
+		if(!rows) { throw new TypeError("Unexpected result from query: " + util.inspect(rows)); }
+		return rows.length !== 0;
+	});
+}
+
+/** Convert special characters in field name to "_" for index naming */
+function pg_convert_index_name(field) {
+	return field.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+}
+
+/** Internal CREATE INDEX query */
+function pg_create_index(self, ObjType, type, field) {
+	return nr_fcall("nopg:pg_create_index", function() {
+		var pgcast = parse_predicate_pgcast(ObjType, type, field);
+		var colname = parse_predicate_key(ObjType, field);
+		var name = pg_convert_index_name(ObjType.meta.table) + "_" + pg_convert_index_name(colname) + "_index";
+		var query = "CREATE INDEX "+name+" ON " + (ObjType.meta.table) + " (("+ colname + "::" + pgcast +"))";
+		var params = [];
+		return do_query(self, query, params);
+	});
+}
+
+/** Internal CREATE INDEX query that will create the index only if the relation does not exists already */
+function pg_declare_index(self, ObjType, type, field) {
+	var colname = parse_predicate_key(ObjType, field);
+	var name = pg_convert_index_name(ObjType.meta.table) + "_" + pg_convert_index_name(colname) + "_index";
+	return pg_relation_exists(self, name).then(function(exists) {
+		if(exists) { return; }
+		return pg_create_index(self, ObjType, type, field);
 	});
 }
 
@@ -1504,6 +1543,10 @@ NoPg.prototype.declareType = function(name) {
 	function createOrReplaceType2(data) {
 		return extend.promise( [NoPg], nr_fcall("nopg:declareType", function() {
 			data = data || {};
+
+			debug.assert(data).is('object');
+			debug.assert(data.indexes).ignore(undefined).is('array');
+
 			var where = {};
 			if(name !== undefined) {
 				if(name instanceof NoPg.Type) {
@@ -1512,12 +1555,28 @@ NoPg.prototype.declareType = function(name) {
 					where.$name = ''+name;
 				}
 			}
+
 			return self._getType(where).then(function(type) {
 				if(type) {
 					return self.update(type, data);
 				} else {
 					return self.createType(name)(data);
 				}
+			}).then(function declare_indexes() {
+
+				if(is.undef(data.indexes)) {
+					return self;
+				}
+
+				var type = self.fetch();
+
+				return data.indexes.map(function build_step(index) {
+					return function step() {
+						return pg_declare_index(self, NoPg.Document, type, index);
+					};
+				}).reduce($Q.when, $Q()).then(function() {
+					return self.push(type);
+				});
 			});
 		}));
 	}
