@@ -1,6 +1,6 @@
 {
   "name": "nor-nopg",
-  "version": "0.1.78",
+  "version": "0.1.79",
   "description": "NoSQL Library for PostgreSQL",
   "bin": {
     "nor-nopg-import": "./tools/import.js",
@@ -33,14 +33,14 @@
   "dependencies": {
     "q"            : ">= 1.0.1  < 1.1.0",
     "nor-extend"   : ">= 0.1.22 < 0.2.0",
-    "nor-pg"       : ">= 0.1.24 < 0.2.0",
+    "nor-pg"       : ">= 0.1.25 < 0.2.0",
     "nor-debug"    : ">= 0.1.42 < 0.2.0",
     "nor-is"       : ">= 0.1.14 < 0.2.0",
     "nor-fs"       : ">= 0.1.10  < 0.2.0",
     "nor-data"     : ">= 0.0.11  < 0.1.0",
     "nor-ref"      : ">= 0.1.1  < 0.2.0",
     "nor-array"    : ">= 0.1.4  < 0.2.0",
-    "nor-newrelic" : ">= 0.1.12  < 0.2.0",
+    "nor-newrelic" : ">= 0.1.13  < 0.2.0",
     "optimist"     : ">= 0.6.1  < 0.7.0",
     "tv4"          : ">= 1.0.18 < 1.1.0",
     "merge"        : ">= 1.1.3  < 1.2.0",
@@ -48,7 +48,7 @@
     "minimist"     : ">= 1.1.0  < 1.2.0"
   },
   "optionalDependencies": {
-    "newrelic"   : ">= 1.10.1 < 1.11.0"
+    "newrelic"   : ">= 1.11.0 < 1.12.0"
   },
   "devDependencies": {
     "lint"         : "*",
