@@ -274,7 +274,7 @@ function get_predicate_datakey(Type) {
 	return (Type.meta.datakey || '$meta').substr(1);
 }
 
-/** Returns PostgreSQL keyword for NoPg keyword. Converts `$foo` to `foo` and `foo` to `meta->'foo'` etc.  */
+/** Returns PostgreSQL keyword for NoPg keyword. Converts `$foo` to `foo` and `foo` to `meta->'foo'` etc. */
 function parse_predicate_key(Type, key, opts) {
 	opts = opts || {};
 	var as = opts.as ? true : false;
@@ -462,8 +462,10 @@ function not_undefined(i) {
 }
 
 /** Parse array predicate */
-function parse_function_predicate(ObjType, arg_params, def_op, o) {
+function parse_function_predicate(ObjType, arg_params, def_op, o, ret_type) {
 	debug.assert(o).is('array');
+
+	ret_type = ret_type || 'boolean';
 
 	var keys, func, params, i;
 
@@ -495,8 +497,19 @@ function parse_function_predicate(ObjType, arg_params, def_op, o) {
 	arg_params.push(JSON.stringify(require('./fun.js').toString(func)));
 	arg_params.push(JSON.stringify(params));
 
-	return '(nopg.call_func(array_to_json(ARRAY['+parsed_keys.join(', ')+']), $'+(n+1)+'::json, $'+(n+2)+"::json)::text = 'true')";
+	if(ret_type === 'boolean') {
+		return '(nopg.call_func(array_to_json(ARRAY['+parsed_keys.join(', ')+']), $'+(n+1)+'::json, $'+(n+2)+"::json)::text = 'true')";
+	}
 
+	if( (ret_type === 'number') || (ret_type === 'numeric') ) {
+		return '(nopg.call_func(array_to_json(ARRAY['+parsed_keys.join(', ')+']), $'+(n+1)+'::json, $'+(n+2)+"::json)::text::numeric)";
+	}
+
+	if(ret_type === 'text') {
+		return '(nopg.call_func(array_to_json(ARRAY['+parsed_keys.join(', ')+']), $'+(n+1)+'::json, $'+(n+2)+"::json)::text)";
+	}
+
+	return '(nopg.call_func(array_to_json(ARRAY['+parsed_keys.join(', ')+']), $'+(n+1)+'::json, $'+(n+2)+"::json))";
 }
 
 /* This object is because these functions need each other at the same time and must be defined before use. */
@@ -512,7 +525,7 @@ _parsers.parse_array_predicate = function parse_array_predicate(ObjType, params,
 	}
 
 	if(op === 'BIND') {
-		return parse_function_predicate(ObjType, params, def_op, o);
+		return parse_function_predicate(ObjType, params, def_op, o, 'boolean');
 	}
 
 	return '(' + ARRAY(o).map(_parsers.recursive_parse_predicates.bind(undefined, ObjType, params, def_op)).filter(not_undefined).join(') '+op+' (') + ')';
@@ -705,7 +718,7 @@ function parse_predicate_pgcast(ObjType, document_type, key) {
 }
 
 /** Parse `traits.order` */
-function parse_traits_order(types, order) {
+function parse_traits_order(types, order, params) {
 
 	debug.assert(types).is('array');
 	types = [].concat(types);
@@ -718,13 +731,23 @@ function parse_traits_order(types, order) {
 	debug.assert(order).is('array');
 
 	return order.map(function(o) {
-		var key, rest;
+		var key_type, key, type, rest;
 		if(is.array(o)) {
-			key = o[0];
+			key_type = o[0].split(':');
+			key = key_type.shift();
+			type = key_type.shift() || 'text';
 			rest = o.slice(1);
 		} else {
-			key = o;
+			key_type = o.split(':');
+			key = key_type.shift() || 'text';
+			type = key_type.shift();
 			rest = [];
+		}
+
+		if(key === 'BIND') {
+			var f = parse_function_predicate(ObjType, params, undefined, rest, type);
+			debug.log('f = ', f);
+			return f;
 		}
 
 		var parsed_key = parse_predicate_key(ObjType, key);
@@ -808,7 +831,7 @@ function do_select(self, types, opts, traits) {
 		function our_query() {
 
 			if(traits.order) {
-				query += ' ORDER BY ' + parse_traits_order([ObjType, document_type_obj], traits.order);
+				query += ' ORDER BY ' + parse_traits_order([ObjType, document_type_obj], traits.order, params);
 			}
 
 			if(traits.limit) {
