@@ -11,6 +11,11 @@ var ARRAY = require('nor-array');
 var NoPg = require('../');
 var debug = require('nor-debug');
 
+// Set default timeout for these operations as 1 hour unless it is already longer
+if(NoPg.defaults.timeout < 3600000) {
+	NoPg.defaults.timeout = 3600000;
+}
+
 var PGCONFIG = argv.pg || process.env.PGCONFIG || 'psql://localhost:5432/test';
 
 var actions = {};

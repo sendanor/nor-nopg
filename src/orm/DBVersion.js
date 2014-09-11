@@ -8,7 +8,7 @@ var NoPgORM = require("./ORM.js");
 
 var meta = require('./meta.js')({
 	"table": "dbversions",
-	"keys": ['$version', '$updated']
+	"keys": ['$version', '$modified']
 });
 
 /** The constructor */

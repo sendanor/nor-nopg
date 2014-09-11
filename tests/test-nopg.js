@@ -12,14 +12,22 @@ var PGCONFIG = process.env.PGCONFIG || 'pg://postgres@localhost/test';
 var debug = require('nor-debug');
 var nopg = require('../src');
 
+/** */
+function not_in(a) {
+	debug.assert(a).is('array');
+	return function not_in_array(x) {
+		return a.indexOf(x) === -1;
+	};
+}
+
 /** Run init() at start */
 before(function(done){
 	nopg.start(PGCONFIG).init().then(function(db) {
 		//var doc = db.fetch();
-		//debug.log('initialized database: doc = ' + util.inspect(doc));
+		//debug.log('initialized database: doc = ', doc);
 		return db.commit();
 	}).then(function(db) {
-		debug.log('Database init was successful.');
+		//debug.log('Database init was successful.');
 		done();
 	}).fail(function(err) {
 		debug.log('Database init failed: ' + err);
@@ -33,7 +41,8 @@ describe('nopg', function(){
 	describe('.start', function(){
 
 		it('is callable', function(){
-			assert.strictEqual(typeof nopg.start, 'function');
+			debug.assert(nopg).is('function');
+			debug.assert(nopg.start).is('function');
 		});
 
 	});
@@ -42,11 +51,25 @@ describe('nopg', function(){
 
 		it('typeless document creation', function(done){
 			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
-				debug.log('db is ', db);
 				var doc = db.fetch();
-				debug.log('doc = ' + util.inspect(doc));
-				assert.strictEqual(typeof doc.hello, 'string');
-				assert.strictEqual(doc.hello, 'world');
+
+				try {
+					debug.assert(doc).is('object');
+					debug.assert(doc.hello).is('string').equals('world');
+					debug.assert(doc.$events).is('object');
+					debug.assert(doc.$id).is('uuid');
+					debug.assert(doc.$content).is('object');
+					debug.assert(doc.$types_id).is('null');
+					debug.assert(doc.$created).is('date string');
+					debug.assert(doc.$modified).is('date string');
+					debug.assert(doc.$type).is('null');
+
+					debug.assert( Object.keys(doc).filter(not_in(['hello', '$events', '$id', '$content', '$types_id', '$created', '$modified', '$type'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('doc = ', doc);
+					throw e;
+				}
+
 				return db.commit();
 			}).then(function(db) {
 				done();
@@ -58,12 +81,44 @@ describe('nopg', function(){
 
 		it('typed document creation', function(done){
 			nopg.start(PGCONFIG).createType("Test")({"$schema":{"type":"object"}}).create("Test")({"hello":"world"}).then(function(db) {
-				debug.log('db is ', db);
 				var type = db.fetch();
+
+				try {
+					debug.assert(type).is('object');
+					debug.assert(type.$events).is('object');
+					debug.assert(type.$id).is('uuid');
+					debug.assert(type.$name).is('string').equals("Test");
+					debug.assert(type.$schema).is('object');
+					//debug.assert(type.$validator).is('function');
+					debug.assert(type.$meta).is('object');
+					debug.assert(type.$created).is('date string');
+					debug.assert(type.$modified).is('date string');
+
+					debug.assert( Object.keys(type).filter(not_in(['$events', '$id', '$name', '$schema', '$validator', '$meta', '$created', '$modified'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('type = ', type);
+					throw e;
+				}
+
 				var doc = db.fetch();
-				debug.log('doc = ' + util.inspect(doc));
-				assert.strictEqual(typeof doc.hello, 'string');
-				assert.strictEqual(doc.hello, 'world');
+
+				try {
+					debug.assert(doc).is('object');
+					debug.assert(doc.hello).is('string').equals('world');
+					debug.assert(doc.$events).is('object');
+					debug.assert(doc.$id).is('uuid');
+					debug.assert(doc.$content).is('object');
+					debug.assert(doc.$types_id).is('uuid').equals(type.$id);
+					debug.assert(doc.$created).is('date string');
+					debug.assert(doc.$modified).is('date string');
+					debug.assert(doc.$type).is('string').equals('Test');
+
+					debug.assert( Object.keys(doc).filter(not_in(['hello', '$events', '$id', '$content', '$types_id', '$created', '$modified', '$type'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('doc = ', doc);
+					throw e;
+				}
+
 				return db.commit();
 			}).then(function(db) {
 				done();
@@ -77,18 +132,45 @@ describe('nopg', function(){
 			var doc;
 			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
 				doc = db.fetch();
-				debug.log('before doc = ' + util.inspect(doc));
-				assert.strictEqual(typeof doc.hello, 'string');
-				assert.strictEqual(doc.hello, 'world');
+
+				try {
+					debug.assert(doc).is('object');
+					debug.assert(doc.hello).is('string').equals('world');
+					debug.assert(doc.$events).is('object');
+					debug.assert(doc.$id).is('uuid');
+					debug.assert(doc.$content).is('object');
+					debug.assert(doc.$types_id).is('null');
+					debug.assert(doc.$created).is('date string');
+					debug.assert(doc.$modified).is('date string');
+					debug.assert(doc.$type).is('null');
+					debug.assert( Object.keys(doc).filter(not_in(['hello', '$events', '$id', '$content', '$types_id', '$created', '$modified', '$type'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('doc = ', doc);
+					throw e;
+				}
+
 				return db.update(doc, {"hello2": "another"});
 			}).then(function(db) {
 				var doc2 = db.fetch();
-				debug.log('updated doc2 = ' + util.inspect(doc2));
-				assert.strictEqual(typeof doc2.hello, 'string');
-				assert.strictEqual(doc2.hello, 'world');
-				assert.strictEqual(typeof doc2.hello2, 'string');
-				assert.strictEqual(doc2.hello2, 'another');
-				assert.strictEqual(doc.$id, doc2.$id);
+
+				try {
+					debug.assert(doc2).is('object');
+					debug.assert(doc2.hello).is('string').equals('world');
+					debug.assert(doc2.hello2).is('string').equals('another');
+					debug.assert(doc2.$events).is('object');
+					debug.assert(doc2.$id).is('uuid').equals(doc.$id);
+					debug.assert(doc2.$content).is('object');
+					debug.assert(doc2.$types_id).is('null');
+					debug.assert(doc2.$created).is('date string');
+					debug.assert(doc2.$modified).is('date string');
+					debug.assert(doc2.$type).is('null');
+
+					debug.assert( Object.keys(doc).filter(not_in(['hello', 'hello2', '$events', '$id', '$content', '$types_id', '$created', '$modified', '$type'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('doc2 = ', doc2);
+					throw e;
+				}
+
 				return db.commit();
 			}).then(function(db) {
 				done();
@@ -102,18 +184,29 @@ describe('nopg', function(){
 			var doc;
 			nopg.start(PGCONFIG).create()({"foo":123, "hello":"world"}).then(function(db) {
 				doc = db.fetch();
-				debug.log('before doc = ' + util.inspect(doc));
+
 				doc.hello = "another";
 				doc.hello2 = "world";
 				delete doc.foo;
-				debug.assert(doc.$id).is('uuid');
-				debug.assert(doc.$content).is('object');
+
+				try {
+					debug.assert(doc.$id).is('uuid');
+					debug.assert(doc.$content).is('object');
+				} catch(e) {
+					debug.log('doc = ', doc);
+					throw e;
+				}
+
 				return db.update(doc);
 			}).then(function(db) {
-				debug.log('updated doc = ' + util.inspect(doc));
-				assert.strictEqual(typeof doc.hello, 'string');
-				assert.strictEqual(doc.hello, 'another');
-				assert.strictEqual(doc.hello2, 'world');
+				try {
+					assert.strictEqual(typeof doc.hello, 'string');
+					assert.strictEqual(doc.hello, 'another');
+					assert.strictEqual(doc.hello2, 'world');
+				} catch(e) {
+					debug.log('doc = ', doc);
+					throw e;
+				}
 				return db.commit();
 			}).then(function(db) {
 				done();
@@ -127,7 +220,6 @@ describe('nopg', function(){
 			var doc;
 			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
 				doc = db.fetch();
-				debug.log('before doc = ' + util.inspect(doc));
 				return db.del(doc);
 			}).then(function(db) {
 				// FIXME: Test that the doc was really deleted.
@@ -142,20 +234,36 @@ describe('nopg', function(){
 
 		it('typeless document search by property', function(done){
 			nopg.start(PGCONFIG).create()({"hello":"UAJuE5ya6m9UvUM87GUFu7GBIJWghHMT"}).then(function(db) {
-				debug.log('db is ', db);
 				var doc = db.fetch();
-				debug.log('doc = ' + util.inspect(doc));
-				assert.strictEqual(typeof doc.hello, 'string');
-				assert.strictEqual(doc.hello, 'UAJuE5ya6m9UvUM87GUFu7GBIJWghHMT');
+
+				try {
+					assert.strictEqual(typeof doc.hello, 'string');
+					assert.strictEqual(doc.hello, 'UAJuE5ya6m9UvUM87GUFu7GBIJWghHMT');
+				} catch(e) {
+					debug.log('doc = ', doc);
+					throw e;
+				}
 
 				return db.search()({"hello":"UAJuE5ya6m9UvUM87GUFu7GBIJWghHMT"});
 			}).then(function(db) {
 				var items = db.fetch();
 
-				assert.strictEqual(items.length, 1);
+				try {
+					assert.strictEqual(items.length, 1);
+				} catch(e) {
+					debug.log('items = ', items);
+					throw e;
+				}
+
 				var doc = items.shift();
-				assert.strictEqual(typeof doc.hello, 'string');
-				assert.strictEqual(doc.hello, 'UAJuE5ya6m9UvUM87GUFu7GBIJWghHMT');
+
+				try {
+					assert.strictEqual(typeof doc.hello, 'string');
+					assert.strictEqual(doc.hello, 'UAJuE5ya6m9UvUM87GUFu7GBIJWghHMT');
+				} catch(e) {
+					debug.log('doc = ', doc);
+					throw e;
+				}
 
 				return db.commit();
 			}).then(function(db) {
@@ -169,11 +277,16 @@ describe('nopg', function(){
 		it('typeless document search by document ID', function(done){
 			var id;
 			nopg.start(PGCONFIG).create()({"hello":"AF82RqSsXM527S3PGK76r6H3xjWqnYgP"}).then(function(db) {
-				debug.log('db is ', db);
+				//debug.log('db is ', db);
 				var doc = db.fetch();
-				debug.log('doc = ' + util.inspect(doc));
-				assert.strictEqual(typeof doc.hello, 'string');
-				assert.strictEqual(doc.hello, 'AF82RqSsXM527S3PGK76r6H3xjWqnYgP');
+
+				try {
+					assert.strictEqual(typeof doc.hello, 'string');
+					assert.strictEqual(doc.hello, 'AF82RqSsXM527S3PGK76r6H3xjWqnYgP');
+				} catch(e) {
+					debug.log('doc = ', doc);
+					throw e;
+				}
 
 				id = doc.$id;
 
@@ -181,10 +294,22 @@ describe('nopg', function(){
 			}).then(function(db) {
 				var items = db.fetch();
 
-				assert.strictEqual(items.length, 1);
+				try {
+					assert.strictEqual(items.length, 1);
+				} catch(e) {
+					debug.log('items = ', items);
+					throw e;
+				}
+
 				var doc = items.shift();
-				assert.strictEqual(typeof doc.hello, 'string');
-				assert.strictEqual(doc.hello, 'AF82RqSsXM527S3PGK76r6H3xjWqnYgP');
+
+				try {
+					assert.strictEqual(typeof doc.hello, 'string');
+					assert.strictEqual(doc.hello, 'AF82RqSsXM527S3PGK76r6H3xjWqnYgP');
+				} catch(e) {
+					debug.log('doc = ', doc);
+					throw e;
+				}
 
 				return db.commit();
 			}).then(function(db) {
@@ -209,16 +334,31 @@ describe('nopg', function(){
 				var item2 = db.fetch();
 				var items = db.fetch();
 
-				assert.strictEqual(type.$name, "TestYmMGe0M6");
+				try {
+					assert.strictEqual(type.$name, "TestYmMGe0M6");
+				} catch(e) {
+					debug.log('type = ', type);
+					throw e;
+				}
 
-				assert.strictEqual(item0.foo, 1);
-				assert.strictEqual(item1.foo, 2);
-				assert.strictEqual(item2.foo, 3);
+				try {
+					assert.strictEqual(item0.foo, 1);
+				} catch(e) { debug.log('item0 = ', item0); throw e; }
 
-				assert.strictEqual(items.length, 3);
-				assert.strictEqual(item0.foo, items[0].foo);
-				assert.strictEqual(item1.foo, items[1].foo);
-				assert.strictEqual(item2.foo, items[2].foo);
+				try {
+					assert.strictEqual(item1.foo, 2);
+				} catch(e) { debug.log('item1 = ', item1); throw e; }
+
+				try {
+					assert.strictEqual(item2.foo, 3);
+				} catch(e) { debug.log('item2 = ', item2); throw e; }
+
+				try {
+					assert.strictEqual(items.length, 3);
+					assert.strictEqual(item0.foo, items[0].foo);
+					assert.strictEqual(item1.foo, items[1].foo);
+					assert.strictEqual(item2.foo, items[2].foo);
+				} catch(e) { debug.log('items = ', items); throw e; }
 
 				return db.commit();
 			}).then(function(db) {
@@ -243,17 +383,29 @@ describe('nopg', function(){
 				var item2 = db.fetch();
 				var items = db.fetch();
 
-				assert.strictEqual(type.$name, "TestMxvLtb3x");
+				try {
+					assert.strictEqual(type.$name, "TestMxvLtb3x");
+				} catch(e) { debug.log('type = ', type); throw e; }
 
-				assert.strictEqual(item0.foo, 1);
-				assert.strictEqual(item0.bar, "foobar");
-				assert.strictEqual(item1.bar, "hello");
-				assert.strictEqual(item1.bar, "hello");
-				assert.strictEqual(item2.foo, 3);
+				try {
+					assert.strictEqual(item0.foo, 1);
+					assert.strictEqual(item0.bar, "foobar");
+				} catch(e) { debug.log('item0 = ', item0); throw e; }
 
-				assert.strictEqual(items.length, 1);
-				assert.strictEqual(item1.foo, items[0].foo);
-				assert.strictEqual(item1.bar, items[0].bar);
+				try {
+					assert.strictEqual(item1.foo, 2);
+					assert.strictEqual(item1.bar, "hello");
+				} catch(e) { debug.log('item1 = ', item1); throw e; }
+
+				try {
+					assert.strictEqual(item2.foo, 3);
+				} catch(e) { debug.log('item2 = ', item2); throw e; }
+
+				try {
+					assert.strictEqual(items.length, 1);
+					assert.strictEqual(item1.foo, items[0].foo);
+					assert.strictEqual(item1.bar, items[0].bar);
+				} catch(e) { debug.log('items = ', items); throw e; }
 
 				return db.commit();
 			}).then(function(db) {
@@ -270,8 +422,11 @@ describe('nopg', function(){
 			  .createType("Testg1KrHD2a")()
 			  .then(function(db) {
 				type = db.fetch();
-				debug.log("type = ", type);
-				assert.strictEqual(type instanceof nopg.Type, true);
+
+				try {
+					assert.strictEqual(type instanceof nopg.Type, true);
+				} catch(e) { debug.log('type = ', type); throw e; }
+
 				return db.create(type)({"foo":1,"bar":"foobar"})
 				  .create(type)({"foo":2,"bar":"hello"})
 				  .create(type)({"foo":3})
@@ -282,22 +437,29 @@ describe('nopg', function(){
 				var item2 = db.fetch();
 				var items = db.fetch();
 
-				debug.log("item0 = ", item0);
-				debug.log("item1 = ", item1);
-				debug.log("item2 = ", item2);
-				debug.log("items = ", items);
+				try {
+					assert.strictEqual(type.$name, "Testg1KrHD2a");
+				} catch(e) { debug.log('type = ', type); throw e; }
 
-				assert.strictEqual(type.$name, "Testg1KrHD2a");
+				try {
+					assert.strictEqual(item0.foo, 1);
+					assert.strictEqual(item0.bar, "foobar");
+				} catch(e) { debug.log('item0 = ', item0); throw e; }
 
-				assert.strictEqual(item0.foo, 1);
-				assert.strictEqual(item0.bar, "foobar");
-				assert.strictEqual(item1.bar, "hello");
-				assert.strictEqual(item1.bar, "hello");
-				assert.strictEqual(item2.foo, 3);
+				try {
+					assert.strictEqual(item1.bar, "hello");
+					assert.strictEqual(item1.bar, "hello");
+				} catch(e) { debug.log('item1 = ', item1); throw e; }
 
-				assert.strictEqual(items.length, 1);
-				assert.strictEqual(item1.foo, items[0].foo);
-				assert.strictEqual(item1.bar, items[0].bar);
+				try {
+					assert.strictEqual(item2.foo, 3);
+				} catch(e) { debug.log('item2 = ', item2); throw e; }
+
+				try {
+					assert.strictEqual(items.length, 1);
+					assert.strictEqual(item1.foo, items[0].foo);
+					assert.strictEqual(item1.bar, items[0].bar);
+				} catch(e) { debug.log('items = ', items); throw e; }
 
 				return db.commit();
 			}).then(function(db) {
@@ -314,8 +476,11 @@ describe('nopg', function(){
 			  .createType()()
 			  .then(function(db) {
 				type = db.fetch();
-				debug.log("type = ", type);
-				assert.strictEqual(type instanceof nopg.Type, true);
+
+				try {
+					assert.strictEqual(type instanceof nopg.Type, true);
+				} catch(e) { debug.log('type = ', type); throw e; }
+
 				return db.create(type)({"foo":1,"bar":"foobar"})
 				  .create(type)({"foo":2,"bar":"hello"})
 				  .create(type)({"foo":3})
@@ -326,20 +491,25 @@ describe('nopg', function(){
 				var item2 = db.fetch();
 				var items = db.fetch();
 
-				debug.log("item0 = ", item0);
-				debug.log("item1 = ", item1);
-				debug.log("item2 = ", item2);
-				debug.log("items = ", items);
+				try {
+					assert.strictEqual(item0.foo, 1);
+					assert.strictEqual(item0.bar, "foobar");
+				} catch(e) { debug.log('item0 = ', item0); throw e; }
 
-				assert.strictEqual(item0.foo, 1);
-				assert.strictEqual(item0.bar, "foobar");
-				assert.strictEqual(item1.bar, "hello");
-				assert.strictEqual(item1.bar, "hello");
-				assert.strictEqual(item2.foo, 3);
+				try {
+					assert.strictEqual(item1.foo, 2);
+					assert.strictEqual(item1.bar, "hello");
+				} catch(e) { debug.log('item1 = ', item1); throw e; }
 
-				assert.strictEqual(items.length, 1);
-				assert.strictEqual(item1.foo, items[0].foo);
-				assert.strictEqual(item1.bar, items[0].bar);
+				try {
+					assert.strictEqual(item2.foo, 3);
+				} catch(e) { debug.log('item2 = ', item2); throw e; }
+
+				try {
+					assert.strictEqual(items.length, 1);
+					assert.strictEqual(item1.foo, items[0].foo);
+					assert.strictEqual(item1.bar, items[0].bar);
+				} catch(e) { debug.log('items = ', items); throw e; }
 
 				return db.commit();
 			}).then(function(db) {
@@ -352,18 +522,30 @@ describe('nopg', function(){
 
 		it('Declare type works over existing type', function(done){
 			nopg.start(PGCONFIG).createType("TypeXvsMtxJyWE")({"hello":"world1"}).declareType("TypeXvsMtxJyWE")({"hello":"world2"}).then(function(db) {
-				debug.log('db is ', db);
+				//debug.log('db is ', db);
 				var type1 = db.fetch();
 				var type2 = db.fetch();
-				debug.log('type1 = ', util.inspect(type1));
-				debug.log('type2 = ', util.inspect(type2));
-				assert.strictEqual(typeof type1, 'object');
-				assert.strictEqual(typeof type2, 'object');
-				assert.strictEqual(typeof type1.hello, 'string');
-				assert.strictEqual(typeof type2.hello, 'string');
-				assert.strictEqual(type1.hello, 'world1');
-				assert.strictEqual(type2.hello, 'world2');
-				assert.strictEqual(type1.$id, type2.$id);
+
+				try {
+					assert.strictEqual(typeof type1, 'object');
+					assert.strictEqual(typeof type1.hello, 'string');
+					assert.strictEqual(type1.hello, 'world1');
+				} catch(e) { debug.log('type1 = ', type1); throw e; }
+
+				try {
+					assert.strictEqual(typeof type2, 'object');
+					assert.strictEqual(typeof type2.hello, 'string');
+					assert.strictEqual(type2.hello, 'world2');
+				} catch(e) { debug.log('type2 = ', type2); throw e; }
+
+				try {
+					assert.strictEqual(type1.$id, type2.$id);
+				} catch(e) {
+					debug.log('type1 = ', type1);
+					debug.log('type2 = ', type2);
+					throw e;
+				}
+
 				return db.commit();
 			}).then(function(db) {
 				done();
@@ -375,12 +557,15 @@ describe('nopg', function(){
 
 		it('Declare type works even if type does not exist', function(done){
 			nopg.start(PGCONFIG).declareType("Type4UJHIRRiCc")({"hello":"world"}).then(function(db) {
-				debug.log('db is ', db);
+				//debug.log('db is ', db);
 				var type1 = db.fetch();
-				debug.log('type1 = ', util.inspect(type1));
-				assert.strictEqual(typeof type1, 'object');
-				assert.strictEqual(typeof type1.hello, 'string');
-				assert.strictEqual(type1.hello, 'world');
+
+				try {
+					assert.strictEqual(typeof type1, 'object');
+					assert.strictEqual(typeof type1.hello, 'string');
+					assert.strictEqual(type1.hello, 'world');
+				} catch(e) { debug.log('type1 = ', type1); throw e; }
+
 				return db.commit();
 			}).then(function(db) {
 				done();
@@ -392,12 +577,13 @@ describe('nopg', function(){
 
 		it('Types with schema', function(done){
 			nopg.start(PGCONFIG).declareType("TypeSession4UJHIRRiCc")({"$schema":{"type":"object"}}).then(function(db) {
-				debug.log('db is ', db);
+				//debug.log('db is ', db);
 				var type1 = db.fetch();
-				debug.log('type1 = ', util.inspect(type1));
-				assert.strictEqual(typeof type1, 'object');
-				assert.strictEqual(typeof type1.$schema, 'object');
-				assert.strictEqual(type1.$schema.type, 'object');
+				try {
+					assert.strictEqual(typeof type1, 'object');
+					assert.strictEqual(typeof type1.$schema, 'object');
+					assert.strictEqual(type1.$schema.type, 'object');
+				} catch(e) { debug.log('type1 = ', type1); throw e; }
 				return db.commit();
 			}).then(function(db) {
 				done();
@@ -411,14 +597,16 @@ describe('nopg', function(){
 			var type, exists;
 			nopg.start(PGCONFIG).createType("DeleteTypeTestsxWH8QiBYc")({"hello":"world"}).then(function(db) {
 				type = db.fetch();
-				debug.log('type = ' + util.inspect(type));
+				//debug.log('type = ' + util.inspect(type));
 				return db.del(type).commit();
 			}).then(function() {
 				return nopg.start(PGCONFIG).typeExists("DeleteTypeTestsxWH8QiBYc").commit();
 			}).then(function(db) {
 				exists = db.fetch();
-				assert.strictEqual(typeof exists, 'boolean');
-				assert.strictEqual(exists, false);
+				try {
+					assert.strictEqual(typeof exists, 'boolean');
+					assert.strictEqual(exists, false);
+				} catch(e) { debug.log('exists = ', exists); throw e; }
 				return db;
 			}).then(function(db) {
 				done();
@@ -442,18 +630,27 @@ describe('nopg', function(){
 				}
 			}).then(function(db) {
 				type = db.fetch();
-				debug.log('type = ' + util.inspect(type));
+				//debug.log('type = ' + util.inspect(type));
 				return db.create(type)({"x":10, "y":20});
 			}).then(function(db) {
 				var point = db.fetch();
-				assert.strictEqual(typeof point.x, 'number');
-				assert.strictEqual(typeof point.y, 'number');
-				assert.strictEqual(point.x, 10);
-				assert.strictEqual(point.y, 20);
-				
+
+				try {
+					assert.strictEqual(typeof point.x, 'number');
+					assert.strictEqual(typeof point.y, 'number');
+					assert.strictEqual(point.x, 10);
+					assert.strictEqual(point.y, 20);
+				} catch(e) { debug.log('point = ', point); throw e; }
+
 				var failed;
 				return db.create(type)({"x":10}).fail(function(err) {
-					debug.log("Expected error was: " + err);
+					try {
+						var err_str = ''+err;
+						debug.assert( err_str.substr( err_str.indexOf('ValidationError:') ) ).equals('ValidationError: Missing required property: y');
+					} catch(e) {
+						debug.log("Expected error, but message was not expected: " + err);
+						throw e;
+					}
 					failed = true;
 				}).fin(function() {
 					assert.strictEqual(failed, true);
@@ -491,18 +688,27 @@ describe('nopg', function(){
 				}
 			}).then(function(db) {
 				type = db.fetch();
-				debug.log('type = ' + util.inspect(type));
+				//debug.log('type = ' + util.inspect(type));
 				return db.create(type)({"x":10, "y":20});
 			}).then(function(db) {
 				var point = db.fetch();
-				assert.strictEqual(typeof point.x, 'number');
-				assert.strictEqual(typeof point.y, 'number');
-				assert.strictEqual(point.x, 10);
-				assert.strictEqual(point.y, 20);
-				
+
+				try {
+					assert.strictEqual(typeof point.x, 'number');
+					assert.strictEqual(typeof point.y, 'number');
+					assert.strictEqual(point.x, 10);
+					assert.strictEqual(point.y, 20);
+				} catch(e) { debug.log('point = ', point); throw e; }
+
 				var failed = false;
 				return db.create(type)({"x":200, "y":200}).fail(function(err) {
-					debug.log("Expected error was: " + err);
+					try {
+						var err_str = ''+err;
+						debug.assert( err_str.substr( err_str.indexOf('failed custom type check'), 24) ).equals('failed custom type check');
+					} catch(e) {
+						debug.log("Expected error, but message was not expected: " + err);
+						throw e;
+					}
 					failed = true;
 				}).fin(function() {
 					assert.strictEqual(failed, true);
@@ -526,12 +732,13 @@ describe('nopg', function(){
 			var type, type2;
 			nopg.start(PGCONFIG).createType("EditTypeTest_VGM3")({"hello":"world"}).then(function(db) {
 				type = db.fetch();
-				debug.log('type = ' + util.inspect(type));
 
-				assert.strictEqual(typeof type, 'object');
-				assert.strictEqual(type instanceof nopg.Type, true);
-				assert.strictEqual(type.hello, 'world');
-				
+				try {
+					assert.strictEqual(typeof type, 'object');
+					assert.strictEqual(type instanceof nopg.Type, true);
+					assert.strictEqual(type.hello, 'world');
+				} catch(e) { debug.log('type = ', type); throw e; }
+
 				type.hello = 'something else';
 
 				return db.update(type).commit();
@@ -539,10 +746,12 @@ describe('nopg', function(){
 				return nopg.start(PGCONFIG).getType("EditTypeTest_VGM3").commit();
 			}).then(function(db) {
 				type2 = db.fetch();
-				assert.strictEqual(typeof type2, 'object');
-				assert.strictEqual(type2 instanceof nopg.Type, true);
-				assert.strictEqual(type2.$id, type.$id);
-				assert.strictEqual(type2.hello, 'something else');
+				try {
+					assert.strictEqual(typeof type2, 'object');
+					assert.strictEqual(type2 instanceof nopg.Type, true);
+					assert.strictEqual(type2.$id, type.$id);
+					assert.strictEqual(type2.hello, 'something else');
+				} catch(e) { debug.log('type2 = ', type2); throw e; }
 			}).then(function() {
 				done();
 			}).fail(function(err) {
@@ -555,26 +764,29 @@ describe('nopg', function(){
 			var type, type2;
 			nopg.start(PGCONFIG).createType("EditTypeTest2_5Vmf")({"hello":"world"}).then(function(db) {
 				type = db.fetch();
-				debug.log('type = ' + util.inspect(type));
 
-				assert.strictEqual(typeof type, 'object');
-				assert.strictEqual(type instanceof nopg.Type, true);
-				assert.strictEqual(type.hello, 'world');
-				
+				try {
+					assert.strictEqual(typeof type, 'object');
+					assert.strictEqual(type instanceof nopg.Type, true);
+					assert.strictEqual(type.hello, 'world');
+				} catch(e) { debug.log('type = ', type); throw e; }
+
 				return db.update(type, {'hello2':'something else'}).commit();
 			}).then(function() {
 				return nopg.start(PGCONFIG).getType("EditTypeTest2_5Vmf").commit();
 			}).then(function(db) {
 				type2 = db.fetch();
 
-				assert.strictEqual(typeof type2, 'object');
-				assert.strictEqual(type2 instanceof nopg.Type, true);
-				assert.strictEqual(type2.hello, 'world');
-				
-				assert.strictEqual(typeof type2, 'object');
-				assert.strictEqual(type2 instanceof nopg.Type, true);
-				assert.strictEqual(type2.$id, type.$id);
-				assert.strictEqual(type2.hello2, 'something else');
+				try {
+					assert.strictEqual(typeof type2, 'object');
+					assert.strictEqual(type2 instanceof nopg.Type, true);
+					assert.strictEqual(type2.hello, 'world');
+
+					assert.strictEqual(typeof type2, 'object');
+					assert.strictEqual(type2 instanceof nopg.Type, true);
+					assert.strictEqual(type2.$id, type.$id);
+					assert.strictEqual(type2.hello2, 'something else');
+				} catch(e) { debug.log('type2 = ', type2); throw e; }
 
 			}).then(function() {
 				done();
@@ -587,24 +799,25 @@ describe('nopg', function(){
 		it('partial update of typed document', function(done){
 			var doc;
 			nopg.start(PGCONFIG).createType("Test-hSYX")({"$schema":{"type":"object"}}).create("Test-hSYX")({"hello":"world"}).then(function(db) {
-				debug.log('db is ', db);
 				var type = db.fetch();
 				doc = db.fetch();
-				debug.log('doc = ' + util.inspect(doc));
-				assert.strictEqual(typeof doc.hello, 'string');
-				assert.strictEqual(doc.hello, 'world');
+				try {
+					assert.strictEqual(typeof doc.hello, 'string');
+					assert.strictEqual(doc.hello, 'world');
+				} catch(e) { debug.log('doc = ', doc); throw e; }
 				return db.update(doc, {"hello2": "world2"});
 			}).then(function(db) {
 				return db.getDocument({'$id':doc.$id});
 			}).then(function(db) {
 				var doc2 = db.fetch();
-				debug.log('doc2 = ' + util.inspect(doc2));
 
-				assert.strictEqual(typeof doc2.hello, 'string');
-				assert.strictEqual(doc2.hello, 'world');
+				try {
+					assert.strictEqual(typeof doc2.hello, 'string');
+					assert.strictEqual(doc2.hello, 'world');
 
-				assert.strictEqual(typeof doc2.hello2, 'string');
-				assert.strictEqual(doc2.hello2, 'world2');
+					assert.strictEqual(typeof doc2.hello2, 'string');
+					assert.strictEqual(doc2.hello2, 'world2');
+				} catch(e) { debug.log('doc2 = ', doc2); throw e; }
 
 				return db.commit();
 			}).then(function(db) {
@@ -618,21 +831,23 @@ describe('nopg', function(){
 		it('partial update of typed document without any real changes', function(done){
 			var doc;
 			nopg.start(PGCONFIG).createType("Test-mtm8")({"$schema":{"type":"object"}}).create("Test-mtm8")({"hello":"world"}).then(function(db) {
-				debug.log('db is ', db);
 				var type = db.fetch();
 				doc = db.fetch();
-				debug.log('doc = ' + util.inspect(doc));
-				assert.strictEqual(typeof doc.hello, 'string');
-				assert.strictEqual(doc.hello, 'world');
+				try {
+					assert.strictEqual(typeof doc.hello, 'string');
+					assert.strictEqual(doc.hello, 'world');
+				} catch(e) { debug.log('doc = ', doc); throw e; }
+
 				return db.update(doc, {"hello": "world"});
 			}).then(function(db) {
 				return db.getDocument({'$id':doc.$id});
 			}).then(function(db) {
 				var doc2 = db.fetch();
-				debug.log('doc2 = ' + util.inspect(doc2));
 
-				assert.strictEqual(typeof doc2.hello, 'string');
-				assert.strictEqual(doc2.hello, 'world');
+				try {
+					assert.strictEqual(typeof doc2.hello, 'string');
+					assert.strictEqual(doc2.hello, 'world');
+				} catch(e) { debug.log('doc2 = ', doc2); throw e; }
 
 				return db.commit();
 			}).then(function(db) {
@@ -658,29 +873,44 @@ describe('nopg', function(){
 				var att1 = db.fetch();
 				var att2 = db.fetch();
 
-				debug.assert(type).typeOf('object').instanceOf(nopg.Type);
-				debug.assert(doc).typeOf('object').instanceOf(nopg.Document);
-				debug.assert(att1).typeOf('object').instanceOf(nopg.Attachment);
-				debug.assert(att2).typeOf('object').instanceOf(nopg.Attachment);
+				try {
+					debug.assert(type).typeOf('object').instanceOf(nopg.Type);
+				} catch(e) { debug.log('type = ', type); throw e; }
 
-				assert.strictEqual(att1.$documents_id, doc.$id);
-				assert.strictEqual(att2.$documents_id, doc.$id);
-				assert.strictEqual(att2.foo, "bar");
+				try {
+					debug.assert(doc).typeOf('object').instanceOf(nopg.Document);
+				} catch(e) { debug.log('doc = ', doc); throw e; }
+
+				try {
+					debug.assert(att1).typeOf('object').instanceOf(nopg.Attachment);
+					assert.strictEqual(att1.$documents_id, doc.$id);
+				} catch(e) { debug.log('att1 = ', att1); throw e; }
+
+				try {
+					debug.assert(att2).typeOf('object').instanceOf(nopg.Attachment);
+					assert.strictEqual(att2.$documents_id, doc.$id);
+					assert.strictEqual(att2.foo, "bar");
+				} catch(e) { debug.log('att2 = ', att2); throw e; }
 
 				var att1_buffer = att1.getBuffer();
 				var att2_buffer = att2.getBuffer();
 
-				debug.log("att1_buffer.length = ", att1_buffer.length);
-				debug.log("att2_buffer.length = ", att2_buffer.length);
+				//debug.log("att1_buffer.length = ", att1_buffer.length);
+				//debug.log("att2_buffer.length = ", att2_buffer.length);
 
 				var att1_hash = crypto.createHash('md5').update( att1_buffer ).digest('hex');
 				var att2_hash = crypto.createHash('md5').update( att2_buffer ).digest('hex');
 
-				debug.log("att1_hash = ", att1_hash);
-				debug.log("att2_hash = ", att2_hash);
+				//debug.log("att1_hash = ", att1_hash);
+				//debug.log("att2_hash = ", att2_hash);
 
-				assert.strictEqual(att1_hash, "43e9b43ddebe7cee7fff8e46d258c67f");
-				assert.strictEqual(att2_hash, "7e87855080a7eb8b8dd4a06122fccb44");
+				try {
+					assert.strictEqual(att1_hash, "43e9b43ddebe7cee7fff8e46d258c67f");
+				} catch(e) { debug.log('att1_hash = ', att1_hash); throw e; }
+
+				try {
+					assert.strictEqual(att2_hash, "7e87855080a7eb8b8dd4a06122fccb44");
+				} catch(e) { debug.log('att2_hash = ', att2_hash); throw e; }
 
 				return db.commit();
 			}).then(function(db) {
@@ -718,13 +948,13 @@ describe('nopg', function(){
 
 				debug.assert(att1_buffer).typeOf('object').instanceOf(Buffer);
 
-				debug.log("att1_buffer.length = ", att1_buffer.length);
+				//debug.log("att1_buffer.length = ", att1_buffer.length);
 
 				var att1_hash = crypto.createHash('md5').update( att1_buffer ).digest('hex');
 
-				debug.log("att1_hash = ", att1_hash);
-
-				assert.strictEqual(att1_hash, "43e9b43ddebe7cee7fff8e46d258c67f");
+				try {
+					assert.strictEqual(att1_hash, "43e9b43ddebe7cee7fff8e46d258c67f");
+				} catch(e) { debug.log('att1_hash = ', att1_hash); throw e; }
 
 				return db.commit();
 			}).then(function(db) {
@@ -766,15 +996,15 @@ describe('nopg', function(){
 				var att2_buffer = att2.getBuffer();
 				var atts_buffers = atts.map(function(a) { return a.getBuffer(); });
 
-				debug.log("att1_buffer.length = ", att1_buffer.length);
-				debug.log("att2_buffer.length = ", att2_buffer.length);
+				//debug.log("att1_buffer.length = ", att1_buffer.length);
+				//debug.log("att2_buffer.length = ", att2_buffer.length);
 
 				var att1_hash = crypto.createHash('md5').update( att1_buffer ).digest('hex');
 				var att2_hash = crypto.createHash('md5').update( att2_buffer ).digest('hex');
 				var atts_hashes = atts_buffers.map(function(a) { return crypto.createHash('md5').update( a ).digest('hex'); });
 
-				debug.log("att1_hash = ", att1_hash);
-				debug.log("att2_hash = ", att2_hash);
+				//debug.log("att1_hash = ", att1_hash);
+				//debug.log("att2_hash = ", att2_hash);
 
 				assert.strictEqual(att1_hash, "43e9b43ddebe7cee7fff8e46d258c67f");
 				assert.strictEqual(att2_hash, "7e87855080a7eb8b8dd4a06122fccb44");
@@ -986,6 +1216,150 @@ describe('nopg', function(){
 				assert.strictEqual(items.length, 2);
 				assert.strictEqual(item1.foo, items[0].foo);
 				assert.strictEqual(item2.foo, items[1].foo);
+
+				return db.commit();
+			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
+				done(err);
+			}).done();
+		});
+
+		/** */
+		it('typed document creation and single fetching by ID', function(done){
+			var type;
+			nopg.start(PGCONFIG).createType("TestQgBYjQsQ")({"$schema":{"type":"object"}}).create("TestQgBYjQsQ")({"hello":"world"}).then(function(db) {
+				type = db.fetch();
+
+				try {
+					debug.assert(type).is('object');
+					debug.assert(type.$events).is('object');
+					debug.assert(type.$id).is('uuid');
+					debug.assert(type.$name).is('string').equals("TestQgBYjQsQ");
+					debug.assert(type.$schema).is('object');
+					//debug.assert(type.$validator).is('function');
+					debug.assert(type.$meta).is('object');
+					debug.assert(type.$created).is('date string');
+					debug.assert(type.$modified).is('date string');
+
+					debug.assert( Object.keys(type).filter(not_in(['$events', '$id', '$name', '$schema', '$validator', '$meta', '$created', '$modified'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('type = ', type);
+					throw e;
+				}
+
+				var doc = db.fetch();
+
+				try {
+					debug.assert(doc).is('object');
+					debug.assert(doc.hello).is('string').equals('world');
+					debug.assert(doc.$events).is('object');
+					debug.assert(doc.$id).is('uuid');
+					debug.assert(doc.$content).is('object');
+					debug.assert(doc.$types_id).is('uuid').equals(type.$id);
+					debug.assert(doc.$created).is('date string');
+					debug.assert(doc.$modified).is('date string');
+					debug.assert(doc.$type).is('string').equals('TestQgBYjQsQ');
+
+					debug.assert( Object.keys(doc).filter(not_in(['hello', '$events', '$id', '$content', '$types_id', '$created', '$modified', '$type'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('doc = ', doc);
+					throw e;
+				}
+
+				return db.searchSingle('TestQgBYjQsQ')({'$id': doc.$id});
+			}).then(function(db) {
+				var doc = db.fetch();
+
+				try {
+					debug.assert(doc).is('object');
+					debug.assert(doc.hello).is('string').equals('world');
+					debug.assert(doc.$events).is('object');
+					debug.assert(doc.$id).is('uuid');
+					debug.assert(doc.$content).is('object');
+					debug.assert(doc.$types_id).is('uuid').equals(type.$id);
+					debug.assert(doc.$created).is('date string');
+					debug.assert(doc.$modified).is('date string');
+					debug.assert(doc.$type).is('string').equals('TestQgBYjQsQ');
+
+					debug.assert( Object.keys(doc).filter(not_in(['hello', '$events', '$id', '$content', '$types_id', '$created', '$modified', '$type'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('doc = ', doc);
+					throw e;
+				}
+
+				return db.commit();
+			}).then(function(db) {
+				done();
+			}).fail(function(err) {
+				debug.log('Database query failed: ' + err);
+				done(err);
+			}).done();
+		});
+
+		/** */
+		it('typed document creation and single fetching by ID with field list', function(done){
+			var type;
+			nopg.start(PGCONFIG).createType("TestgJBvMX")({"$schema":{"type":"object"}}).create("TestgJBvMX")({"hello":"world"}).then(function(db) {
+				type = db.fetch();
+
+				try {
+					debug.assert(type).is('object');
+					debug.assert(type.$events).is('object');
+					debug.assert(type.$id).is('uuid');
+					debug.assert(type.$name).is('string').equals("TestgJBvMX");
+					debug.assert(type.$schema).is('object');
+					//debug.assert(type.$validator).is('function');
+					debug.assert(type.$meta).is('object');
+					debug.assert(type.$created).is('date string');
+					debug.assert(type.$modified).is('date string');
+
+					debug.assert( Object.keys(type).filter(not_in(['$events', '$id', '$name', '$schema', '$validator', '$meta', '$created', '$modified'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('type = ', type);
+					throw e;
+				}
+
+				var doc = db.fetch();
+
+				try {
+					debug.assert(doc).is('object');
+					debug.assert(doc.hello).is('string').equals('world');
+					debug.assert(doc.$events).is('object');
+					debug.assert(doc.$id).is('uuid');
+					debug.assert(doc.$content).is('object');
+					debug.assert(doc.$types_id).is('uuid').equals(type.$id);
+					debug.assert(doc.$created).is('date string');
+					debug.assert(doc.$modified).is('date string');
+					debug.assert(doc.$type).is('string').equals('TestgJBvMX');
+
+					debug.assert( Object.keys(doc).filter(not_in(['hello', '$events', '$id', '$content', '$types_id', '$created', '$modified', '$type'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('doc = ', doc);
+					throw e;
+				}
+
+				return db.searchSingle('TestgJBvMX')({'$id': doc.$id}, {'fields': ['$id', '$content', '$types_id', '$created', '$modified', '$type']});
+			}).then(function(db) {
+				var doc = db.fetch();
+
+				try {
+					debug.assert(doc).is('object');
+					debug.assert(doc.hello).is('string').equals('world');
+					debug.assert(doc.$events).is('object');
+					debug.assert(doc.$id).is('uuid');
+					debug.assert(doc.$content).is('object');
+					debug.assert(doc.$types_id).is('uuid').equals(type.$id);
+					debug.assert(doc.$created).is('date string');
+					debug.assert(doc.$modified).is('date string');
+					debug.assert(doc.$type).is('string').equals('TestgJBvMX');
+
+					debug.assert( Object.keys(doc).filter(not_in(['hello', '$events', '$id', '$content', '$types_id', '$created', '$modified', '$type'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('doc = ', doc);
+					throw e;
+				}
 
 				return db.commit();
 			}).then(function(db) {

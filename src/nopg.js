@@ -309,13 +309,15 @@ function parse_predicate_key(Type, key, opts) {
 
 		// $type is a special keyword for string-based $types_id for Documents
 		// FIXME: This probably should be implemented somewhere else (like inside Document)
+		/* As of schema v0015 the type is directly a column of documents
 		if( (Type === NoPg.Document) && (key === '$type') ) {
 			if(as) {
-				return "get_type(types_id)->>'name' AS type";
+				return "type";
 			} else {
 				return "get_type(types_id)->>'name'";
 			}
 		}
+		*/
 
 		//if(key === '$*') {
 		//	return "*, get_type(types_id)->>'name' AS type";
@@ -330,7 +332,11 @@ function parse_predicate_key(Type, key, opts) {
 		}
 
 		if(key === '$updated') {
-			return "to_json(extract(epoch from updated)*1000)";
+			return "to_json(extract(epoch from modified)*1000)";
+		}
+
+		if(key === '$modified') {
+			return "to_json(extract(epoch from modified)*1000)";
 		}
 
 		return key.substr(1);
@@ -446,6 +452,9 @@ function get_type_condition(params, type) {
 	if(type !== undefined) {
 		if(is.string(type)) {
 			params.push(type);
+			// NOTE: We need to use `get_type_id()` until we fix the possibility that some
+			// older rows do not have correct `type` field -- these are rows that were created
+			// before their current validation schema and do not pass it.
 			return "types_id = get_type_id($"+(params.length)+")";
 		} else if(type instanceof NoPg.Type) {
 			params.push(type.$id);
@@ -512,6 +521,28 @@ function parse_function_predicate(ObjType, arg_params, def_op, o, ret_type) {
 	return '(nopg.call_func(array_to_json(ARRAY['+parsed_keys.join(', ')+']), $'+(n+1)+'::json, $'+(n+2)+"::json))";
 }
 
+/** Returns true if op is AND, OR or BIND */
+function parse_operator_name(op) {
+	op = ''+op;
+	op = op.split(':')[0];
+	return op;
+}
+
+/** Returns true if op is AND, OR or BIND */
+function parse_operator_type(op, def) {
+	op = ''+op;
+	if(op.indexOf(':') === -1) {
+		return def || 'boolean';
+	}
+	return op.split(':')[1];
+}
+
+/** Returns true if op is AND, OR or BIND */
+function is_operator(op) {
+	op = parse_operator_name(op);
+	return (op === 'AND') || (op === 'OR') || (op === 'BIND');
+}
+
 /* This object is because these functions need each other at the same time and must be defined before use. */
 var _parsers = {};
 
@@ -519,13 +550,14 @@ var _parsers = {};
 _parsers.parse_array_predicate = function parse_array_predicate(ObjType, params, def_op, o) {
 
 	var op = 'AND';
-	if( (o[0] === 'AND') || (o[0] === 'OR') || (o[0] === 'BIND') ) {
+
+	if(is_operator(o[0])) {
 		o = [].concat(o);
 		op = o.shift();
 	}
 
-	if(op === 'BIND') {
-		return parse_function_predicate(ObjType, params, def_op, o, 'boolean');
+	if(parse_operator_name(op) === 'BIND') {
+		return parse_function_predicate(ObjType, params, def_op, o, parse_operator_type(op));
 	}
 
 	return '(' + ARRAY(o).map(_parsers.recursive_parse_predicates.bind(undefined, ObjType, params, def_op)).filter(not_undefined).join(') '+op+' (') + ')';
@@ -625,14 +657,16 @@ function parse_internal_fields(ObjType, nopg_fields) {
 	}
 
 	// Append $type if it is not there and $* has been included
+	/* As of schema v0015 the `type` is one of the columns in the documents table
 	var nopg_fields_ = ARRAY(nopg_fields);
 	if((ObjType === NoPg.Document) && nopg_fields_.some(function(f) { return f === '$*'; }) &&
 	   nopg_fields_.every(function(f) { return f !== '$type'; }) ) {
 		nopg_fields.push('$type');
 	}
+	*/
 
 	//
-	var fields = nopg_fields_.map(function(f) {
+	var fields = ARRAY(nopg_fields).map(function(f) {
 		return parse_predicate_key(ObjType, f, {as: field_as});
 	}).valueOf();
 
@@ -680,7 +714,7 @@ function parse_predicate_pgtype(ObjType, document_type, key) {
 			return 'numeric';
 		}
 
-		if( (key === '$created') || (key === '$updated') ) {
+		if( (key === '$type') || (key === '$created') || (key === '$modified') || (key === '$updated') ) {
 			return 'text';
 		}
 
@@ -731,16 +765,14 @@ function parse_traits_order(types, order, params) {
 	debug.assert(order).is('array');
 
 	return order.map(function(o) {
-		var key_type, key, type, rest;
+		var key, type, rest;
 		if(is.array(o)) {
-			key_type = o[0].split(':');
-			key = key_type.shift();
-			type = key_type.shift() || 'text';
+			key = parse_operator_name(o[0]);
+			type = parse_operator_type(o[0], 'text');
 			rest = o.slice(1);
 		} else {
-			key_type = o.split(':');
-			key = key_type.shift() || 'text';
-			type = key_type.shift();
+			key = parse_operator_name(o);
+			type = parse_operator_type(o, 'text');
 			rest = [];
 		}
 
@@ -768,7 +800,7 @@ function do_select(self, types, opts, traits) {
 			_recursive = traits._recursive;
 		}
 
-		if( is.array(opts) && (opts.length === 1) && (['OR', 'AND', 'BIND'].indexOf(opts[0]) !== -1) ) {
+		if( is.array(opts) && (opts.length === 1) && is_operator(opts[0]) ) {
 			throw new TypeError('opts invalid: ' + util.inspect(opts) );
 		}
 
@@ -898,6 +930,9 @@ function do_insert(self, ObjType, data) {
 		      ") RETURNING *";
 
 		var params = keys.map(get_data).valueOf();
+
+		//debug.log('query = ' , query);
+
 		return do_query(self, query, params);
 	});
 }
@@ -1283,10 +1318,7 @@ NoPg.prototype.fetch = function() {
 NoPg.prototype.fetchSingle = function() {
 	var db = this;
 	var items = db.fetch();
-	debug.assert(items).is('array');
-	if(items.length >= 2) {
-		debug.assert(items).length(1);
-	}
+	debug.assert(items).is('array').maxLength(1);
 	return items.shift();
 };
 
@@ -1474,6 +1506,7 @@ NoPg.prototype.create = function(type) {
 
 			if(type && (type instanceof NoPg.Type)) {
 				data.$types_id = type.$id;
+				data.$type = type.$name;
 			} else if(type) {
 				return self._getType(type).then(function(t) {
 					if(!(t instanceof NoPg.Type)) {
