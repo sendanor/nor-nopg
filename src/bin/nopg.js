@@ -21,6 +21,7 @@ var PGCONFIG = argv.pg || process.env.PGCONFIG || 'psql://localhost:5432/test';
 var actions = {};
 
 if(argv.v) {
+	$Q.longStackSupport = true;
 	debug.setNodeENV('development');
 } else {
 	debug.setNodeENV('production');
@@ -73,7 +74,7 @@ actions.types = function action_types() {
 	if(Object.keys(opts).length === 0) {
 		opts = undefined;
 	}
-	debug.log('opts = ', opts);
+	//debug.log('opts = ', opts);
 	return NoPg.start(PGCONFIG).searchTypes(opts).commit().then(function(db) {
 		var types = db.fetch();
 		var table = ARRAY(types).map(function(type) {
@@ -107,7 +108,10 @@ $Q.fcall(function() {
 
 		return function() {
 			return $Q.fcall(actions[action]).fail(function(err) {
-				throw ""+action + ": Failed: " + err;
+				if(argv.v) {
+					throw err;
+				}
+				throw new TypeError( ""+action + ": Failed: " + err );
 			});
 		};
 	}).reduce(function (soFar, f) {
@@ -121,8 +125,8 @@ $Q.fcall(function() {
 }).fail(function(err) {
 	util.error(''+err);
 
-	if(argv.v && err.stack) {
-		util.error(err.stack);
+	if(argv.v) {
+		debug.error(err);
 	}
 
 	process.exit(1);

@@ -24,6 +24,8 @@ var extend = require('nor-extend').setup({useFunctionPromises:true});
 var orm = require('./orm');
 var merge = require('merge');
 var pghelpers = require('./pghelpers.js');
+var Query = require('./query.js');
+var Predicate = require('./Predicate.js');
 
 /* ------- (OPTIONAL) NEWRELIC SUPPORT ---------- */
 
@@ -34,7 +36,7 @@ var nr_fcall = require('nor-newrelic/src/fcall.js');
 /** Returns seconds between two date values
  * @returns {number} Time between two values (ms)
  */
-function get_ms(a, b) {
+function _get_ms(a, b) {
 	debug.assert(a).is('date');
 	debug.assert(b).is('date');
 	if(a < b) {
@@ -44,7 +46,7 @@ function get_ms(a, b) {
 }
 
 /** Optionally log time */
-function log_time(sample) {
+function _log_time(sample) {
 
 	debug.assert(sample).is('object');
 	debug.assert(sample.event).is('string');
@@ -85,6 +87,7 @@ function NoPg(db) {
 	};
 }
 
+// Exports
 module.exports = NoPg;
 
 NoPg.debug = (process.env.DEBUG_NOPG ? true : false);
@@ -118,7 +121,7 @@ function assert_type(obj, type, text) {
 */
 
 /** Take first result from the database query and returns new instance of `Type` */
-function get_result(Type) {
+function _get_result(Type) {
 	return function(rows) {
 		if(!rows) { throw new TypeError("failed to parse result"); }
 		var doc = rows.shift();
@@ -130,6 +133,15 @@ function get_result(Type) {
 
 		var obj = {};
 		ARRAY(Object.keys(doc)).forEach(function(key) {
+
+			if(key === 'documents') {
+				obj['$'+key] = {};
+				ARRAY(Object.keys(doc[key])).forEach(function(k) {
+					obj['$'+key][k] = _get_result(NoPg.Document)([doc[key][k]]);
+				});
+				return;
+			}
+
 			obj['$'+key] = doc[key];
 		});
 		return new Type(obj);
@@ -221,12 +233,28 @@ function get_results(Type, opts) {
 			if(!row) { throw new TypeError("failed to parse result #" + i + " from database!"); }
 			//debug.log('input in row = ', row);
 
+			//debug.log('row = ', row);
+
 			if(row instanceof Type) {
 				return row;
 			}
 
 			var obj = {};
 			ARRAY(Object.keys(row)).forEach(function(key) {
+
+				if(key === 'documents') {
+					obj['$'+key] = {};
+					ARRAY(Object.keys(row[key])).forEach(function(uuid) {
+						var sub_doc = row[key][uuid];
+						var sub_obj = {};
+						ARRAY(Object.keys(sub_doc)).forEach(function(k) {
+							parse_field(sub_obj, k, sub_doc[k]);
+						});
+						obj['$'+key][uuid] = new NoPg.Document(sub_obj);
+					});
+					return;
+				}
+
 				parse_field(obj, key, row[key]);
 			});
 
@@ -274,76 +302,44 @@ function get_predicate_datakey(Type) {
 	return (Type.meta.datakey || '$meta').substr(1);
 }
 
-/** Returns PostgreSQL keyword for NoPg keyword. Converts `$foo` to `foo` and `foo` to `meta->'foo'` etc. */
-function parse_predicate_key(Type, key, opts) {
+/** Convert NoPg keywords to internal PostgreSQL name paths for PostgreSQL get_documents() function */
+function parse_predicate_document_relations(ObjType, documents) {
+	return ARRAY(documents).map(function(d) {
+
+		if(d && (d.length >= 1) && (d[0] === '$')) {
+			return d.substr(1);
+		}
+
+		return get_predicate_datakey(ObjType) + '.' + d;
+	}).valueOf();
+}
+
+/** Returns PostgreSQL keyword for NoPg keyword. Converts `$foo` to `foo` and `foo` to `meta->'foo'` etc.
+ * @param Type
+ * @param key {string} The NoPg keyword
+ * @param opts
+ */
+function _parse_predicate_key(Type, opts, key) {
 	opts = opts || {};
-	var as = opts.as ? true : false;
-	if( is.func(opts.as) ) {
-		as = opts.as;
-	} else if(as) {
-		as = function(a, b) {
-			return '' + a + '__' + b.replace(/[^a-zA-Z0-9\_\-\.]/g, '_');
-		};
+
+	if(key[0] !== '$') {
+		var datakey = get_predicate_datakey(Type);
+		return new Predicate("json_extract_path("+datakey+", '"+JSON.stringify([key])+"'::json->>0)", [], {'datakey': datakey, 'key': key});
 	}
 
-	var datakey = get_predicate_datakey(Type);
+	var _key = key.substr(1);
 
-	function parse_meta_key(datakey, key) {
-
-		/*jslint regexp: false*/
-		var keyreg = /^[^']+$/;
-		/*jslint regexp: true*/
-
-		// FIXME: Implement escape?
-		if(!(keyreg.test(key))) { throw new TypeError("Invalid keyword: " + key); }
-
-		if(is.func(as)) {
-			return "json_extract_path("+datakey+", '"+key+"') AS " + as(datakey, key);
-		}
-
-		//return ""+datakey+"->>'"+key+"'";
-		return "json_extract_path("+datakey+", '"+key+"')";
+	if( (opts.epoch === true) && ( (key === '$created') || (key === '$modified') ) ) {
+		return new Predicate("to_json(extract(epoch from "+_key+")*1000)", [], {'key':_key});
 	}
 
-	function parse_top_key(key) {
-
-		// $type is a special keyword for string-based $types_id for Documents
-		// FIXME: This probably should be implemented somewhere else (like inside Document)
-		/* As of schema v0015 the type is directly a column of documents
-		if( (Type === NoPg.Document) && (key === '$type') ) {
-			if(as) {
-				return "type";
-			} else {
-				return "get_type(types_id)->>'name'";
-			}
-		}
-		*/
-
-		//if(key === '$*') {
-		//	return "*, get_type(types_id)->>'name' AS type";
-		//}
-
-		if(is.func(as)) {
-			return ""+key.substr(1);
-		}
-
-		if(key === '$created') {
-			return "to_json(extract(epoch from created)*1000)";
-		}
-
-		if(key === '$updated') {
-			return "to_json(extract(epoch from modified)*1000)";
-		}
-
-		if(key === '$modified') {
-			return "to_json(extract(epoch from modified)*1000)";
-		}
-
-		return key.substr(1);
+	if(key === '$documents') {
+		var documents = (opts && opts.traits && opts.traits.documents) || [];
+		debug.assert(documents).is('array');
+		return new Predicate("get_documents(row_to_json("+(Type.meta.table)+".*), '"+JSON.stringify(parse_predicate_document_relations(Type, documents))+"'::json)", [], {'key':_key});
 	}
 
-	// Huh, next line is implemented in a funny way. Not sure if it's even faster/better. Not even less bytes. :-)
-	return ( (key[0] === '$') ? parse_top_key : parse_meta_key.bind(undefined, datakey) ) (key);
+	return new Predicate(_key, [], {'key':_key});
 }
 
 /** Returns true if first letter is dollar */
@@ -448,21 +444,25 @@ function do_query(self, query, values) {
 }
 
 /* Returns the type condition and pushes new params to `params` */
-function get_type_condition(params, type) {
-	if(type !== undefined) {
-		if(is.string(type)) {
-			params.push(type);
-			// NOTE: We need to use `get_type_id()` until we fix the possibility that some
-			// older rows do not have correct `type` field -- these are rows that were created
-			// before their current validation schema and do not pass it.
-			return "types_id = get_type_id($"+(params.length)+")";
-		} else if(type instanceof NoPg.Type) {
-			params.push(type.$id);
-			return "types_id = $" + (params.length);
-		} else {
-			throw new TypeError("Unknown type: " + util.inspect(type));
-		}
+function parse_where_type_condition(query, type) {
+	if(type === undefined) {
+		return;
 	}
+
+	if(is.string(type)) {
+		// NOTE: We need to use `get_type_id()` until we fix the possibility that some
+		// older rows do not have correct `type` field -- these are rows that were created
+		// before their current validation schema and do not pass it.
+		query.where( new Predicate("types_id = get_type_id($)", type) );
+		return;
+	}
+
+	if(type instanceof NoPg.Type) {
+		query.where( new Predicate("types_id = $", type.$id) );
+		return;
+	}
+
+	throw new TypeError("Unknown type: " + util.inspect(type));
 }
 
 /** Returns true if `i` is not `undefined` */
@@ -471,54 +471,60 @@ function not_undefined(i) {
 }
 
 /** Parse array predicate */
-function parse_function_predicate(ObjType, arg_params, def_op, o, ret_type) {
+function _parse_function_predicate(ObjType, q, def_op, o, ret_type) {
 	debug.assert(o).is('array');
 
 	ret_type = ret_type || 'boolean';
 
-	var keys, func, params, i;
-
 	// FIXME: This loop could be optimized to return directly once first function is found! #performance
-	func = ARRAY(o).filter(is.func).valueOf().shift();
+	var func = ARRAY(o).filter(is.func).valueOf().shift();
 
 	debug.assert(func).is('function');
 
-	i = o.indexOf(func);
+	var i = o.indexOf(func);
 	debug.assert(i).is('number');
 
-	keys = o.slice(0, i);
-	params = o.slice(i+1);
+	var input_nopg_keys = o.slice(0, i);
+	var js_input_params = o.slice(i+1);
 
-	debug.assert(keys).is('array');
-	debug.assert(params).is('array');
+	debug.assert(input_nopg_keys).is('array');
+	debug.assert(js_input_params).is('array');
 
-	//debug.log('keys = ', keys);
+	//debug.log('input_nopg_keys = ', input_nopg_keys);
 	//debug.log('func = ', func);
-	//debug.log('params = ', params);
+	//debug.log('js_input_params = ', js_input_params);
 
-	var parsed_keys = ARRAY(keys).map(parse_predicate_key.bind(undefined, ObjType)).valueOf();
+	var input_pg_keys = ARRAY(input_nopg_keys).map(_parse_predicate_key.bind(undefined, ObjType, {'epoch':true}));
 
-	//debug.log('parsed_keys = ', parsed_keys);
-	debug.assert(parsed_keys).is('array');
+	var pg_items = input_pg_keys.map(function(i) { return i.getString(); }).valueOf();
+	var pg_params = input_pg_keys.map(function(i) { return i.getParams(); }).reduce(function(a, b) { return a.concat(b); });
 
-	var n = arg_params.length;
+	debug.assert(pg_items).is('array');
+	debug.assert(pg_params).is('array');
 
-	arg_params.push(JSON.stringify(require('./fun.js').toString(func)));
-	arg_params.push(JSON.stringify(params));
+	//debug.log('input_pg_keys = ', input_pg_keys);
+
+	//var n = arg_params.length;
+	//arg_params.push(JSON.stringify(require('./fun.js').toString(func)));
+	//arg_params.push(JSON.stringify(js_input_params));
+
+	var call_func = 'nopg.call_func(array_to_json(ARRAY['+pg_items.join(', ')+"]), $::json, $::json)";
+
+	var type_cast = '';
 
 	if(ret_type === 'boolean') {
-		return '(nopg.call_func(array_to_json(ARRAY['+parsed_keys.join(', ')+']), $'+(n+1)+'::json, $'+(n+2)+"::json)::text = 'true')";
+		type_cast = "::text = 'true'";
 	}
 
 	if( (ret_type === 'number') || (ret_type === 'numeric') ) {
-		return '(nopg.call_func(array_to_json(ARRAY['+parsed_keys.join(', ')+']), $'+(n+1)+'::json, $'+(n+2)+"::json)::text::numeric)";
+		type_cast = '::text::numeric';
 	}
 
 	if(ret_type === 'text') {
-		return '(nopg.call_func(array_to_json(ARRAY['+parsed_keys.join(', ')+']), $'+(n+1)+'::json, $'+(n+2)+"::json)::text)";
+		type_cast = '::text';
 	}
 
-	return '(nopg.call_func(array_to_json(ARRAY['+parsed_keys.join(', ')+']), $'+(n+1)+'::json, $'+(n+2)+"::json))";
+	return new Predicate(call_func + type_cast, pg_params.concat( [JSON.stringify(require('./fun.js').toString(func)), JSON.stringify(js_input_params)] ));
 }
 
 /** Returns true if op is AND, OR or BIND */
@@ -547,8 +553,7 @@ function is_operator(op) {
 var _parsers = {};
 
 /** Parse array predicate */
-_parsers.parse_array_predicate = function parse_array_predicate(ObjType, params, def_op, o) {
-
+_parsers.parse_array_predicate = function _parse_array_predicate(ObjType, q, def_op, o) {
 	var op = 'AND';
 
 	if(is_operator(o[0])) {
@@ -557,53 +562,59 @@ _parsers.parse_array_predicate = function parse_array_predicate(ObjType, params,
 	}
 
 	if(parse_operator_name(op) === 'BIND') {
-		return parse_function_predicate(ObjType, params, def_op, o, parse_operator_type(op));
+		return _parse_function_predicate(ObjType, q, def_op, o, parse_operator_type(op));
 	}
 
-	return '(' + ARRAY(o).map(_parsers.recursive_parse_predicates.bind(undefined, ObjType, params, def_op)).filter(not_undefined).join(') '+op+' (') + ')';
+	var predicates = ARRAY(o).map(_parsers.recursive_parse_predicates.bind(undefined, ObjType, q, def_op)).filter(not_undefined).valueOf();
+	return Predicate.join(predicates, op);
 };
 
 /** Recursively parse predicates */
-_parsers.recursive_parse_predicates = function recursive_parse_predicates(ObjType, params, def_op, o) {
+_parsers.recursive_parse_predicates = function _recursive_parse_predicates(ObjType, q, def_op, o) {
 
 	if(o === undefined) { return; }
 
 	if( is.array(o) ) {
-		return _parsers.parse_array_predicate(ObjType, params, def_op, o);
+		return _parsers.parse_array_predicate(ObjType, q, def_op, o);
 	}
 
 	if( is.obj(o) ) {
 		o = parse_predicates(ObjType)(o, ObjType.meta.datakey.substr(1) );
-		return '(' + ARRAY(Object.keys(o)).map(function(k) {
-			params.push(o[k]);
-			return '' + k + ' = $' + params.length;
-		}).join(') '+def_op+' (') + ')';
+		var predicates = ARRAY(Object.keys(o)).map(function(k) {
+			return new Predicate('' + k + ' = $', [o[k]]);
+		}).valueOf();
+		return Predicate.join(predicates, def_op);
 	}
 
-	return ''+o;
+	return new Predicate(''+o);
 };
 
 // Exports as normal functions
-var recursive_parse_predicates = _parsers.recursive_parse_predicates.bind();
-//var parse_array_predicate = _parsers.parse_array_predicate.bind();
+var _recursive_parse_predicates = _parsers.recursive_parse_predicates.bind();
+//var _parse_array_predicate = _parsers.parse_array_predicate.bind();
 
 /** Parse traits object */
 function parse_search_traits(traits) {
 	traits = traits || {};
 
-	/* Parse `traits.fields` */
+	// Initialize fields as all fields
 	if(!traits.fields) {
 		traits.fields = ['$*'];
 	}
 
+	// If fields was not an array (but is not negative -- check previous if clause), lets make it that.
 	if(!is.array(traits.fields)) {
 		traits.fields = [traits.fields];
 	}
 
 	debug.assert(traits.fields).is('array');
 
-	/* Parse `traits.order` */
+	// Append '$documents' to fields if traits.documents is specified and it is missing from there
+	if(traits.documents && (traits.fields.indexOf('$documents') === -1) ) {
+		traits.fields = traits.fields.concat(['$documents']);
+	}
 
+	// Order by $created by default
 	if(!traits.order) {
 		// FIXME: Check if `$created` exists in the ObjType!
 		traits.order = ['$created'];
@@ -634,67 +645,40 @@ function parse_search_traits(traits) {
 	return traits;
 }
 
-/** Parses internal fields from nopg style fields */
-function parse_internal_fields(ObjType, nopg_fields) {
+/** Parses internal fields from nopg style fields
+ * 
+ */
+function parse_select_fields(ObjType, traits) {
 	debug.assert(ObjType).is('function');
-	debug.assert(nopg_fields).is('array');
-
-	var field_id = 0;
-	var field_map = {};
-
-	function field_as(a, b) {
-		field_id += 1;
-		var key;
-		if(!b) {
-			key = a;
-			field_map[key] = a;
-			return key;
-		} else {
-			key = a + '__' + field_id;
-			field_map[key] = [a, b];
-			return key;
-		}
-	}
-
-	// Append $type if it is not there and $* has been included
-	/* As of schema v0015 the `type` is one of the columns in the documents table
-	var nopg_fields_ = ARRAY(nopg_fields);
-	if((ObjType === NoPg.Document) && nopg_fields_.some(function(f) { return f === '$*'; }) &&
-	   nopg_fields_.every(function(f) { return f !== '$type'; }) ) {
-		nopg_fields.push('$type');
-	}
-	*/
-
-	//
-	var fields = ARRAY(nopg_fields).map(function(f) {
-		return parse_predicate_key(ObjType, f, {as: field_as});
+	debug.assert(traits).ignore(undefined).is('object');
+	return ARRAY(traits.fields).map(function(f) {
+		return _parse_predicate_key(ObjType, {'traits': traits, 'epoch':false}, f);
 	}).valueOf();
-
-	var result = {
-		"keys": fields,
-		"map": field_map
-	};
-
-	return result;
 }
 
 /** Parse opts object */
 function parse_search_opts(opts, traits) {
 
 	if(opts === undefined) {
-	} else if(is.array(opts)) {
-		if( (opts.length >= 1) && is.obj(opts[0]) ) {
-			opts = [ ((traits.match === 'any') ? 'OR' : 'AND') ].concat(opts);
-		}
-	} else if(opts instanceof NoPg.Type) {
-		opts = [ "AND", { "$id": opts.$id } ];
-	} else if(is.obj(opts)) {
-		opts = [ ((traits.match === 'any') ? 'OR' : 'AND') , opts];
-	} else {
-		opts = [ "AND", {"$name": ''+opts} ];
+		return;
 	}
 
-	return opts;
+	if(is.array(opts)) {
+		if( (opts.length >= 1) && is.obj(opts[0]) ) {
+			return [ ((traits.match === 'any') ? 'OR' : 'AND') ].concat(opts);
+		}
+		return opts;
+	}
+
+	if(opts instanceof NoPg.Type) {
+		return [ "AND", { "$id": opts.$id } ];
+	}
+
+	if(is.obj(opts)) {
+		return [ ((traits.match === 'any') ? 'OR' : 'AND') , opts];
+	}
+
+	return [ "AND", {"$name": ''+opts} ];
 }
 
 /** Returns PostgreSQL type for key based on the schema
@@ -714,7 +698,7 @@ function parse_predicate_pgtype(ObjType, document_type, key) {
 			return 'numeric';
 		}
 
-		if( (key === '$type') || (key === '$created') || (key === '$modified') || (key === '$updated') ) {
+		if( (key === '$type') || (key === '$created') || (key === '$modified') ) {
 			return 'text';
 		}
 
@@ -751,20 +735,14 @@ function parse_predicate_pgcast(ObjType, document_type, key) {
 	return pgtype;
 }
 
-/** Parse `traits.order` */
-function parse_traits_order(types, order, params) {
-
-	debug.assert(types).is('array');
-	types = [].concat(types);
-
-	var ObjType = types.shift();
-	var document_type = types.shift();
+/** Generate ORDER BY using `traits.order` */
+function _parse_select_order(ObjType, document_type, order, q) {
 
 	debug.assert(ObjType).is('function');
 	debug.assert(document_type).ignore(undefined).is('object');
 	debug.assert(order).is('array');
 
-	return order.map(function(o) {
+	return ARRAY(order).map(function(o) {
 		var key, type, rest;
 		if(is.array(o)) {
 			key = parse_operator_name(o[0]);
@@ -777,33 +755,55 @@ function parse_traits_order(types, order, params) {
 		}
 
 		if(key === 'BIND') {
-			var f = parse_function_predicate(ObjType, params, undefined, rest, type);
-			debug.log('f = ', f);
-			return f;
+			return _parse_function_predicate(ObjType, q, undefined, rest, type);
 		}
 
-		var parsed_key = parse_predicate_key(ObjType, key);
+		var parsed_key = _parse_predicate_key(ObjType, {'epoch':true}, key);
 		//debug.log('parsed_key = ', parsed_key);
 		var pgcast = document_type ? parse_predicate_pgcast(ObjType, document_type, key) : 'text';
 		//debug.log('pgtype = ', pgtype);
 
-		return [ '(' + parsed_key + ')::' + pgcast].concat(rest).join(' ');
-	}).join(', ');
+		return new Predicate( [ '(' + parsed_key.getString() + ')::' + pgcast].concat(rest).join(' '), parsed_key.getParams(), parsed_key.getMetaObject() );
+	}).valueOf();
 }
 
-/** Generic SELECT query */
-function do_select(self, types, opts, traits) {
+/** Get type object using only do_query() */
+function _get_type_by_name(self, document_type) {
+	return do_query(self, "SELECT * FROM types WHERE name = $1", [document_type]).then(get_results(NoPg.Type)).then(function(results) {
+		debug.assert(results).is('array');
+		if(results.length !== 1) {
+			if(results.length === 0) {
+				throw new TypeError("Database has no type: " + document_type);
+			}
+			throw new TypeError("Database has multiple types: " + document_type + " (" + results.length + ")");
+		}
+		var result = results.shift();
+		debug.assert(result).is('object');
+		return result;
+	});
+}
+
+/** Generic SELECT query
+ * @param self {object} The NoPg connection/transaction object
+ * @param types {} 
+ * @param search_opts {} 
+ * @param traits {object} 
+ */
+function do_select(self, types, search_opts, traits) {
 	return nr_fcall("nopg:do_select", function() {
 
+		// If true then this is recursive function call
 		var _recursive = false;
 		if(is.obj(traits) && traits._recursive) {
 			_recursive = traits._recursive;
 		}
 
-		if( is.array(opts) && (opts.length === 1) && is_operator(opts[0]) ) {
-			throw new TypeError('opts invalid: ' + util.inspect(opts) );
+		//
+		if( is.array(search_opts) && (search_opts.length === 1) && is_operator(search_opts[0]) ) {
+			throw new TypeError('search_opts invalid: ' + util.inspect(search_opts) );
 		}
 
+		// Object type and document type
 		var ObjType, document_type;
 		if(is.array(types)) {
 			types = [].concat(types);
@@ -813,44 +813,64 @@ function do_select(self, types, opts, traits) {
 			ObjType = types;
 		}
 
+		// Create the initial query object
+		var q = new Query({
+			'method': 'select',
+			'table': ObjType.meta.table,
+		});
+
+		// Traits for search operation
 		traits = parse_search_traits(traits);
-		opts = parse_search_opts(opts, traits);
-		var fields = parse_internal_fields(ObjType, traits.fields);
+
+		// Search options for documents
+		search_opts = parse_search_opts(search_opts, traits);
+
+		// Fields to search for
+		var fields = parse_select_fields(ObjType, traits);
+		q.fields(fields);
 
 		/* Build `type_condition` */
 
-		var where = [], params = [];
-
-		var type_condition;
+		// If we have the document_type we can limit the results with it
 		if(document_type) {
-			type_condition = get_type_condition(params, document_type);
-			if(type_condition) { where.push( type_condition ); }
+			parse_where_type_condition(q, document_type);
 		}
 
 		/* Parse `opts_condition` */
 
-		var opts_condition;
-		if(opts) {
-			opts_condition = recursive_parse_predicates(ObjType, params, ((traits.match === 'any') ? 'OR' : 'AND'), opts);
-			where.push( opts_condition );
+		var type_predicate = search_opts ? _recursive_parse_predicates(ObjType, q, ((traits.match === 'any') ? 'OR' : 'AND'), search_opts) : undefined;
+		if(type_predicate) {
+			q.where(type_predicate);
 		}
 
-		debug.assert(where).is('array');
+		//debug.assert(where).is('array');
 
+		/*
 		if(NoPg.debug) {
-			debug.log('opts = ', opts);
+			debug.log('search_opts = ', search_opts);
 		} else if(!where.every(function(item) { return is.string(item) && (item.length >= 1); })) {
 			debug.warn('search() got unknown input: check debug logs.');
 			debug.log('where = ', where);
 			debug.log('types = ', types);
 			debug.log('traits = ', traits);
-			debug.log('opts = ', opts);
+			debug.log('search_opts = ', search_opts);
 		}
+		*/
 
+		/*
 		var query = "SELECT " + fields.keys.join(', ') + " FROM " + (ObjType.meta.table);
 
 		if(where.length >= 1) {
 			query += " WHERE (" + where.join(') AND (') + ')';
+		}
+		*/
+
+		if(traits.limit) {
+			q.limit(traits.limit);
+		}
+
+		if(traits.offset) {
+			q.offset(traits.offset);
 		}
 
 		var document_type_obj;
@@ -860,45 +880,33 @@ function do_select(self, types, opts, traits) {
 		}
 
 		/* */
-		function our_query() {
+		function our_query(q) {
 
 			if(traits.order) {
-				query += ' ORDER BY ' + parse_traits_order([ObjType, document_type_obj], traits.order, params);
+				q.orders( _parse_select_order(ObjType, document_type_obj, traits.order, q) );
 			}
 
-			if(traits.limit) {
-				query += ' LIMIT ' + traits.limit;
+			var result = q.compile();
+
+			if(NoPg.debug) {
+				debug.log('query = ', result.query);
+				debug.log('params = ', result.params);
 			}
 
-			if(traits.offset) {
-				query += ' OFFSET ' + traits.offset;
-			}
-
-			return do_query(self, query, params).then(get_results(ObjType, {
-				'fieldMap': fields.map
+			return do_query(self, result.query, result.params ).then(get_results(ObjType, {
+				'fieldMap': result.fieldMap
 			}));
 
 		}
 
+		// Only search type if it is missing, and traits.order is in use and this is not recursive call
 		if( traits.order && (!document_type_obj) && is.string(document_type) && (!_recursive) ) {
-			var type_fields = parse_internal_fields(NoPg.Type, ['$*']);
-			return do_query(self, "SELECT * FROM types WHERE name = $1", [document_type]).then(get_results(NoPg.Type, {
-				'fieldMap': type_fields.map
-			})).then(function(results) {
-				debug.assert(results).is('array');
-				if(results.length !== 1) {
-					if(results.length === 0) {
-						throw new TypeError("Database has no type: " + document_type);
-					}
-					throw new TypeError("Database has multiple types: " + document_type + " (" + results.length + ")");
-				}
-				var result = results.shift();
-				debug.assert(result).is('object');
-				document_type_obj = result;
-			}).then(our_query);
+			return _get_type_by_name(self, document_type).then(function(type) {
+				document_type_obj = type;
+			}).then(our_query.bind(undefined, q));
 		}
 
-		return our_query();
+		return our_query(q);
 	});
 }
 
@@ -1052,18 +1060,24 @@ function pg_convert_index_name(field) {
 function pg_create_index(self, ObjType, type, field) {
 	return nr_fcall("nopg:pg_create_index", function() {
 		var pgcast = parse_predicate_pgcast(ObjType, type, field);
-		var colname = parse_predicate_key(ObjType, field);
-		var name = pg_convert_index_name(ObjType.meta.table) + "_" + pg_convert_index_name(colname) + "_index";
-		var query = "CREATE INDEX "+name+" ON " + (ObjType.meta.table) + " (("+ colname + "::" + pgcast +"))";
-		var params = [];
+		var colname = _parse_predicate_key(ObjType, {'epoch':false}, field);
+		var datakey = colname.getMeta('datakey');
+		var field_name = (datakey ? datakey + '.' : '' ) + colname.getMeta('key');
+		var name = pg_convert_index_name(ObjType.meta.table) + "_" + pg_convert_index_name(field_name) + "_index";
+		var query = "CREATE INDEX "+name+" ON " + (ObjType.meta.table) + " (("+ colname.getString() + "::" + pgcast +"))";
+		query = Query.numerifyPlaceHolders(query);
+		var params = colname.getParams();
+		//debug.log("params = ", params);
 		return do_query(self, query, params);
 	});
 }
 
 /** Internal CREATE INDEX query that will create the index only if the relation does not exists already */
 function pg_declare_index(self, ObjType, type, field) {
-	var colname = parse_predicate_key(ObjType, field);
-	var name = pg_convert_index_name(ObjType.meta.table) + "_" + pg_convert_index_name(colname) + "_index";
+	var colname = _parse_predicate_key(ObjType, {'epoch':false}, field);
+	var datakey = colname.getMeta('datakey');
+	var field_name = (datakey ? datakey + '.' : '' ) + colname.getMeta('key');
+	var name = pg_convert_index_name(ObjType.meta.table) + "_" + pg_convert_index_name(field_name) + "_index";
 	return pg_relation_exists(self, name).then(function(exists) {
 		if(exists) { return; }
 		return pg_create_index(self, ObjType, type, field);
@@ -1110,7 +1124,7 @@ NoPg.prototype._record_sample = function(data) {
 	debug.assert(data.params).ignore(undefined).is('array');
 
 	if(data.duration === undefined) {
-		data.duration = get_ms(data.start, data.end);
+		data.duration = _get_ms(data.start, data.end);
 	}
 
 	if(stats_enabled) {
@@ -1118,7 +1132,7 @@ NoPg.prototype._record_sample = function(data) {
 	}
 
 	if(log_times) {
-		log_time(data);
+		_log_time(data);
 	}
 };
 
@@ -1517,7 +1531,7 @@ NoPg.prototype.create = function(type) {
 				});
 			}
 
-			return do_insert(self, NoPg.Document, data).then(get_result(NoPg.Document)).then(save_result_to(self));
+			return do_insert(self, NoPg.Document, data).then(_get_result(NoPg.Document)).then(save_result_to(self));
 		}));
 	}
 
@@ -1527,7 +1541,7 @@ NoPg.prototype.create = function(type) {
 /** Add new DBVersion record */
 NoPg.prototype._addDBVersion = function(data) {
 	var self = this;
-	return do_insert(self, NoPg.DBVersion, data).then(get_result(NoPg.DBVersion));
+	return do_insert(self, NoPg.DBVersion, data).then(_get_result(NoPg.DBVersion));
 };
 
 /** Search documents */
@@ -1549,7 +1563,7 @@ NoPg.prototype.searchSingle = function(type) {
 	function searchSingle2(opts, traits) {
 		return extend.promise( [NoPg], nr_fcall("nopg:search", function() {
 			return do_select(self, [ObjType, type], opts, traits)
-				.then(get_result(ObjType))
+				.then(_get_result(ObjType))
 				.then(save_result_to_queue(self))
 				.then(function() { return self; });
 		}));
@@ -1562,7 +1576,7 @@ NoPg.prototype.update = function(obj, data) {
 	var self = this;
 	var ObjType = NoPg.getObjectType(obj);
 	return extend.promise( [NoPg], nr_fcall("nopg:update", function() {
-		return do_update(self, ObjType, obj, data).then(get_result(ObjType)).then(save_result_to(self));
+		return do_update(self, ObjType, obj, data).then(_get_result(ObjType)).then(save_result_to(self));
 	}));
 };
 
@@ -1587,7 +1601,7 @@ NoPg.prototype.createType = function(name) {
 			if(name !== undefined) {
 				data.$name = ''+name;
 			}
-			return do_insert(self, NoPg.Type, data).then(get_result(NoPg.Type)).then(save_result_to(self));
+			return do_insert(self, NoPg.Type, data).then(_get_result(NoPg.Type)).then(save_result_to(self));
 		}));
 	}
 	return createType2;
@@ -1675,13 +1689,13 @@ NoPg.prototype.typeExists = function(name) {
 NoPg.prototype._getType = function(name, traits) {
 	var self = this;
 	if(!is.string(name)) {
-		return do_select(self, NoPg.Type, name, traits).then(get_result(NoPg.Type));
+		return do_select(self, NoPg.Type, name, traits).then(_get_result(NoPg.Type));
 	}
 	if(self._cache.types.hasOwnProperty(name)) {
 		return $Q.when(self._cache.types[name]);
 	}
 
-	var cached = do_select(self, NoPg.Type, name, traits).then(get_result(NoPg.Type));
+	var cached = do_select(self, NoPg.Type, name, traits).then(_get_result(NoPg.Type));
 	cached = self._cache.types[name] = cached.then(function(result) {
 		if(is.obj(result)) {
 			self._cache.types[name] = result;
@@ -1777,7 +1791,7 @@ NoPg.prototype._importLib = function(file, opts) {
 NoPg.prototype.importLib = function(file, opts) {
 	var self = this;
 	return extend.promise( [NoPg], nr_fcall("nopg:importLib", function() {
-		return self._importLib(file, opts).then(get_result(NoPg.Lib)).then(save_result_to(self));
+		return self._importLib(file, opts).then(_get_result(NoPg.Lib)).then(save_result_to(self));
 	}));
 };
 
@@ -1785,7 +1799,7 @@ NoPg.prototype.importLib = function(file, opts) {
 NoPg.prototype._getObject = function(ObjType) {
 	var self = this;
 	return function(opts, traits) {
-		return do_select(self, ObjType, opts, traits).then(get_result(ObjType));
+		return do_select(self, ObjType, opts, traits).then(_get_result(ObjType));
 	};
 };
 
@@ -1870,7 +1884,7 @@ NoPg.prototype.createAttachment = function(doc) {
 
 				debug.assert(data.$documents_id).is('string');
 
-				return do_insert(self, NoPg.Attachment, data).then(get_result(NoPg.Attachment)).then(save_result_to(self));
+				return do_insert(self, NoPg.Attachment, data).then(_get_result(NoPg.Attachment)).then(save_result_to(self));
 			}); // q_fcall
 		})); // nr_fcall
 	}
