@@ -356,7 +356,7 @@ parse_predicate_document_relations = function parse_predicate_document_relations
 			};
 		}).valueOf();
 
-		debug.log('fields = ', JSON.stringify(fields, null, 2) );
+		//debug.log('fields = ', JSON.stringify(fields, null, 2) );
 
 		if(prop && (prop.length >= 1) && (prop[0] === '$')) {
 			return {
