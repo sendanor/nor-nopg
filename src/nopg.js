@@ -302,17 +302,8 @@ function get_predicate_datakey(Type) {
 	return (Type.meta.datakey || '$meta').substr(1);
 }
 
-/** Convert NoPg keywords to internal PostgreSQL name paths for PostgreSQL get_documents() function */
-function parse_predicate_document_relations(ObjType, documents) {
-	return ARRAY(documents).map(function(d) {
-
-		if(d && (d.length >= 1) && (d[0] === '$')) {
-			return d.substr(1);
-		}
-
-		return get_predicate_datakey(ObjType) + '.' + d;
-	}).valueOf();
-}
+// Pre-define function
+var parse_predicate_document_relations;
 
 /** Returns PostgreSQL keyword for NoPg keyword. Converts `$foo` to `foo` and `foo` to `meta->'foo'` etc.
  * @param Type
@@ -336,11 +327,50 @@ function _parse_predicate_key(Type, opts, key) {
 	if(key === '$documents') {
 		var documents = (opts && opts.traits && opts.traits.documents) || [];
 		debug.assert(documents).is('array');
-		return new Predicate("get_documents(row_to_json("+(Type.meta.table)+".*), '"+JSON.stringify(parse_predicate_document_relations(Type, documents))+"'::json)", [], {'key':_key});
+		return new Predicate("get_documents(row_to_json("+(Type.meta.table)+".*), $::json)", [
+			JSON.stringify(parse_predicate_document_relations(Type, documents))
+		], {'key':_key});
 	}
 
 	return new Predicate(_key, [], {'key':_key});
 }
+
+/** Convert NoPg keywords to internal PostgreSQL name paths for PostgreSQL get_documents() function
+ * Note! documents might contain data like `['user|name,email']` which tells the field list and should be converted to PostgreSQL names here.
+ */
+parse_predicate_document_relations = function parse_predicate_document_relations(ObjType, documents) {
+	return ARRAY(documents).map(function(d) {
+
+		var parts = d.split('|');
+		var prop = parts.shift();
+		var fields = parts.join('|') || '*';
+
+		fields = ARRAY(fields.split(',')).map(function(f) {
+			if(f === '*') { return {'query':'*'}; }
+			var p = _parse_predicate_key(ObjType, {'traits': {}, 'epoch':false}, f);
+			return {
+				'name': f,
+				'datakey': p.getMeta('datakey'),
+				'key': p.getMeta('key'),
+				'query': p.getString()
+			};
+		}).valueOf();
+
+		debug.log('fields = ', JSON.stringify(fields, null, 2) );
+
+		if(prop && (prop.length >= 1) && (prop[0] === '$')) {
+			return {
+				'prop': prop.substr(1),
+				'fields': fields
+			};
+		}
+
+		return {
+			'prop': get_predicate_datakey(ObjType) + '.' + prop,
+			'fields': fields
+		};
+	}).valueOf();
+};
 
 /** Returns true if first letter is dollar */
 function first_letter_is_dollar(k) {
