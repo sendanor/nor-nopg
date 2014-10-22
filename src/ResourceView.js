@@ -58,6 +58,21 @@ function ResourceView(opts) {
 		compute_keys = opts.compute_keys;
 	}
 
+	var collection_keys;
+	if(opts && opts.collection_keys) {
+		collection_keys = opts.collection_keys;
+	}
+
+	var element_post;
+	if(opts && opts.element_post) {
+		element_post = opts.element_post;
+	}
+
+	var collection_post;
+	if(opts && opts.collection_post) {
+		collection_post = opts.collection_post;
+	}
+
 	opts = copy(opts || {});
 
 	debug.assert(opts).is('object');
@@ -72,6 +87,18 @@ function ResourceView(opts) {
 
 	if(is.obj(compute_keys)) {
 		view.compute_keys = compute_keys;
+	}
+
+	if(is.obj(collection_keys)) {
+		view.collection_keys = collection_keys;
+	}
+
+	if(is.func(element_post)) {
+		view.element_post = element_post;
+	}
+
+	if(is.func(collection_post)) {
+		view.collection_post = collection_post;
 	}
 
 	//debug.log("view.opts = ", view.opts);
@@ -161,6 +188,14 @@ ResourceView.prototype.element = function(req, res, opts) {
 			body = compute_keys(body, opts.compute_keys, req, res);
 		}
 
+		if(is.func(opts.element_post)) {
+			body = opts.element_post.call(body, req, res);
+		}
+
+		if(is.func(view.element_post)) {
+			body = view.element_post.call(body, req, res);
+		}
+
 		return body;
 	};
 };
@@ -191,14 +226,33 @@ ResourceView.prototype.collection = function(req, res, opts) {
 		body.$ = ARRAY(items).map(view.element(req, res, element_opts)).valueOf();
 		//debug.log('body = ', body);
 
+		//
 		if(is.obj(view.compute_keys)) {
 			body = compute_keys(body, view.compute_keys, req, res);
 		}
 
+		if(is.obj(view.collection_keys)) {
+			body = compute_keys(body, view.collection_keys, req, res);
+		}
+
+		//
 		if(is.obj(opts.compute_keys)) {
 			body = compute_keys(body, opts.compute_keys, req, res);
 		}
 
+		if(is.obj(opts.collection_keys)) {
+			body = compute_keys(body, opts.collection_keys, req, res);
+		}
+
+		if(is.func(opts.collection_post)) {
+			body = opts.collection_post.call(body, req, res);
+		}
+
+		if(is.func(view.collection_post)) {
+			body = view.collection_post.call(body, req, res);
+		}
+
+		//
 		return body;
 	};
 };
