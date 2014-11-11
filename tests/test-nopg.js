@@ -1,7 +1,7 @@
 "use strict";
 
-var Q = require('q');
-Q.longStackSupport = true;
+var _Q = require('q');
+_Q.longStackSupport = true;
 
 var crypto = require('crypto');
 var fs = require('nor-fs');
@@ -921,48 +921,47 @@ describe('nopg', function(){
 			}).done();
 		});
 
-		it.skip('can create document with attachments from buffer', function(done){
+		it('can create document with attachments from buffer', function(){
 			var doc;
+			var buffer;
 
-			var buffer = fs.sync.readFile(  __dirname + '/files/test1.jpg', {'encoding':'hex'} );
+			return _Q.fcall(function() {
+				return fs.readFile( __dirname + '/files/test1.jpg', {'encoding':'hex'} );
+			}).then(function(buffer) {
 
-			debug.assert(buffer).typeOf('object').instanceOf(Buffer);
+				debug.assert(buffer).typeOf('object').instanceOf(Buffer);
 
-			nopg.start(PGCONFIG)
-			    .createType("Test-W3tE")({"$schema":{"type":"object"}})
-			    .create("Test-W3tE")({"hello":"world"})
-			    .createAttachment()(buffer)
-				.then(function(db) {
+				nopg.start(PGCONFIG)
+				    .createType("Test-W3tE")({"$schema":{"type":"object"}})
+				    .create("Test-W3tE")({"hello":"world"})
+				    .createAttachment()(buffer)
+					.then(function(db) {
 
-				var type = db.fetch();
-				var doc = db.fetch();
-				var att1 = db.fetch();
+					var type = db.fetch();
+					var doc = db.fetch();
+					var att1 = db.fetch();
 
-				debug.assert(type).typeOf('object').instanceOf(nopg.Type);
-				debug.assert(doc).typeOf('object').instanceOf(nopg.Document);
-				debug.assert(att1).typeOf('object').instanceOf(nopg.Attachment);
+					debug.assert(type).typeOf('object').instanceOf(nopg.Type);
+					debug.assert(doc).typeOf('object').instanceOf(nopg.Document);
+					debug.assert(att1).typeOf('object').instanceOf(nopg.Attachment);
 
-				assert.strictEqual(att1.$documents_id, doc.$id);
+					assert.strictEqual(att1.$documents_id, doc.$id);
 
-				var att1_buffer = att1.getBuffer();
+					var att1_buffer = att1.getBuffer();
 
-				debug.assert(att1_buffer).typeOf('object').instanceOf(Buffer);
+					debug.assert(att1_buffer).typeOf('object').instanceOf(Buffer);
 
-				//debug.log("att1_buffer.length = ", att1_buffer.length);
+					//debug.log("att1_buffer.length = ", att1_buffer.length);
 
-				var att1_hash = crypto.createHash('md5').update( att1_buffer ).digest('hex');
+					var att1_hash = crypto.createHash('md5').update( att1_buffer ).digest('hex');
 
-				try {
-					assert.strictEqual(att1_hash, "43e9b43ddebe7cee7fff8e46d258c67f");
-				} catch(e) { debug.log('att1_hash = ', att1_hash); throw e; }
+					try {
+						assert.strictEqual(att1_hash, "43e9b43ddebe7cee7fff8e46d258c67f");
+					} catch(e) { debug.log('att1_hash = ', att1_hash); throw e; }
 
-				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+					return db.commit();
+				});
+			});
 		});
 
 		it('can list document with attachments', function(done){
