@@ -5,6 +5,7 @@
 var is = require('nor-is');
 var debug = require('nor-debug');
 var ARRAY = require('nor-array');
+var FUNCTION = require('nor-function');
 var copy = require('nor-data').copy;
 
 function meta(opts) {
@@ -32,7 +33,7 @@ function meta(opts) {
 				}
 				if(opts.parsers[key] === 'function') {
 					if(data[key]) {
-						self[key] = require('../fun.js').toFunction(data[key]);
+						self[key] = FUNCTION.toFunction(data[key]);
 					}
 				} else {
 					self[key] = copy(data[key]);
@@ -109,7 +110,7 @@ function meta(opts) {
 				//}
 
 				if(self['$'+key] instanceof Function) {
-					self['$'+key] = require('../fun.js').toString(self['$'+key]);
+					self['$'+key] = FUNCTION.toString(self['$'+key]);
 				}
 
 				data[key] = copy(self['$'+key]);

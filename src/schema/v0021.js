@@ -19,7 +19,7 @@ module.exports = [
 
 				// Parse fun
 				if(fun.substr(0, 8) === 'function') {
-					// FIXME: This is the same code as in ../fun.js -- should be reused from there.
+					// FIXME: This is the same code as in nor-function -- should be reused from there.
 					fun = new Function('return (' + fun + ')')();
 				} else {
 					throw new TypeError("Second argument is not valid serialized function");

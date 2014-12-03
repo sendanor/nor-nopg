@@ -8,6 +8,7 @@
 
 var debug = require('nor-debug');
 var ARRAY = require('nor-array');
+var FUNCTION = require('nor-function');
 
 // Make NOPG_EVENT_TIMES as obsolete
 if( (process.env.NOPG_EVENT_TIMES !== undefined) && (process.env.DEBUG_NOPG_EVENT_TIMES === undefined) ) {
@@ -535,7 +536,7 @@ function _parse_function_predicate(ObjType, q, def_op, o, ret_type) {
 	//debug.log('input_pg_keys = ', input_pg_keys);
 
 	//var n = arg_params.length;
-	//arg_params.push(JSON.stringify(require('./fun.js').toString(func)));
+	//arg_params.push(JSON.stringify(FUNCTION.toString(func)));
 	//arg_params.push(JSON.stringify(js_input_params));
 
 	var call_func = 'nopg.call_func(array_to_json(ARRAY['+pg_items.join(', ')+"]), $::json, $::json)";
@@ -554,7 +555,7 @@ function _parse_function_predicate(ObjType, q, def_op, o, ret_type) {
 		type_cast = '::text';
 	}
 
-	return new Predicate(call_func + type_cast, pg_params.concat( [JSON.stringify(require('./fun.js').toString(func)), JSON.stringify(js_input_params)] ));
+	return new Predicate(call_func + type_cast, pg_params.concat( [JSON.stringify(FUNCTION.toString(func)), JSON.stringify(js_input_params)] ));
 }
 
 /** Returns true if op is AND, OR or BIND */
