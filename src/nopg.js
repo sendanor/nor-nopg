@@ -525,7 +525,8 @@ function _parse_function_predicate(ObjType, q, def_op, o, ret_type) {
 	//debug.log('func = ', func);
 	//debug.log('js_input_params = ', js_input_params);
 
-	var input_pg_keys = ARRAY(input_nopg_keys).map(_parse_predicate_key.bind(undefined, ObjType, {'epoch':true}));
+	var _parse_predicate_key_epoch = FUNCTION(_parse_predicate_key).curry(ObjType, {'epoch':true});
+	var input_pg_keys = ARRAY(input_nopg_keys).map(_parse_predicate_key_epoch);
 
 	var pg_items = input_pg_keys.map(function(i) { return i.getString(); }).valueOf();
 	var pg_params = input_pg_keys.map(function(i) { return i.getParams(); }).reduce(function(a, b) { return a.concat(b); });
@@ -596,7 +597,8 @@ _parsers.parse_array_predicate = function _parse_array_predicate(ObjType, q, def
 		return _parse_function_predicate(ObjType, q, def_op, o, parse_operator_type(op));
 	}
 
-	var predicates = ARRAY(o).map(_parsers.recursive_parse_predicates.bind(undefined, ObjType, q, def_op)).filter(not_undefined).valueOf();
+	var parse_predicates = FUNCTION(_parsers.recursive_parse_predicates).curry(ObjType, q, def_op);
+	var predicates = ARRAY(o).map( parse_predicates ).filter(not_undefined).valueOf();
 	return Predicate.join(predicates, op);
 };
 
@@ -621,8 +623,7 @@ _parsers.recursive_parse_predicates = function _recursive_parse_predicates(ObjTy
 };
 
 // Exports as normal functions
-var _recursive_parse_predicates = _parsers.recursive_parse_predicates.bind();
-//var _parse_array_predicate = _parsers.parse_array_predicate.bind();
+var _recursive_parse_predicates = FUNCTION(_parsers.recursive_parse_predicates).curry();
 
 /** Parse traits object */
 function parse_search_traits(traits) {
@@ -934,7 +935,7 @@ function do_select(self, types, search_opts, traits) {
 		if( traits.order && (!document_type_obj) && is.string(document_type) && (!_recursive) ) {
 			return _get_type_by_name(self, document_type).then(function(type) {
 				document_type_obj = type;
-			}).then(our_query.bind(undefined, q));
+			}).then( FUNCTION(our_query).curry(q) );
 		}
 
 		return our_query(q);
