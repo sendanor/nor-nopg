@@ -1492,6 +1492,11 @@ function pad(num, size) {
 	return s;
 }
 
+/** Runs `require(file)` and push results to `builders` array */
+function push_file(builders, file) {
+	builders.push.apply(builders, require(file) );
+}
+
 /** Initialize the database */
 NoPg.prototype.init = function() {
 	var self = this;
@@ -1511,7 +1516,8 @@ NoPg.prototype.init = function() {
 				file = './schema/v' + pad(i, 4) + '.js';
 				try {
 					//debug.log('Loading database version ', i, " from ", file);
-					builders.push.apply(builders, require(file) );
+					//builders.push.apply(builders, require(file) );
+					push_file(builders, file);
 				} catch(err) {
 					//debug.log("Exception: ", err);
 					throw new TypeError("Failed to load: "+ file + ": " + err);
