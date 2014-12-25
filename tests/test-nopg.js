@@ -21,18 +21,12 @@ function not_in(a) {
 }
 
 /** Run init() at start */
-before(function(done){
-	nopg.start(PGCONFIG).init().then(function(db) {
+before(function(){
+	return nopg.start(PGCONFIG).init().then(function(db) {
 		//var doc = db.fetch();
 		//debug.log('initialized database: doc = ', doc);
 		return db.commit();
-	}).then(function(db) {
-		//debug.log('Database init was successful.');
-		done();
-	}).fail(function(err) {
-		debug.log('Database init failed: ' + err);
-		done(err);
-	}).done();
+	});
 });
 
 /* */
@@ -49,8 +43,8 @@ describe('nopg', function(){
 
 	describe('test of', function() {
 
-		it('typeless document creation', function(done){
-			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
+		it('typeless document creation', function(){
+			return nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
 				var doc = db.fetch();
 
 				try {
@@ -71,16 +65,11 @@ describe('nopg', function(){
 				}
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('typed document creation', function(done){
-			nopg.start(PGCONFIG).createType("Test")({"$schema":{"type":"object"}}).create("Test")({"hello":"world"}).then(function(db) {
+		it('typed document creation', function(){
+			return nopg.start(PGCONFIG).createType("Test")({"$schema":{"type":"object"}}).create("Test")({"hello":"world"}).then(function(db) {
 				var type = db.fetch();
 
 				try {
@@ -120,17 +109,12 @@ describe('nopg', function(){
 				}
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('typeless document partial update by document object', function(done){
+		it('typeless document partial update by document object', function(){
 			var doc;
-			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
+			return nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
 				doc = db.fetch();
 
 				try {
@@ -172,17 +156,12 @@ describe('nopg', function(){
 				}
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('typeless document update by chaining object', function(done){
+		it('typeless document update by chaining object', function(){
 			var doc;
-			nopg.start(PGCONFIG).create()({"foo":123, "hello":"world"}).then(function(db) {
+			return nopg.start(PGCONFIG).create()({"foo":123, "hello":"world"}).then(function(db) {
 				doc = db.fetch();
 
 				doc.hello = "another";
@@ -208,32 +187,22 @@ describe('nopg', function(){
 					throw e;
 				}
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('typeless document deletion', function(done){
+		it('typeless document deletion', function(){
 			var doc;
-			nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
+			return nopg.start(PGCONFIG).create()({"hello":"world"}).then(function(db) {
 				doc = db.fetch();
 				return db.del(doc);
 			}).then(function(db) {
 				// FIXME: Test that the doc was really deleted.
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('typeless document search by property', function(done){
-			nopg.start(PGCONFIG).create()({"hello":"UAJuE5ya6m9UvUM87GUFu7GBIJWghHMT"}).then(function(db) {
+		it('typeless document search by property', function(){
+			return nopg.start(PGCONFIG).create()({"hello":"UAJuE5ya6m9UvUM87GUFu7GBIJWghHMT"}).then(function(db) {
 				var doc = db.fetch();
 
 				try {
@@ -266,17 +235,12 @@ describe('nopg', function(){
 				}
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('typeless document search by document ID', function(done){
+		it('typeless document search by document ID', function(){
 			var id;
-			nopg.start(PGCONFIG).create()({"hello":"AF82RqSsXM527S3PGK76r6H3xjWqnYgP"}).then(function(db) {
+			return nopg.start(PGCONFIG).create()({"hello":"AF82RqSsXM527S3PGK76r6H3xjWqnYgP"}).then(function(db) {
 				//debug.log('db is ', db);
 				var doc = db.fetch();
 
@@ -312,16 +276,11 @@ describe('nopg', function(){
 				}
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('typed document search', function(done){
-			nopg.start(PGCONFIG)
+		it('typed document search', function(){
+			return nopg.start(PGCONFIG)
 			  .createType("TestYmMGe0M6")()
 			  .create("TestYmMGe0M6")({"foo":1})
 			  .create("TestYmMGe0M6")({"foo":2})
@@ -361,16 +320,11 @@ describe('nopg', function(){
 				} catch(e) { debug.log('items = ', items); throw e; }
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('typed document search by property', function(done){
-			nopg.start(PGCONFIG)
+		it('typed document search by property', function(){
+			return nopg.start(PGCONFIG)
 			  .createType("TestMxvLtb3x")()
 			  .create("TestMxvLtb3x")({"foo":1,"bar":"foobar"})
 			  .create("TestMxvLtb3x")({"foo":2,"bar":"hello"})
@@ -408,17 +362,12 @@ describe('nopg', function(){
 				} catch(e) { debug.log('items = ', items); throw e; }
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('typed document search by selected property', function(done){
+		it('typed document search by selected property', function(){
 			var type;
-			nopg.start(PGCONFIG)
+			return nopg.start(PGCONFIG)
 			  .createType("Testg1KrHD2a")()
 			  .then(function(db) {
 				type = db.fetch();
@@ -462,17 +411,12 @@ describe('nopg', function(){
 				} catch(e) { debug.log('items = ', items); throw e; }
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('Creating unnamed types', function(done){
+		it('Creating unnamed types', function(){
 			var type;
-			nopg.start(PGCONFIG)
+			return nopg.start(PGCONFIG)
 			  .createType()()
 			  .then(function(db) {
 				type = db.fetch();
@@ -512,16 +456,11 @@ describe('nopg', function(){
 				} catch(e) { debug.log('items = ', items); throw e; }
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('Declare type works over existing type', function(done){
-			nopg.start(PGCONFIG).createType("TypeXvsMtxJyWE")({"hello":"world1"}).declareType("TypeXvsMtxJyWE")({"hello":"world2"}).then(function(db) {
+		it('Declare type works over existing type', function(){
+			return nopg.start(PGCONFIG).createType("TypeXvsMtxJyWE")({"hello":"world1"}).declareType("TypeXvsMtxJyWE")({"hello":"world2"}).then(function(db) {
 				//debug.log('db is ', db);
 				var type1 = db.fetch();
 				var type2 = db.fetch();
@@ -547,16 +486,11 @@ describe('nopg', function(){
 				}
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('Declare type works even if type does not exist', function(done){
-			nopg.start(PGCONFIG).declareType("Type4UJHIRRiCc")({"hello":"world"}).then(function(db) {
+		it('Declare type works even if type does not exist', function(){
+			return nopg.start(PGCONFIG).declareType("Type4UJHIRRiCc")({"hello":"world"}).then(function(db) {
 				//debug.log('db is ', db);
 				var type1 = db.fetch();
 
@@ -567,16 +501,11 @@ describe('nopg', function(){
 				} catch(e) { debug.log('type1 = ', type1); throw e; }
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('Types with schema', function(done){
-			nopg.start(PGCONFIG).declareType("TypeSession4UJHIRRiCc")({"$schema":{"type":"object"}}).then(function(db) {
+		it('Types with schema', function(){
+			return nopg.start(PGCONFIG).declareType("TypeSession4UJHIRRiCc")({"$schema":{"type":"object"}}).then(function(db) {
 				//debug.log('db is ', db);
 				var type1 = db.fetch();
 				try {
@@ -585,17 +514,12 @@ describe('nopg', function(){
 					assert.strictEqual(type1.$schema.type, 'object');
 				} catch(e) { debug.log('type1 = ', type1); throw e; }
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('Deleting types', function(done){
+		it('Deleting types', function(){
 			var type, exists;
-			nopg.start(PGCONFIG).createType("DeleteTypeTestsxWH8QiBYc")({"hello":"world"}).then(function(db) {
+			return nopg.start(PGCONFIG).createType("DeleteTypeTestsxWH8QiBYc")({"hello":"world"}).then(function(db) {
 				type = db.fetch();
 				//debug.log('type = ' + util.inspect(type));
 				return db.del(type).commit();
@@ -608,17 +532,12 @@ describe('nopg', function(){
 					assert.strictEqual(exists, false);
 				} catch(e) { debug.log('exists = ', exists); throw e; }
 				return db;
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('Types with schema do not allow bad data', function(done){
+		it('Types with schema do not allow bad data', function(){
 			var type;
-			nopg.start(PGCONFIG).createType("SchemaTest_2y78")({
+			return nopg.start(PGCONFIG).createType("SchemaTest_2y78")({
 				"$schema": {
 					"title": "Point Object",
 					"type": "object",
@@ -659,18 +578,13 @@ describe('nopg', function(){
 				});
 			}).then(function(db) {
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
 		/* */
-		it('Types with validator do not allow wrong data', function(done){
+		it('Types with validator do not allow wrong data', function(){
 			var type;
-			nopg.start(PGCONFIG).createType("ValidatorTest_3esH")({
+			return nopg.start(PGCONFIG).createType("ValidatorTest_3esH")({
 				"$schema": {
 					"title": "Point Object",
 					"type": "object",
@@ -717,20 +631,12 @@ describe('nopg', function(){
 				});
 			}).then(function(db) {
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				if(err.stack) {
-					debug.log('stack:\n---\n' + err.stack + '\n---\n');
-				}
-				done(err);
-			}).done();
+			});
 		});
 
-		it('Editing types by changing object', function(done){
+		it('Editing types by changing object', function(){
 			var type, type2;
-			nopg.start(PGCONFIG).createType("EditTypeTest_VGM3")({"hello":"world"}).then(function(db) {
+			return nopg.start(PGCONFIG).createType("EditTypeTest_VGM3")({"hello":"world"}).then(function(db) {
 				type = db.fetch();
 
 				try {
@@ -752,17 +658,12 @@ describe('nopg', function(){
 					assert.strictEqual(type2.$id, type.$id);
 					assert.strictEqual(type2.hello, 'something else');
 				} catch(e) { debug.log('type2 = ', type2); throw e; }
-			}).then(function() {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('Partial updating of types', function(done){
+		it('Partial updating of types', function(){
 			var type, type2;
-			nopg.start(PGCONFIG).createType("EditTypeTest2_5Vmf")({"hello":"world"}).then(function(db) {
+			return nopg.start(PGCONFIG).createType("EditTypeTest2_5Vmf")({"hello":"world"}).then(function(db) {
 				type = db.fetch();
 
 				try {
@@ -788,17 +689,12 @@ describe('nopg', function(){
 					assert.strictEqual(type2.hello2, 'something else');
 				} catch(e) { debug.log('type2 = ', type2); throw e; }
 
-			}).then(function() {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('partial update of typed document', function(done){
+		it('partial update of typed document', function(){
 			var doc;
-			nopg.start(PGCONFIG).createType("Test-hSYX")({"$schema":{"type":"object"}}).create("Test-hSYX")({"hello":"world"}).then(function(db) {
+			return nopg.start(PGCONFIG).createType("Test-hSYX")({"$schema":{"type":"object"}}).create("Test-hSYX")({"hello":"world"}).then(function(db) {
 				var type = db.fetch();
 				doc = db.fetch();
 				try {
@@ -820,17 +716,12 @@ describe('nopg', function(){
 				} catch(e) { debug.log('doc2 = ', doc2); throw e; }
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('partial update of typed document without any real changes', function(done){
+		it('partial update of typed document without any real changes', function(){
 			var doc;
-			nopg.start(PGCONFIG).createType("Test-mtm8")({"$schema":{"type":"object"}}).create("Test-mtm8")({"hello":"world"}).then(function(db) {
+			return nopg.start(PGCONFIG).createType("Test-mtm8")({"$schema":{"type":"object"}}).create("Test-mtm8")({"hello":"world"}).then(function(db) {
 				var type = db.fetch();
 				doc = db.fetch();
 				try {
@@ -850,18 +741,12 @@ describe('nopg', function(){
 				} catch(e) { debug.log('doc2 = ', doc2); throw e; }
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('can create document with attachments', function(done){
+		it('can create document with attachments', function(){
 			var doc;
-
-			nopg.start(PGCONFIG)
+			return nopg.start(PGCONFIG)
 			    .createType("Test-6pvY")({"$schema":{"type":"object"}})
 			    .create("Test-6pvY")({"hello":"world"})
 			    .createAttachment()( __dirname + '/files/test1.jpg')
@@ -913,12 +798,7 @@ describe('nopg', function(){
 				} catch(e) { debug.log('att2_hash = ', att2_hash); throw e; }
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
 		it('can create document with attachments from buffer', function(){
@@ -964,10 +844,9 @@ describe('nopg', function(){
 			});
 		});
 
-		it('can list document with attachments', function(done){
+		it('can list document with attachments', function(){
 			var doc;
-
-			nopg.start(PGCONFIG)
+			return nopg.start(PGCONFIG)
 			    .createType("Test-0qBe")({"$schema":{"type":"object"}})
 			    .create("Test-0qBe")({"hello":"world"})
 			    .createAttachment()( __dirname + '/files/test1.jpg')
@@ -1012,16 +891,11 @@ describe('nopg', function(){
 				assert.strictEqual(atts_hashes[1], "7e87855080a7eb8b8dd4a06122fccb44");
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('typed document search by properties with any match', function(done){
-			nopg.start(PGCONFIG)
+		it('typed document search by properties with any match', function(){
+			return nopg.start(PGCONFIG)
 			  .createType("TestdtIWxj5c")()
 			  .create("TestdtIWxj5c")({"foo":1,"bar":"foobar"})
 			  .create("TestdtIWxj5c")({"foo":2,"bar":"hello"})
@@ -1051,16 +925,11 @@ describe('nopg', function(){
 				assert.strictEqual(item1.bar, items[1].bar);
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('typed document search by properties with order', function(done){
-			nopg.start(PGCONFIG)
+		it('typed document search by properties with order', function(){
+			return nopg.start(PGCONFIG)
 			  .createType("Testj0LidL")()
 			  .create("Testj0LidL")({"foo":"Hello"})
 			  .create("Testj0LidL")({"foo":"Bar"})
@@ -1086,16 +955,11 @@ describe('nopg', function(){
 				assert.strictEqual(item2.foo, items[2].foo);
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('typed document search by properties with array logic', function(done){
-			nopg.start(PGCONFIG)
+		it('typed document search by properties with array logic', function(){
+			return nopg.start(PGCONFIG)
 			  .createType("TestAATxICz0")()
 			  .create("TestAATxICz0")({"index":1,"bar":"foobar"})
 			  .create("TestAATxICz0")({"index":2,"bar":"hello"})
@@ -1137,16 +1001,11 @@ describe('nopg', function(){
 				assert.strictEqual(item4.bar, items[1].bar);
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
-		it('typed document search with selected fields', function(done){
-			nopg.start(PGCONFIG)
+		it('typed document search with selected fields', function(){
+			return nopg.start(PGCONFIG)
 			  .createType("TestIjvIqtC1")()
 			  .create("TestIjvIqtC1")({"foo":1,"bar":"hello"})
 			  .create("TestIjvIqtC1")({"foo":2,"bar":"hello"})
@@ -1179,20 +1038,12 @@ describe('nopg', function(){
 				assert.strictEqual(items[1].bar, undefined);
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				if(err.stack) {
-					debug.log('stack: ' + err.stack);
-				}
-				done(err);
-			}).done();
+			});
 		});
 
 		/* */
-		it('typed document search using custom function', function(done){
-			nopg.start(PGCONFIG)
+		it('typed document search using custom function', function(){
+			return nopg.start(PGCONFIG)
 			  .createType("Test2jiArvj8")()
 			  .create("Test2jiArvj8")({"foo":1})
 			  .create("Test2jiArvj8")({"foo":2})
@@ -1216,18 +1067,13 @@ describe('nopg', function(){
 				assert.strictEqual(item2.foo, items[1].foo);
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
 		/** */
-		it('typed document creation and single fetching by ID', function(done){
+		it('typed document creation and single fetching by ID', function(){
 			var type;
-			nopg.start(PGCONFIG).createType("TestQgBYjQsQ")({"$schema":{"type":"object"}}).create("TestQgBYjQsQ")({"hello":"world"}).then(function(db) {
+			return nopg.start(PGCONFIG).createType("TestQgBYjQsQ")({"$schema":{"type":"object"}}).create("TestQgBYjQsQ")({"hello":"world"}).then(function(db) {
 				type = db.fetch();
 
 				try {
@@ -1288,18 +1134,13 @@ describe('nopg', function(){
 				}
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
 		/** */
-		it('typed document creation and single fetching by ID with field list', function(done){
+		it('typed document creation and single fetching by ID with field list', function(){
 			var type;
-			nopg.start(PGCONFIG).createType("TestgJBvMX")({"$schema":{"type":"object"}}).create("TestgJBvMX")({"hello":"world"}).then(function(db) {
+			return nopg.start(PGCONFIG).createType("TestgJBvMX")({"$schema":{"type":"object"}}).create("TestgJBvMX")({"hello":"world"}).then(function(db) {
 				type = db.fetch();
 
 				try {
@@ -1360,18 +1201,13 @@ describe('nopg', function(){
 				}
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
 		/** */
-		it('fetching related documents', function(done){
+		it('fetching related documents', function(){
 			var user_type, group_type, group;
-			nopg.start(PGCONFIG)
+			return nopg.start(PGCONFIG)
 			 .createType("Testmoccpt_user")({
 				"$schema":{
 					"type":"object",
@@ -1519,18 +1355,13 @@ describe('nopg', function(){
 				}
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
 		/** */
-		it('fetching related documents with field list', function(done){
+		it('fetching related documents with field list', function(){
 			var user_type, group_type, group;
-			nopg.start(PGCONFIG)
+			return nopg.start(PGCONFIG)
 			 .createType("Test_TyWXGCr_user")({
 				"$schema":{
 					"type":"object",
@@ -1691,12 +1522,7 @@ describe('nopg', function(){
 				}
 
 				return db.commit();
-			}).then(function(db) {
-				done();
-			}).fail(function(err) {
-				debug.log('Database query failed: ' + err);
-				done(err);
-			}).done();
+			});
 		});
 
 // End of tests
