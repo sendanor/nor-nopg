@@ -537,7 +537,7 @@ function _parse_function_predicate(ObjType, q, def_op, o, ret_type) {
 	//debug.log('input_pg_keys = ', input_pg_keys);
 
 	//var n = arg_params.length;
-	//arg_params.push(JSON.stringify(FUNCTION.toString(func)));
+	//arg_params.push(JSON.stringify(FUNCTION(func).stringify()));
 	//arg_params.push(JSON.stringify(js_input_params));
 
 	var call_func = 'nopg.call_func(array_to_json(ARRAY['+pg_items.join(', ')+"]), $::json, $::json)";
@@ -556,7 +556,7 @@ function _parse_function_predicate(ObjType, q, def_op, o, ret_type) {
 		type_cast = '::text';
 	}
 
-	return new Predicate(call_func + type_cast, pg_params.concat( [JSON.stringify(FUNCTION.toString(func)), JSON.stringify(js_input_params)] ));
+	return new Predicate(call_func + type_cast, pg_params.concat( [JSON.stringify(FUNCTION(func).stringify()), JSON.stringify(js_input_params)] ));
 }
 
 /** Returns true if op is AND, OR or BIND */
@@ -1494,7 +1494,7 @@ function pad(num, size) {
 
 /** Runs `require(file)` and push results to `builders` array */
 function push_file(builders, file) {
-	builders.push.apply(builders, require(file) );
+	FUNCTION(builders.push).apply(builders, require(file) );
 }
 
 /** Initialize the database */
@@ -1516,7 +1516,7 @@ NoPg.prototype.init = function() {
 				file = './schema/v' + pad(i, 4) + '.js';
 				try {
 					//debug.log('Loading database version ', i, " from ", file);
-					//builders.push.apply(builders, require(file) );
+					//FUNCTION(builders.push).apply(builders, require(file) );
 					push_file(builders, file);
 				} catch(err) {
 					//debug.log("Exception: ", err);

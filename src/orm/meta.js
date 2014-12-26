@@ -33,7 +33,7 @@ function meta(opts) {
 				}
 				if(opts.parsers[key] === 'function') {
 					if(data[key]) {
-						self[key] = FUNCTION.toFunction(data[key]);
+						self[key] = FUNCTION.parse(data[key]);
 					}
 				} else {
 					self[key] = copy(data[key]);
@@ -110,7 +110,7 @@ function meta(opts) {
 				//}
 
 				if(self['$'+key] instanceof Function) {
-					self['$'+key] = FUNCTION.toString(self['$'+key]);
+					self['$'+key] = FUNCTION(self['$'+key]).stringify();
 				}
 
 				data[key] = copy(self['$'+key]);

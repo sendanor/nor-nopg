@@ -5,6 +5,7 @@
 //var debug = require('nor-debug');
 //var util = require("util");
 var ARRAY = require('nor-array');
+var FUNCTION = require('nor-function');
 var events = require("events");
 
 /** The constructor */
@@ -19,7 +20,7 @@ ARRAY(['addListenter', 'on', 'once', 'removeListener', 'removeAllListeners', 'se
 	NoPgORM.prototype[method] = function() {
 		var self = this;
 		var args = Array.prototype.slice.call(arguments);
-		return self.$events[method].apply(self.$events, args);
+		return FUNCTION(self.$events[method]).apply(self.$events, args);
 	};
 });
 

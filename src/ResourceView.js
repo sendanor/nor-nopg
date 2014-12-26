@@ -7,6 +7,7 @@
 
 "use strict";
 
+var FUNCTION = require('nor-function');
 var ARRAY = require('nor-array');
 var debug = require('nor-debug');
 var merge = require('merge');
@@ -147,11 +148,11 @@ ResourceView.prototype.element = function(req, res, opts) {
 		var body = strip(item).specials().get();
 		ARRAY(opts.keys).forEach(function(key) {
 			var path = [req].concat(render_path(opts.path, params)).concat([item.$id]);
-			//debug.log("path = ", ref.apply(undefined , path));
+			//debug.log("path = ", FUNCTION(ref).curryApply(path));
 
 			//
 			if( (key === '$ref') && is.uuid(item.$id) ) {
-				body.$ref = ref.apply(undefined, path);
+				body.$ref = FUNCTION(ref).curryApply(path);
 				return;
 			}
 
@@ -222,7 +223,7 @@ ResourceView.prototype.collection = function(req, res, opts) {
 		}
 		//debug.log("element_opts = ", element_opts);
 		var body = {};
-		body.$ref = ref.apply(undefined, path);
+		body.$ref = FUNCTION(ref).curryApply(path);
 		body.$ = ARRAY(items).map(view.element(req, res, element_opts)).valueOf();
 		//debug.log('body = ', body);
 
