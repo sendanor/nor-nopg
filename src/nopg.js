@@ -396,9 +396,11 @@ function parse_predicates(Type) {
 	/** */
 	function parse_keyref(datakey, key) {
 		if(key.indexOf('.') === -1) {
-			return "" + datakey + "->>'" + key + "'";
+			return "json_extract_path(" + datakey + ", '" + JSON.stringify([key]) + "'::json->>0)::text";
+			//return "" + datakey + "->>'" + key + "'";
 		} else {
-			return "" + datakey + "#>>'{" + key.split('.').join(',') +"}'";
+			return "json_extract_path(" + datakey + ", '" + JSON.stringify(key.join('.')) + "'::json->>0)::text";
+			//return "" + datakey + "#>>'{" + key.split('.').join(',') +"}'";
 		}
 	}
 
