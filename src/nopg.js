@@ -475,9 +475,27 @@ function do_query(self, query, values) {
 }
 
 /* Returns the type condition and pushes new params to `params` */
+function parse_where_type_condition_array(query, type) {
+	var predicates = ARRAY(type).map(function(t) {
+		if(is.string(t)) {
+			return new Predicate("type = $", t);
+		}
+		if(type instanceof NoPg.Type) {
+			return new Predicate("types_id = $", type.$id);
+		}
+		throw new TypeError("Unknown type: " + util.inspect(t));
+	}).valueOf();
+	query.where( Predicate.join(predicates, 'OR') );
+}
+
+/* Returns the type condition and pushes new params to `params` */
 function parse_where_type_condition(query, type) {
 	if(type === undefined) {
 		return;
+	}
+
+	if(is.array(type)) {
+		return parse_where_type_condition_array(query, type);
 	}
 
 	if(is.string(type)) {
