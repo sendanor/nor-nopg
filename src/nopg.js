@@ -309,7 +309,7 @@ function parse_keyref_json(datakey, key) {
 		return "(" + datakey + " -> '" + key + "'::text)";
 	} else {
 		//return "json_extract_path(" + datakey + ", '" + JSON.stringify(key.split('.')) + "'::json ->> 0)::text";
-		return "(" + datakey + " #> '{" + key.split('.').join(',') +"}'::text)";
+		return "(" + datakey + " #> '{" + key.split('.').join(',') +"}')";
 	}
 }
 
@@ -321,7 +321,7 @@ function parse_keyref_text(datakey, key) {
 		return "(" + datakey + " ->> '" + key + "'::text)";
 	} else {
 		//return "json_extract_path(" + datakey + ", '" + JSON.stringify(key.split('.')) + "'::json ->> 0)::text";
-		return "(" + datakey + " #>> '{" + key.split('.').join(',') +"}'::text)";
+		return "(" + datakey + " #>> '{" + key.split('.').join(',') +"}')";
 	}
 }
 
