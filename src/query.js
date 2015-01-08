@@ -11,10 +11,12 @@ var ARRAY = require('nor-array');
 function Query(opts) {
 	this._opts = opts || {};
 
-	debug.assert(opts.table).is('string');
+	debug.assert(opts.ObjType).is('function');
+	debug.assert(opts.table).ignore(undefined).is('string');
 	debug.assert(opts.method).ignore(undefined).is('string');
 
-	this._table = opts.table;
+	this.ObjType = opts.ObjType;
+	this._table = opts.table || (this.ObjType && this.ObjType.meta.table);
 	this._method = opts.method || 'select';
 
 	this._fields = [];
@@ -158,7 +160,7 @@ Query.prototype.compile = function() {
 	query = Query.numerifyPlaceHolders(query);
 
 	// Return results
-	return {'query':query, 'params':params, 'fieldMap': field_map};
+	return {'query':query, 'params':params, 'fieldMap': field_map, 'ObjType': this.ObjType};
 };
 
 // Exports
