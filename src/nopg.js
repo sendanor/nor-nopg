@@ -98,6 +98,7 @@ function get_true_value(value) {
 	value = ('' + value).toLowerCase();
 	if(value === "false") { return false; }
 	if(value === "off") { return false; }
+	if(value === "no") { return false; }
 	if(value === "0") { return false; }
 	return true;
 }
