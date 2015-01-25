@@ -1,1 +1,1 @@
-module.exports = 25;
+module.exports = 26;

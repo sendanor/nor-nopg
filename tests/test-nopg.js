@@ -1473,7 +1473,6 @@ describe('nopg', function(){
 					throw e;
 				}
 
-
 				return db.searchSingle('Test_TyWXGCr_user')({'$id': user.$id}, {
 					'documents': ['group|$id,$type,$types_id,name,sort_order']
 				});
@@ -1504,6 +1503,173 @@ describe('nopg', function(){
 						debug.assert(user.$documents[user.group].$id).is('uuid');
 						debug.assert(user.$documents[user.group].$content).is('object');
 						debug.assert(user.$documents[user.group].$type).is('string').equals('Test_TyWXGCr_group');
+						debug.assert(user.$documents[user.group].$types_id).is('uuid').equals(group_type.$id);
+						//debug.assert(user.$documents[user.group].$created).is('date string');
+						//debug.assert(user.$documents[user.group].$modified).is('date string');
+
+						debug.assert( Object.keys(user.$documents[user.group]).filter(not_in(['name', 'sort_order', '$events', '$id', '$content', '$types_id', '$type' /*, '$created', '$modified'*/])) ).is('array').length(0);
+					} catch(e) {
+						debug.log('user.$documents[user.group] = ', user.$documents[user.group]);
+						throw e;
+					}
+
+					debug.assert( Object.keys(user).filter(not_in(['name', 'group', 'email', 'sort_order', 'password', '$events', '$id', '$content', '$types_id', '$created', '$modified', '$type', '$documents'])) ).is('array').length(0);
+
+				} catch(e) {
+					debug.log('user = ', user);
+					throw e;
+				}
+
+				return db.commit();
+			});
+		});
+
+		/** */
+		it('fetching related documents with reversed relations', function(){
+			var user_type, group_type, group;
+			return nopg.start(PGCONFIG)
+			 .createType("Test_ReversedRelations_user")({
+				"$schema":{
+					"type":"object",
+					"properties": {
+						"name": {"type": "string"},
+						"group": {"type": "string"},
+						"email": {"type": "string"},
+						"password": {"type": "string"},
+						"sort_order": {"type": "number"}
+					}
+				},
+				'relations': {
+					'group': 'Test_ReversedRelations_group',
+				}
+			 })
+			 .createType("Test_ReversedRelations_group")({
+				"$schema":{
+					"type": "object",
+					"properties": {
+						"name": {"type": "string"},
+						"password": {"type": "string"},
+						"sort_order": {"type": "number"}
+					}
+				}
+			 })
+			 .create("Test_ReversedRelations_group")({"name":"Users", "password": "secret", "sort_order": 10})
+			 .then(function(db) {
+				user_type = db.fetch();
+
+				try {
+					debug.assert(user_type).is('object');
+					debug.assert(user_type.$events).is('object');
+					debug.assert(user_type.$id).is('uuid');
+					debug.assert(user_type.$name).is('string').equals("Test_ReversedRelations_user");
+					debug.assert(user_type.$schema).is('object');
+					//debug.assert(user_type.$validator).is('function');
+					debug.assert(user_type.$meta).is('object');
+					debug.assert(user_type.$created).is('date string');
+					debug.assert(user_type.$modified).is('date string');
+
+					debug.assert( Object.keys(user_type).filter(not_in(['$events', '$id', '$name', '$schema', '$validator', '$meta', '$created', '$modified', 'relations'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('user_type = ', user_type);
+					throw e;
+				}
+
+				group_type = db.fetch();
+
+				try {
+					debug.assert(group_type).is('object');
+					debug.assert(group_type.$events).is('object');
+					debug.assert(group_type.$id).is('uuid');
+					debug.assert(group_type.$name).is('string').equals("Test_ReversedRelations_group");
+					debug.assert(group_type.$schema).is('object');
+					//debug.assert(group_type.$validator).is('function');
+					debug.assert(group_type.$meta).is('object');
+					debug.assert(group_type.$created).is('date string');
+					debug.assert(group_type.$modified).is('date string');
+
+					debug.assert( Object.keys(group_type).filter(not_in(['$events', '$id', '$name', '$schema', '$validator', '$meta', '$created', '$modified'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('group_type = ', group_type);
+					throw e;
+				}
+
+				group = db.fetch();
+
+				try {
+					debug.assert(group).is('object');
+					debug.assert(group.name).is('string').equals('Users');
+					debug.assert(group.password).is('string').equals('secret');
+					debug.assert(group.sort_order).is('number').equals(10);
+					debug.assert(group.$events).is('object');
+					debug.assert(group.$id).is('uuid');
+					debug.assert(group.$content).is('object');
+					debug.assert(group.$types_id).is('uuid').equals(group_type.$id);
+					debug.assert(group.$created).is('date string');
+					debug.assert(group.$modified).is('date string');
+					debug.assert(group.$type).is('string').equals('Test_ReversedRelations_group');
+
+					debug.assert( Object.keys(group).filter(not_in(['name', 'password', 'sort_order', '$events', '$id', '$content', '$types_id', '$created', '$modified', '$type'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('group = ', group);
+					throw e;
+				}
+
+				return db.create('Test_ReversedRelations_user')({'name': 'foobar', 'group': group.$id, 'email': 'foobar@example.com', 'sort_order': 1000, 'password': 'secret1234'});
+			}).then(function(db) {
+				var user = db.fetch();
+
+				try {
+					debug.assert(user).is('object');
+					debug.assert(user.name).is('string').equals('foobar');
+					debug.assert(user.group).is('uuid').equals(group.$id);
+					debug.assert(user.email).is('string').equals('foobar@example.com');
+					debug.assert(user.password).is('string').equals('secret1234');
+					debug.assert(user.sort_order).is('number').equals(1000);
+					debug.assert(user.$events).is('object');
+					debug.assert(user.$id).is('uuid');
+					debug.assert(user.$content).is('object');
+					debug.assert(user.$types_id).is('uuid').equals(user_type.$id);
+					debug.assert(user.$created).is('date string');
+					debug.assert(user.$modified).is('date string');
+					debug.assert(user.$type).is('string').equals('Test_ReversedRelations_user');
+
+					debug.assert( Object.keys(user).filter(not_in(['name', 'group', 'email', 'password', 'sort_order', '$events', '$id', '$content', '$types_id', '$created', '$modified', '$type'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('user = ', user);
+					throw e;
+				}
+
+				return db.searchSingle('Test_ReversedRelations_group')({'$id': group.$id}, {
+					'documents': ['users{Test_ReversedRelations_user#group}|$id,$type,$types_id,name,sort_order']
+				});
+
+			}).then(function(db) {
+				var group = db.fetch();
+
+				try {
+					debug.assert(user).is('object');
+					debug.assert(user.name).is('string').equals('foobar');
+					debug.assert(user.group).is('uuid').equals(group.$id);
+					debug.assert(user.$events).is('object');
+					debug.assert(user.$id).is('uuid');
+					debug.assert(user.$content).is('object');
+					debug.assert(user.$types_id).is('uuid').equals(user_type.$id);
+					debug.assert(user.$created).is('date string');
+					debug.assert(user.$modified).is('date string');
+					debug.assert(user.$type).is('string').equals('Test_ReversedRelations_user');
+
+					debug.assert(user.$documents).is('object');
+
+					try {
+						debug.assert(user.$documents[user.group]).is('object');
+						debug.assert(user.$documents[user.group].name).is('string').equals('Users');
+						debug.assert(user.$documents[user.group].sort_order).is('number').equals(10);
+						debug.assert(user.$documents[user.group].password).is('undefined');
+						debug.assert(user.$documents[user.group].email).is('undefined');
+						debug.assert(user.$documents[user.group].$events).is('object');
+						debug.assert(user.$documents[user.group].$id).is('uuid');
+						debug.assert(user.$documents[user.group].$content).is('object');
+						debug.assert(user.$documents[user.group].$type).is('string').equals('Test_ReversedRelations_group');
 						debug.assert(user.$documents[user.group].$types_id).is('uuid').equals(group_type.$id);
 						//debug.assert(user.$documents[user.group].$created).is('date string');
 						//debug.assert(user.$documents[user.group].$modified).is('date string');

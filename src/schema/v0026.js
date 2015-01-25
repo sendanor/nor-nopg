@@ -58,10 +58,6 @@ module.exports = [
 				return obj;
 			}
 
-			//function get_type(id) {
-			//	return plv8.execute("SELECT * FROM types WHERE id = $1 LIMIT 1", [id])[0];
-			//}
-
 			function error(msg) {
 				plv8.elog(ERROR, msg);
 			}
@@ -86,6 +82,9 @@ module.exports = [
 				return /^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/.test(obj);
 			}
 
+			/** Returns property from object
+			 * @returns The value of property named `current` of object `last`, otherwise undefined.
+			 */
 			function get_property_step(last, current) {
 				return is_object(last) ? last[current] : undefined;
 			}
@@ -144,19 +143,8 @@ module.exports = [
 			}
 
 			// Check for bad input
-
 			if(!is_object(data)) { return error("get_documents(data, ...) not object"); }
 			if(!is_array(config)) { return error("get_documents(..., config) not array"); }
-
-			//var types_id = data.types_id;
-			//if(!is_uuid(types_id)) { return error("data.types_id not valid UUID: " + types_id); }
-
-			// Get document type
-			//var type = get_type(types_id);
-			//if(!is_object(type)) { return error("type not valid object: " + type); }
-
-			//var relations = type.relations || {};
-			//if(!is_object(relations)) { return error("type.relations not valid object: " + relations); }
 
 			// Populate documents from `config`
 			data.documents = {};
