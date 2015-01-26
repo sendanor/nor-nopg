@@ -134,13 +134,20 @@ function _get_result(Type) {
 			if(key === 'documents') {
 				obj['$'+key] = {};
 				ARRAY(Object.keys(doc[key])).forEach(function(k) {
-					obj['$'+key][k] = _get_result(NoPg.Document)([doc[key][k]]);
+					if(is.uuid(k)) {
+						obj['$'+key][k] = _get_result(NoPg.Document)([doc[key][k]]);
+					} else {
+						obj['$'+key][k] = doc[key][k];
+					}
 				});
 				return;
 			}
 
 			obj['$'+key] = doc[key];
 		});
+
+		_parse_object_expressions(obj);
+
 		return new Type(obj);
 	};
 }
@@ -242,6 +249,10 @@ function get_results(Type, opts) {
 				if(key === 'documents') {
 					obj['$'+key] = {};
 					ARRAY(Object.keys(row[key])).forEach(function(uuid) {
+						if(!is.uuid(uuid)) {
+							obj['$'+key][uuid] = row[key][uuid];
+							return;
+						}
 						var sub_doc = row[key][uuid];
 						var sub_obj = {};
 						ARRAY(Object.keys(sub_doc)).forEach(function(k) {
@@ -254,6 +265,8 @@ function get_results(Type, opts) {
 
 				parse_field(obj, key, row[key]);
 			});
+
+			_parse_object_expressions(obj);
 
 			//debug.log('result in obj = ', obj);
 			return new Type(obj);
@@ -453,6 +466,30 @@ function parse_predicates(Type) {
 	return parse_data;
 }
 
+
+/** Parse obj.$documents.expressions into the object */
+function _parse_object_expressions(obj) {
+	debug.assert(obj).is('object');
+	if(!obj.$documents) {
+		return;
+	}
+
+	var expressions = obj.$documents.expressions;
+	if(!expressions) {
+		return;
+	}
+
+	ARRAY(Object.keys(expressions)).forEach(function(prop) {
+		var value = expressions[prop], key;
+		// FIXME: This code should understand things better
+		if(prop.substr(0, 'content.'.length) === 'content.') {
+			key = prop.substr('content.'.length);
+		} else {
+			key = '$' + prop;
+		}
+		obj[key] = value;
+	});
+}
 
 /* ------------- PRIVATE FUNCTIONS --------------- */
 
