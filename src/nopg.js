@@ -106,6 +106,9 @@ function get_true_value(value) {
 NoPg.debug = get_true_value(process.env.DEBUG_NOPG);
 
 // Addons
+NoPg.merge = require('./merge.js');
+NoPg.scan = require('./scan.js');
+NoPg.expand = require('./expand.js');
 NoPg.strip = require('./strip.js');
 NoPg.types = require('./types.js');
 NoPg.ResourceView = require('./ResourceView.js');
