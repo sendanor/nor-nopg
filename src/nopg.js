@@ -1289,7 +1289,7 @@ NoPg._getObjectType = function(doc) {
 NoPg.getObjectType = function(doc) {
 	var ObjType = NoPg._getObjectType(doc);
 	if(!ObjType) {
-		throw new TypeError("doc is unknown type: " + doc);
+		throw new TypeError("doc is unknown type: {" + typeof doc + "} " + JSON.stringify(doc, null, 2) );
 	}
 	return ObjType;
 };
@@ -1770,7 +1770,7 @@ NoPg.prototype.searchSingle = function(type) {
 /** Update document */
 NoPg.prototype.update = function(obj, data) {
 	var self = this;
-	var ObjType = NoPg.getObjectType(obj);
+	var ObjType = NoPg._getObjectType(obj) || NoPg.Document;
 	return extend.promise( [NoPg], nr_fcall("nopg:update", function() {
 		return do_update(self, ObjType, obj, data).then(_get_result(ObjType)).then(save_result_to(self));
 	}));
@@ -1780,7 +1780,7 @@ NoPg.prototype.update = function(obj, data) {
 NoPg.prototype.del = function(obj) {
 	if(!obj.$id) { throw new TypeError("opts.$id invalid: " + util.inspect(obj) ); }
 	var self = this;
-	var ObjType = NoPg.getObjectType(obj);
+	var ObjType = NoPg._getObjectType(obj) || NoPg.Document;
 	return extend.promise( [NoPg], nr_fcall("nopg:del", function() {
 		return do_delete(self, ObjType, obj).then(function() { return self; });
 	}));
