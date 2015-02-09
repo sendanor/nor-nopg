@@ -2101,11 +2101,15 @@ NoPg.prototype.createAttachment = function(doc) {
 					doc_id = doc.$id;
 				} else if(doc && (doc instanceof NoPg.Attachment)) {
 					doc_id = doc.$documents_id;
+				} else if(doc && is.uuid(doc.$documents_id)) {
+					doc_id = doc.$documents_id;
+				} else if(doc && is.uuid(doc.$id)) {
+					doc_id = doc.$id;
 				} else {
 					throw new TypeError("Could not detect document ID!");
 				}
 
-				debug.assert(doc_id).is('string');
+				debug.assert(doc_id).is('uuid');
 
 				if(file_is_buffer) {
 					return file;
