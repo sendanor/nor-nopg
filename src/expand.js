@@ -5,6 +5,7 @@ var debug = require('nor-debug');
 var ARRAY = require('nor-array');
 var scan = require('./scan.js');
 var merge = require('./merge.js');
+var is = require('nor-is');
 
 /** Scan document for same partial objects and merge them
  * @param doc {object} The document to expand
@@ -23,10 +24,16 @@ module.exports = function expand_objects(doc, opts) {
 		doc = JSON.parse(JSON.stringify(doc));
 	}
 
+	// Scan objects
 	var cache = scan(doc);
-	ARRAY(Object.keys(cache)).forEach(function(key) {
-		merge(cache[key]);
+
+	var uuids = ARRAY(Object.keys(cache)).filter(is.uuid).valueOf();
+
+	// Merge same objects
+	ARRAY(uuids).forEach(function(uuid) {
+		merge(cache[uuid]);
 	});
+
 	return doc;
 };
 

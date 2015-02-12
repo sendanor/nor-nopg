@@ -4,8 +4,98 @@ var is = require('nor-is');
 var debug = require('nor-debug');
 var ARRAY = require('nor-array');
 
+/** Merge two arrays */
+function _merge_array(opts, a, b) {
+	debug.assert(opts).is('object');
+
+	var ids_mapped = {};
+
+	var tmp = [].concat(a);
+
+	ARRAY(a).forEach(function(v) {
+		if(v && v.$id) {
+			ids_mapped[v.$id] = true;
+			return;
+		}
+	});
+
+	ARRAY(b).forEach(function(v) {
+		var id = v && v.$id;
+
+		if(id && ids_mapped.hasOwnProperty(id)) {
+			return;
+		}
+
+		if( tmp.indexOf(v) >= 0 ) {
+			return;
+		}
+
+		if(id) {
+			ids_mapped[id] = true;
+		}
+
+		tmp.push(v);
+	});
+
+	if(opts.cache && opts.cache._has_cursors) {
+		ARRAY(tmp).forEach(function(v, i) {
+
+			var parent;
+			var key;
+
+			key = a.indexOf(v);
+			if(key >= 0) {
+				parent = a;
+			} else {
+				key = b.indexOf(v);
+				if(key >= 0) {
+					parent = b;
+				}
+			}
+
+			if(!(parent && (key >= 0))) {
+				return;
+			}
+
+			//debug.log('Searching cursor...');
+			var f = opts.cache.findCursor(parent, key);
+			if(f) {
+				//debug.log('Expanding cursor...');
+				opts.cache.addToCursor(f, tmp, i);
+			}
+		});
+	}
+
+	return tmp;
+}
+
+/** Copy property from a to b
+ * @param opts {object} Options
+ * @param key {string} The keyword of the property
+ * @param a {object} Copy to
+ * @param b {object} Copy from
+ */
+function _copy_property(opts, key, a, b) {
+	debug.assert(opts).is('object');
+	debug.assert(key).is('string');
+	debug.assert(a).is('object');
+	debug.assert(b).is('object');
+
+	a[key] = b[key];
+
+	if(opts.cache && opts.cache._has_cursors && is.obj(b[key]) && b[key].hasOwnProperty('$id')) {
+		var f = opts.cache.findCursor(b, key);
+		if(f) {
+			//debug.log('Expanding cursor...');
+			opts.cache.addToCursor(f, a, key);
+		}
+
+	}
+}
+
 /** Merge two objects */
-function _merge_object(a, b) {
+function _merge_object(opts, a, b) {
+	debug.assert(opts).is('object');
 	debug.assert(a).is('object');
 	debug.assert(b).is('object');
 
@@ -23,14 +113,12 @@ function _merge_object(a, b) {
 
 		// If only A is missing
 		if( (!a_is) && (b_is) ) {
-			a[key] = b[key];
-			return;
+			return _copy_property(opts, key, a, b);
 		}
 
 		// If only B is missing
 		if( a_is && (!b_is) ) {
-			b[key] = a[key];
-			return;
+			return _copy_property(opts, key, b, a);
 		}
 
 		// If both exists, we need to be smart.
@@ -45,14 +133,16 @@ function _merge_object(a, b) {
 
 		// If only A is true
 		if(a_is_true && (!b_is_true)) {
-			b[key] = a[key];
-			return;
+			return _copy_property(opts, key, b, a);
+			//b[key] = a[key];
+			//return;
 		}
 
 		// If only B is true
 		if( (!a_is_true) && b_is_true) {
-			a[key] = b[key];
-			return;
+			return _copy_property(opts, key, a, b);
+			//a[key] = b[key];
+			//return;
 		}
 
 		// Ignore if both are false
@@ -72,35 +162,7 @@ function _merge_object(a, b) {
 
 		// If both are arrays
 		if( both_are_objects && (a[key] instanceof Array) && (b[key] instanceof Array) ) {
-			var ids_mapped = {};
-
-			var tmp = [].concat(a[key]);
-
-			ARRAY(a[key]).forEach(function(v) {
-				if(v && v.$id) {
-					ids_mapped[v.$id] = true;
-					return;
-				}
-			});
-
-			ARRAY(b[key]).forEach(function(v) {
-				var id = v && v.$id;
-
-				if(id && ids_mapped.hasOwnProperty(id)) {
-					return;
-				}
-
-				if( tmp.indexOf(v) >= 0 ) {
-					return;
-				}
-
-				if(id) {
-					ids_mapped[id] = true;
-				}
-
-				tmp.push(v);
-			});
-
+			var tmp = _merge_array(opts, a[key], b[key]);
 			a[key] = tmp;
 			b[key] = tmp;
 			return;
@@ -117,7 +179,7 @@ function _merge_object(a, b) {
 				return;
 			}
 
-			return _merge_object(a[key], b[key]);
+			return _merge_object(opts, a[key], b[key]);
 		}
 
 		// Ignore non-empty non-equal strings, there is nothing we can do about that
@@ -139,29 +201,41 @@ function _merge_object(a, b) {
  * which have the $id property.
  * @param objs {array} The array of partial objects
  */
-module.exports = function merge_objects(objs_) {
+module.exports = function merge_objects(objs_, opts) {
 	debug.assert(objs_).is('array');
+
+	opts = opts || {};
+	debug.assert(opts).is('object');
+	debug.assert(opts.cache).ignore(undefined).is('object');
 
 	// We cannot do anything if less than one element
 	if(objs_.length <= 1) {
-		return objs_;
+		return;
 	}
 
 	var objs = [].concat(objs_);
 	var a = objs.shift();
+
+	if(is.func(a)) {
+		a = a();
+	}
+
 	debug.assert(a).is('object');
 
-	// First run will make sure A has everything from other objects
-	ARRAY(objs).forEach(function merge_objects_(b) {
+	/** Merge `a` and `b` */
+	function merge_objects_(b) {
+		if(is.func(b)) {
+			b = b();
+		}
 		debug.assert(b).is('object');
-		_merge_object(a, b);
-	});
+		_merge_object(opts, a, b);
+	}
+
+	// First run will make sure A has everything from other objects
+	ARRAY(objs).forEach(merge_objects_);
 
 	// Second run fill make sure each other object has everything A has now
-	ARRAY(objs).forEach(function merge_objects_(b) {
-		debug.assert(b).is('object');
-		_merge_object(a, b);
-	});
+	ARRAY(objs).forEach(merge_objects_);
 
 };
 
