@@ -59,6 +59,11 @@ function ResourceView(opts) {
 		compute_keys = opts.compute_keys;
 	}
 
+	var element_keys;
+	if(opts && opts.element_keys) {
+		element_keys = opts.element_keys;
+	}
+
 	var collection_keys;
 	if(opts && opts.collection_keys) {
 		collection_keys = opts.collection_keys;
@@ -88,6 +93,10 @@ function ResourceView(opts) {
 
 	if(is.obj(compute_keys)) {
 		view.compute_keys = compute_keys;
+	}
+
+	if(is.obj(element_keys)) {
+		view.element_keys = element_keys;
 	}
 
 	if(is.obj(collection_keys)) {
@@ -185,9 +194,19 @@ ResourceView.prototype.element = function(req, res, opts) {
 			body = compute_keys(body, view.compute_keys, req, res);
 		}
 
+		if(is.obj(view.element_keys)) {
+			body = compute_keys(body, view.element_keys, req, res);
+		}
+
+
 		if(is.obj(opts.compute_keys)) {
 			body = compute_keys(body, opts.compute_keys, req, res);
 		}
+
+		if(is.obj(opts.element_keys)) {
+			body = compute_keys(body, opts.element_keys, req, res);
+		}
+
 
 		if(is.func(opts.element_post)) {
 			body = opts.element_post.call(body, req, res);

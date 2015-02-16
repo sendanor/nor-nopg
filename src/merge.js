@@ -100,11 +100,16 @@ function _merge_object(opts, a, b) {
 	debug.assert(b).is('object');
 
 	// Get unique keys from both objects
-	var tmp = {};
-	ARRAY( Object.keys(a).concat(Object.keys(b)) ).forEach(function(key) {
-		tmp[key] = true;
-	});
-	var keys = Object.keys(tmp);
+	var keys;
+	if(is.array(opts.properties)) {
+		keys = [].concat(opts.properties);
+	} else {
+		var tmp = {};
+		ARRAY( Object.keys(a).concat(Object.keys(b)) ).forEach(function(key) {
+			tmp[key] = true;
+		});
+		keys = Object.keys(tmp);
+	}
 
 	// Search each property and clone with the better option
 	ARRAY(keys).forEach(function(key) {
@@ -119,6 +124,11 @@ function _merge_object(opts, a, b) {
 		// If only B is missing
 		if( a_is && (!b_is) ) {
 			return _copy_property(opts, key, b, a);
+		}
+
+		// If both are missing, do nothing.
+		if( (!a_is) && (!b_is) ) {
+			return;
 		}
 
 		// If both exists, we need to be smart.
@@ -179,7 +189,9 @@ function _merge_object(opts, a, b) {
 				return;
 			}
 
-			return _merge_object(opts, a[key], b[key]);
+			return _merge_object({
+				'cache': opts.cache
+			}, a[key], b[key]);
 		}
 
 		// Ignore non-empty non-equal strings, there is nothing we can do about that
@@ -207,6 +219,7 @@ module.exports = function merge_objects(objs_, opts) {
 	opts = opts || {};
 	debug.assert(opts).is('object');
 	debug.assert(opts.cache).ignore(undefined).is('object');
+	debug.assert(opts.properties).ignore(undefined).is('array');
 
 	// We cannot do anything if less than one element
 	if(objs_.length <= 1) {

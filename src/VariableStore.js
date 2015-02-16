@@ -22,6 +22,7 @@ VariableStore.prototype.save = function store_save(value) {
  * @returns {number|undefined} The unique ID as number or undefined if not found.
  */
 VariableStore.prototype.search = function store_search(value) {
+	// FIXME: Should we simply use .indexOf()?
 	var s = this.store;
 	var l = s.length;
 	var i = 0;

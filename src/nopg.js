@@ -109,6 +109,7 @@ NoPg.debug = get_true_value(process.env.DEBUG_NOPG);
 NoPg.merge = require('./merge.js');
 NoPg.scan = require('./scan.js');
 NoPg.expand = require('./expand.js');
+NoPg.compact = require('./compact.js');
 NoPg.strip = require('./strip.js');
 NoPg.types = require('./types.js');
 NoPg.ResourceView = require('./ResourceView.js');

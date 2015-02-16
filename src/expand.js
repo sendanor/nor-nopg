@@ -18,20 +18,90 @@ module.exports = function expand_objects(doc, opts) {
 	opts = opts || {};
 	debug.assert(opts).is('object');
 
+	var _strip = opts.strip || undefined;
+	debug.assert(_strip).ignore(undefined).is('array');
+
 	var _inplace = opts.inplace ? true : false;
+
+	var _expand_types = opts.types;
+	debug.assert(_expand_types).ignore(undefined).is('object');
+
+	if(is.array(_expand_types)) {
+		var tmp = {};
+		ARRAY(_expand_types).forEach(function(t) {
+			tmp[t] = true;
+		});
+		_expand_types = tmp;
+	}
 
 	if(!_inplace) {
 		doc = JSON.parse(JSON.stringify(doc));
 	}
 
 	// Scan objects
-	var cache = scan(doc);
+	var cache = scan(doc, {
+		"cursors": true
+	});
 
 	var uuids = ARRAY(Object.keys(cache)).filter(is.uuid).valueOf();
 
 	// Merge same objects
 	ARRAY(uuids).forEach(function(uuid) {
-		merge(cache[uuid]);
+		var type = ARRAY(cache[uuid]).map(function(c) {
+			return c();
+		}).filter(function(sample) {
+			return (sample && sample.$type) ? true : false;
+		}).map(function(sample) {
+			return sample.$type;
+		}).valueOf().shift();
+
+		var properties;
+		if(!is.obj(_expand_types)) {
+			properties = true;
+		} else {
+			properties = (_expand_types.hasOwnProperty(type)) ? _expand_types[type] : undefined;
+		}
+		if(is.array(properties)) {
+			merge(cache[uuid], {'cache': cache, 'properties': properties});
+		} else if(properties === true) {
+			merge(cache[uuid], {'cache': cache});
+		}
+	});
+
+	// 
+	if(_strip) {
+		ARRAY(uuids).forEach(function(uuid) {
+			var objs = cache[uuid];
+			debug.assert(objs).is('array');
+			ARRAY(objs).forEach(function(obj) {
+				ARRAY(_strip).forEach(function(key) {
+					if(obj.hasOwnProperty(key)) {
+						delete obj[key];
+					}
+				});
+			});
+		});
+	}
+
+	// Scan again
+	cache = null;
+	uuids = null;
+	cache = scan(doc, {
+		"cursors": true
+	});
+
+	//uuids = ARRAY(Object.keys(cache)).filter(is.uuid).valueOf();
+
+	// Remove circular references
+	//debug.log('cache.circulars.length = ', cache.circulars.length);
+	ARRAY(cache.circulars).forEach(function(f) {
+		var obj = f();
+		//debug.log('obj = ', obj);
+		if(is.obj(obj) && is.uuid(obj.$id)) {
+			f(obj.$id);
+		} else {
+			f(null);
+		}
 	});
 
 	return doc;
