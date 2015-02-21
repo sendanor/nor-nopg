@@ -121,6 +121,30 @@ NoPg.Attachment = orm.Attachment;
 NoPg.Lib = orm.Lib;
 NoPg.DBVersion = orm.DBVersion;
 
+/** Parse obj.$documents.expressions into the object */
+function _parse_object_expressions(obj) {
+	debug.assert(obj).is('object');
+	if(!obj.$documents) {
+		return;
+	}
+
+	var expressions = obj.$documents.expressions;
+	if(!expressions) {
+		return;
+	}
+
+	ARRAY(Object.keys(expressions)).forEach(function(prop) {
+		var value = expressions[prop], key;
+		// FIXME: This code should understand things better
+		if(prop.substr(0, 'content.'.length) === 'content.') {
+			key = prop.substr('content.'.length);
+		} else {
+			key = '$' + prop;
+		}
+		obj[key] = value;
+	});
+}
+
 /** Take first result from the database query and returns new instance of `Type` */
 function _get_result(Type) {
 	return function(rows) {
@@ -364,10 +388,11 @@ function _parse_predicate_key(Type, opts, key) {
 	}
 
 	if(key === '$documents') {
-		var documents = (opts && opts.traits && opts.traits.documents) || [];
+		var traits = (opts && opts.traits) || {};
+		var documents = (traits && traits.documents) || [];
 		debug.assert(documents).is('array');
 		return new Predicate("get_documents(row_to_json("+(Type.meta.table)+".*), $::json)", [
-			JSON.stringify(parse_predicate_document_relations(Type, documents))
+			JSON.stringify(parse_predicate_document_relations(Type, documents, traits))
 		], {'key':_key});
 	}
 
@@ -377,7 +402,7 @@ function _parse_predicate_key(Type, opts, key) {
 /** Convert NoPg keywords to internal PostgreSQL name paths for PostgreSQL get_documents() function
  * Note! documents might contain data like `['user|name,email']` which tells the field list and should be converted to PostgreSQL names here.
  */
-parse_predicate_document_relations = function parse_predicate_document_relations(ObjType, documents) {
+parse_predicate_document_relations = function parse_predicate_document_relations(ObjType, documents, traits) {
 	return ARRAY(documents).map(function(d) {
 
 		var parts = d.split('|');
@@ -386,7 +411,7 @@ parse_predicate_document_relations = function parse_predicate_document_relations
 
 		fields = ARRAY(fields.split(',')).map(function(f) {
 			if(f === '*') { return {'query':'*'}; }
-			var p = _parse_predicate_key(ObjType, {'traits': {}, 'epoch':false}, f);
+			var p = _parse_predicate_key(ObjType, {'traits': traits, 'epoch':false}, f);
 			return {
 				'name': f,
 				'datakey': p.getMeta('datakey'),
@@ -468,31 +493,6 @@ function parse_predicates(Type) {
 	}
 
 	return parse_data;
-}
-
-
-/** Parse obj.$documents.expressions into the object */
-function _parse_object_expressions(obj) {
-	debug.assert(obj).is('object');
-	if(!obj.$documents) {
-		return;
-	}
-
-	var expressions = obj.$documents.expressions;
-	if(!expressions) {
-		return;
-	}
-
-	ARRAY(Object.keys(expressions)).forEach(function(prop) {
-		var value = expressions[prop], key;
-		// FIXME: This code should understand things better
-		if(prop.substr(0, 'content.'.length) === 'content.') {
-			key = prop.substr('content.'.length);
-		} else {
-			key = '$' + prop;
-		}
-		obj[key] = value;
-	});
 }
 
 /* ------------- PRIVATE FUNCTIONS --------------- */
@@ -671,7 +671,7 @@ function parse_predicate_pgcast(ObjType, document_type, key) {
 }
 
 /** Parse array predicate */
-function _parse_function_predicate(ObjType, q, def_op, o, ret_type) {
+function _parse_function_predicate(ObjType, q, def_op, o, ret_type, traits) {
 	debug.assert(o).is('array');
 
 	ret_type = ret_type || 'boolean';
@@ -694,7 +694,7 @@ function _parse_function_predicate(ObjType, q, def_op, o, ret_type) {
 	//debug.log('func = ', func);
 	//debug.log('js_input_params = ', js_input_params);
 
-	var _parse_predicate_key_epoch = FUNCTION(_parse_predicate_key).curry(ObjType, {'epoch':true});
+	var _parse_predicate_key_epoch = FUNCTION(_parse_predicate_key).curry(ObjType, {'traits': traits, 'epoch':true});
 	var input_pg_keys = ARRAY(input_nopg_keys).map(_parse_predicate_key_epoch);
 
 	var pg_items = input_pg_keys.map(function(i) { return i.getString(); }).valueOf();
@@ -742,7 +742,7 @@ function is_operator(op) {
 var _parsers = {};
 
 /** Parse array predicate */
-_parsers.parse_array_predicate = function _parse_array_predicate(ObjType, q, def_op, o) {
+_parsers.parse_array_predicate = function _parse_array_predicate(ObjType, q, def_op, traits, o) {
 	var op = 'AND';
 
 	if(is_operator(o[0])) {
@@ -751,21 +751,21 @@ _parsers.parse_array_predicate = function _parse_array_predicate(ObjType, q, def
 	}
 
 	if(parse_operator_name(op) === 'BIND') {
-		return _parse_function_predicate(ObjType, q, def_op, o, parse_operator_type(op));
+		return _parse_function_predicate(ObjType, q, def_op, o, parse_operator_type(op), traits);
 	}
 
-	var parse_predicates = FUNCTION(_parsers.recursive_parse_predicates).curry(ObjType, q, def_op);
+	var parse_predicates = FUNCTION(_parsers.recursive_parse_predicates).curry(ObjType, q, def_op, traits);
 	var predicates = ARRAY(o).map( parse_predicates ).filter(not_undefined).valueOf();
 	return Predicate.join(predicates, op);
 };
 
 /** Recursively parse predicates */
-_parsers.recursive_parse_predicates = function _recursive_parse_predicates(ObjType, q, def_op, o) {
+_parsers.recursive_parse_predicates = function _recursive_parse_predicates(ObjType, q, def_op, traits, o) {
 
 	if(o === undefined) { return; }
 
 	if( is.array(o) ) {
-		return _parsers.parse_array_predicate(ObjType, q, def_op, o);
+		return _parsers.parse_array_predicate(ObjType, q, def_op, traits, o);
 	}
 
 	if( is.obj(o) ) {
@@ -875,7 +875,7 @@ function parse_search_opts(opts, traits) {
 }
 
 /** Generate ORDER BY using `traits.order` */
-function _parse_select_order(ObjType, document_type, order, q) {
+function _parse_select_order(ObjType, document_type, order, q, traits) {
 
 	debug.assert(ObjType).is('function');
 	debug.assert(document_type).ignore(undefined).is('object');
@@ -894,11 +894,11 @@ function _parse_select_order(ObjType, document_type, order, q) {
 		}
 
 		if(key === 'BIND') {
-			return _parse_function_predicate(ObjType, q, undefined, rest, type);
+			return _parse_function_predicate(ObjType, q, undefined, rest, type, traits);
 		}
 
 		//debug.log('key = ', key);
-		var parsed_key = _parse_predicate_key(ObjType, {'epoch':true}, key);
+		var parsed_key = _parse_predicate_key(ObjType, {'traits': traits, 'epoch':true}, key);
 		//debug.log('parsed_key = ', parsed_key);
 		var pgcast = parse_predicate_pgcast(ObjType, document_type, key);
 		//debug.log('pgcast = ', pgcast);
@@ -978,7 +978,7 @@ function prepare_select_query(self, types, search_opts, traits) {
 
 		/* Parse `opts_condition` */
 
-		var type_predicate = search_opts ? _recursive_parse_predicates(ObjType, q, ((traits.match === 'any') ? 'OR' : 'AND'), search_opts) : undefined;
+		var type_predicate = search_opts ? _recursive_parse_predicates(ObjType, q, ((traits.match === 'any') ? 'OR' : 'AND'), traits, search_opts) : undefined;
 		if(type_predicate) {
 			q.where(type_predicate);
 		}
@@ -1010,7 +1010,7 @@ function prepare_select_query(self, types, search_opts, traits) {
 		}).then(function our_query(q) {
 
 			if(traits.order) {
-				q.orders( _parse_select_order(ObjType, document_type_obj, traits.order, q) );
+				q.orders( _parse_select_order(ObjType, document_type_obj, traits.order, q, traits) );
 			}
 
 			return q;
