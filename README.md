@@ -457,3 +457,8 @@ Run lint test
 -------------
 
 `npm run lint`
+
+Commercial Support
+------------------
+
+You can buy commercial support from [Sendanor](http://sendanor.com/software).
