@@ -1176,7 +1176,7 @@ function pg_get_indexdef(self, name) {
 	return do_query(self, 'SELECT indexdef FROM pg_indexes WHERE indexname = $1 LIMIT 1', [name]).then(function(rows) {
 		if(!rows) { throw new TypeError("Unexpected result from query: " + util.inspect(rows)); }
 		if(rows.length === 0) {
-			throw new TypeError("Index does not exist!");
+			throw new TypeError("Index does not exist: " + name);
 		}
 		return (rows.shift()||{}).indexdef;
 	});
@@ -1188,13 +1188,23 @@ function pg_convert_index_name(field) {
 }
 
 /** Internal DROP INDEX query */
-function pg_drop_index(self, ObjType, type, field) {
+function pg_drop_index(self, ObjType, type, field, typefield) {
 	return nr_fcall("nopg:pg_drop_index", function() {
 		//var pgcast = parse_predicate_pgcast(ObjType, type, field);
 		var colname = _parse_predicate_key(ObjType, {'epoch':false}, field);
 		var datakey = colname.getMeta('datakey');
 		var field_name = (datakey ? datakey + '.' : '' ) + colname.getMeta('key');
-		var name = pg_convert_index_name(ObjType.meta.table) + "_" + pg_convert_index_name(field_name) + "_index";
+
+		var name;
+		if(ObjType === NoPg.Document) {
+			if(!typefield) {
+				throw new TypeError("No typefield set for NoPg.Document!");
+			}
+			name = pg_convert_index_name(ObjType.meta.table) + "_" + typefield + "_" + pg_convert_index_name(field_name) + "_index";
+		} else {
+			name = pg_convert_index_name(ObjType.meta.table) + "_" + pg_convert_index_name(field_name) + "_index";
+		}
+
 		var query = "DROP INDEX IF EXISTS "+name;
 		//query = Query.numerifyPlaceHolders(query);
 		//var params = colname.getParams();
@@ -1204,14 +1214,26 @@ function pg_drop_index(self, ObjType, type, field) {
 }
 
 /** Internal CREATE INDEX query */
-function pg_create_index(self, ObjType, type, field) {
+function pg_create_index(self, ObjType, type, field, typefield) {
 	return nr_fcall("nopg:pg_create_index", function() {
 		var pgcast = parse_predicate_pgcast(ObjType, type, field);
 		var colname = _parse_predicate_key(ObjType, {'epoch':false}, field);
 		var datakey = colname.getMeta('datakey');
 		var field_name = (datakey ? datakey + '.' : '' ) + colname.getMeta('key');
-		var name = pg_convert_index_name(ObjType.meta.table) + "_" + pg_convert_index_name(field_name) + "_index";
-		var query = "CREATE INDEX "+name+" ON " + (ObjType.meta.table) + " USING btree (("+ pgcast(colname.getString()) + "))";
+
+		var name;
+		var query;
+		if(ObjType === NoPg.Document) {
+			if(!typefield) {
+				throw new TypeError("No typefield set for NoPg.Document!");
+			}
+			name = pg_convert_index_name(ObjType.meta.table) + "_" + typefield + "_" + pg_convert_index_name(field_name) + "_index";
+			query = "CREATE INDEX "+name+" ON " + (ObjType.meta.table) + " USING btree ("+typefield+", ("+ pgcast(colname.getString()) + "))";
+		} else {
+			name = pg_convert_index_name(ObjType.meta.table) + "_" + pg_convert_index_name(field_name) + "_index";
+			query = "CREATE INDEX "+name+" ON " + (ObjType.meta.table) + " USING btree (("+ pgcast(colname.getString()) + "))";
+		}
+
 		query = Query.numerifyPlaceHolders(query);
 		var params = colname.getParams();
 		//debug.log("params = ", params);
@@ -1230,13 +1252,25 @@ function pg_create_index(self, ObjType, type, field) {
 }
 
 /** Returns the CREATE INDEX query */
-function pg_create_index_query(self, ObjType, type, field) {
+function pg_create_index_query(self, ObjType, type, field, typefield) {
 	var pgcast = parse_predicate_pgcast(ObjType, type, field);
 	var colname = _parse_predicate_key(ObjType, {'epoch':false}, field);
 	var datakey = colname.getMeta('datakey');
 	var field_name = (datakey ? datakey + '.' : '' ) + colname.getMeta('key');
-	var name = pg_convert_index_name(ObjType.meta.table) + "_" + pg_convert_index_name(field_name) + "_index";
-	var query = "CREATE INDEX "+name+" ON " + (ObjType.meta.table) + " USING btree (("+ pgcast(colname.getString()) + "))";
+
+	var name;
+	var query;
+	if(ObjType === NoPg.Document) {
+		if(!typefield) {
+			throw new TypeError("No typefield set for NoPg.Document!");
+		}
+		name = pg_convert_index_name(ObjType.meta.table) + "_" + typefield + "_" + pg_convert_index_name(field_name) + "_index";
+		query = "CREATE INDEX "+name+" ON " + (ObjType.meta.table) + " USING btree ("+ typefield +", ("+ pgcast(colname.getString()) + "))";
+	} else {
+		name = pg_convert_index_name(ObjType.meta.table) + "_" + pg_convert_index_name(field_name) + "_index";
+		query = "CREATE INDEX "+name+" ON " + (ObjType.meta.table) + " USING btree (("+ pgcast(colname.getString()) + "))";
+	}
+
 	//query = Query.numerifyPlaceHolders(query);
 	var params = colname.getParams();
 	if(params.length !== 0) {
@@ -1246,18 +1280,29 @@ function pg_create_index_query(self, ObjType, type, field) {
 }
 
 /** Internal CREATE INDEX query that will create the index only if the relation does not exists already */
-function pg_declare_index(self, ObjType, type, field) {
+function pg_declare_index(self, ObjType, type, field, typefield) {
 	var colname = _parse_predicate_key(ObjType, {'epoch':false}, field);
 	var datakey = colname.getMeta('datakey');
 	var field_name = (datakey ? datakey + '.' : '' ) + colname.getMeta('key');
-	var name = pg_convert_index_name(ObjType.meta.table) + "_" + pg_convert_index_name(field_name) + "_index";
+
+	var name;
+	if(ObjType === NoPg.Document) {
+		if(!typefield) {
+			throw new TypeError("No typefield set for NoPg.Document!");
+		}
+		name = pg_convert_index_name(ObjType.meta.table) + "_" + typefield + "_" + pg_convert_index_name(field_name) + "_index";
+	} else {
+		name = pg_convert_index_name(ObjType.meta.table) + "_" + pg_convert_index_name(field_name) + "_index";
+	}
+
 	return pg_relation_exists(self, name).then(function(exists) {
 		if(!exists) {
-			return pg_create_index(self, ObjType, type, field);
+			return pg_create_index(self, ObjType, type, field, typefield);
 		}
 
 		return pg_get_indexdef(self, name).then(function(old_indexdef) {
-			var new_indexdef = pg_create_index_query(self, ObjType, type, field);
+			var new_indexdef = pg_create_index_query(self, ObjType, type, field, typefield);
+
 			if(new_indexdef === old_indexdef) {
 				return self;
 			}
@@ -1268,8 +1313,8 @@ function pg_declare_index(self, ObjType, type, field) {
 				debug.log('new index is: ', new_indexdef);
 			}
 
-			return pg_drop_index(self, ObjType, type, field).then(function() {
-				return pg_create_index(self, ObjType, type, field);
+			return pg_drop_index(self, ObjType, type, field. typefield).then(function() {
+				return pg_create_index(self, ObjType, type, field, typefield);
 			});
 		});
 	});
@@ -1846,7 +1891,9 @@ NoPg.prototype.declareType = function(name, opts) {
 
 				return data.indexes.map(function build_step(index) {
 					return function step() {
-						return pg_declare_index(self, NoPg.Document, type, index);
+						return pg_declare_index(self, NoPg.Document, type, index, "types_id").then(function() {
+							return pg_declare_index(self, NoPg.Document, type, index, "type");
+						});
 					};
 				}).reduce($Q.when, $Q()).then(function() {
 					return self.push(type);
@@ -1882,7 +1929,9 @@ NoPg.prototype.declareIndexes = function(name) {
 			return self._getType(where).then(function(type) {
 				return data.indexes.map(function build_step(index) {
 					return function step() {
-						return pg_declare_index(self, NoPg.Document, type, index);
+						return pg_declare_index(self, NoPg.Document, type, index, "types_id").then(function() {
+							return pg_declare_index(self, NoPg.Document, type, index, "type");
+						});
 					};
 				}).reduce($Q.when, $Q()).then(function() {
 					return self;
