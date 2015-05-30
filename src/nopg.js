@@ -562,7 +562,11 @@ function parse_where_type_condition(query, type) {
 		// NOTE: We need to use `get_type_id()` until we fix the possibility that some
 		// older rows do not have correct `type` field -- these are rows that were created
 		// before their current validation schema and do not pass it.
-		query.where( new Predicate("types_id = get_type_id($)", type) );
+		//query.where( new Predicate("types_id = get_type_id($", type) );
+
+		// schema v18 should have fixed type's for all documents
+		query.where( new Predicate("type = $", type) );
+
 		return;
 	}
 
@@ -789,6 +793,13 @@ _parsers.recursive_parse_predicates = function _recursive_parse_predicates(ObjTy
 // Exports as normal functions
 var _recursive_parse_predicates = FUNCTION(_parsers.recursive_parse_predicates).curry();
 
+/** Returns true if array has values without leading $ */
+function has_property_names(a) {
+	return ARRAY(a).some(function(k) {
+		return k && (k[0] !== '$');
+	});
+}
+
 /** Parse traits object */
 function parse_search_traits(traits) {
 	traits = traits || {};
@@ -1005,7 +1016,7 @@ function prepare_select_query(self, types, search_opts, traits) {
 		return $Q.fcall(function() {
 
 			// Only search type if it is missing, and traits.order is in use and this is not recursive call
-			if(! (traits.order && (!document_type_obj) && is.string(document_type) && (!_recursive)) ) {
+			if(! (traits.order && has_property_names(traits.order) && (!document_type_obj) && is.string(document_type) && (!_recursive)) ) {
 				return q;
 			}
 
@@ -1552,6 +1563,7 @@ NoPg.start = function(pgconfig, opts) {
 			w.reset(db);
 			db._watchdog = w;
 			return pg_query("SET plv8.start_proc = 'plv8_init'")(db);
+		/*
 		}).then(function(db) {
 			return pg_table_exists(db, NoPg.DBVersion.meta.table).then(function(exists) {
 				if(!exists) {
@@ -1559,6 +1571,7 @@ NoPg.start = function(pgconfig, opts) {
 				}
 				return db;
 			});
+		*/
 		});
 	}));
 };
