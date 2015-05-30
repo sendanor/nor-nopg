@@ -1243,28 +1243,29 @@ function wrap_casts(x) {
 }
 
 /** Returns index query */
-function pg_create_index_query_internal(self, ObjType, type, field, typefield) {
+function pg_create_index_query_internal(self, ObjType, type, field, typefield, is_unique) {
 	var query;
 	var pgcast = parse_predicate_pgcast(ObjType, type, field);
 	var colname = _parse_predicate_key(ObjType, {'epoch':false}, field);
 	var name = pg_create_index_name(self, ObjType, type, field, typefield);
+	query = "CREATE " + (is_unique?'UNIQUE ':'') + "INDEX "+name+" ON " + (ObjType.meta.table) + " USING btree ";
 	if( (ObjType === NoPg.Document) && (typefield !== undefined)) {
 		if(!typefield) {
 			throw new TypeError("No typefield set for NoPg.Document!");
 		}
-		query = "CREATE INDEX "+name+" ON " + (ObjType.meta.table) + " USING btree ("+typefield+", "+ wrap_casts(pgcast(colname.getString())) + ")";
+		query += "(" + typefield+", "+ wrap_casts(pgcast(colname.getString())) + ")";
 	} else {
-		query = "CREATE INDEX "+name+" ON " + (ObjType.meta.table) + " USING btree ("+ wrap_casts(pgcast(colname.getString())) + ")";
+		query += "(" + wrap_casts(pgcast(colname.getString())) + ")";
 	}
 	return query;
 }
 
 /** Create index */
-function pg_create_index(self, ObjType, type, field, typefield) {
+function pg_create_index(self, ObjType, type, field, typefield, is_unique) {
 	return nr_fcall("nopg:pg_create_index", function() {
 		var colname = _parse_predicate_key(ObjType, {'epoch':false}, field);
 		var name = pg_create_index_name(self, ObjType, type, field, typefield);
-		var query = pg_create_index_query_internal(self, ObjType, type, field, typefield);
+		var query = pg_create_index_query_internal(self, ObjType, type, field, typefield, is_unique);
 
 		query = Query.numerifyPlaceHolders(query);
 		var params = colname.getParams();
@@ -1284,9 +1285,9 @@ function pg_create_index(self, ObjType, type, field, typefield) {
 }
 
 /** Returns the create index query as string and throws an error if any parameters exists */
-function pg_create_index_query(self, ObjType, type, field, typefield) {
+function pg_create_index_query(self, ObjType, type, field, typefield, is_unique) {
 	var colname = _parse_predicate_key(ObjType, {'epoch':false}, field);
-	var query = pg_create_index_query_internal(self, ObjType, type, field, typefield);
+	var query = pg_create_index_query_internal(self, ObjType, type, field, typefield, is_unique);
 	//query = Query.numerifyPlaceHolders(query);
 	var params = colname.getParams();
 	if(params.length !== 0) {
@@ -1296,18 +1297,18 @@ function pg_create_index_query(self, ObjType, type, field, typefield) {
 }
 
 /** Internal CREATE INDEX query that will create the index only if the relation does not exists already */
-function pg_declare_index(self, ObjType, type, field, typefield) {
+function pg_declare_index(self, ObjType, type, field, typefield, is_unique) {
 	var colname = _parse_predicate_key(ObjType, {'epoch':false}, field);
 	var datakey = colname.getMeta('datakey');
 	var field_name = (datakey ? datakey + '.' : '' ) + colname.getMeta('key');
-	var name = pg_create_index_name(self, ObjType, type, field, typefield);
+	var name = pg_create_index_name(self, ObjType, type, field, typefield, is_unique);
 	return pg_relation_exists(self, name).then(function(exists) {
 		if(!exists) {
-			return pg_create_index(self, ObjType, type, field, typefield);
+			return pg_create_index(self, ObjType, type, field, typefield, is_unique);
 		}
 
 		return pg_get_indexdef(self, name).then(function(old_indexdef) {
-			var new_indexdef = pg_create_index_query(self, ObjType, type, field, typefield);
+			var new_indexdef = pg_create_index_query(self, ObjType, type, field, typefield, is_unique);
 
 			if(new_indexdef === old_indexdef) {
 				return self;
@@ -1320,7 +1321,7 @@ function pg_declare_index(self, ObjType, type, field, typefield) {
 			}
 
 			return pg_drop_index(self, ObjType, type, field, typefield).then(function() {
-				return pg_create_index(self, ObjType, type, field, typefield);
+				return pg_create_index(self, ObjType, type, field, typefield, is_unique);
 			});
 		});
 	});
@@ -1889,6 +1890,9 @@ NoPg.prototype.declareType = function(name, opts) {
 
 			debug.assert(data).is('object');
 			debug.assert(data.indexes).ignore(undefined).is('array');
+			debug.assert(data.uniqueIndexes).ignore(undefined).is('array');
+			var indexes = data.indexes || [];
+			var uniqueIndexes = data.uniqueIndexes || [];
 
 			var where = {};
 			if(name !== undefined) {
@@ -1911,33 +1915,37 @@ NoPg.prototype.declareType = function(name, opts) {
 					return self.push(type);
 				}
 
-				if(!data.indexes) {
-					data.indexes = [];
+				if(uniqueIndexes.length >= 1) {
+					ARRAY(uniqueIndexes).forEach(function(i) {
+						if(indexes.indexOf(i) < 0) {
+							indexes.push(i);
+						}
+					});
 				}
 
-				if(data.indexes.indexOf('$id') < 0) {
-					data.indexes.push('$id');
+				if(indexes.indexOf('$id') < 0) {
+					indexes.push('$id');
 				}
 
-				if(data.indexes.indexOf('$created') < 0) {
-					data.indexes.push('$created');
+				if(indexes.indexOf('$created') < 0) {
+					indexes.push('$created');
 				}
 
-				if(data.indexes.indexOf('$modified') < 0) {
-					data.indexes.push('$modified');
+				if(indexes.indexOf('$modified') < 0) {
+					indexes.push('$modified');
 				}
 
-				if(data.indexes.length === 0) {
+				if(indexes.length === 0) {
 					return self.push(type);
 				}
 
 				//var type = self.fetch();
-				return data.indexes.map(function build_step(index) {
+				return indexes.map(function build_step(index) {
 					return function step() {
 						return pg_declare_index(self, NoPg.Document, type, index).then(function() {
-							return pg_declare_index(self, NoPg.Document, type, index, "types_id");
+							return pg_declare_index(self, NoPg.Document, type, index, "types_id", uniqueIndexes.indexOf(index) >= 0);
 						}).then(function() {
-							return pg_declare_index(self, NoPg.Document, type, index, "type");
+							return pg_declare_index(self, NoPg.Document, type, index, "type", uniqueIndexes.indexOf(index) >= 0);
 						});
 					};
 				}).reduce($Q.when, $Q()).then(function() {
@@ -1957,24 +1965,32 @@ NoPg.prototype.declareIndexes = function(name) {
 			data = data || {};
 			debug.assert(data).is('object');
 			debug.assert(data.indexes).ignore(undefined).is('array');
+			debug.assert(data.uniqueIndexes).ignore(undefined).is('array');
 
-			if(!data.indexes) {
-				data.indexes = [];
+			var indexes = data.indexes || [];
+			var uniqueIndexes = data.uniqueIndexes || [];
+
+			if(uniqueIndexes.length >= 1) {
+				ARRAY(uniqueIndexes).forEach(function(i) {
+					if(indexes.indexOf(i) < 0) {
+						indexes.push(i);
+					}
+				});
 			}
 
-			if(data.indexes.indexOf('$id') < 0) {
-				data.indexes.push('$id');
+			if(indexes.indexOf('$id') < 0) {
+				indexes.push('$id');
 			}
 
-			if(data.indexes.indexOf('$created') < 0) {
-				data.indexes.push('$created');
+			if(indexes.indexOf('$created') < 0) {
+				indexes.push('$created');
 			}
 
-			if(data.indexes.indexOf('$modified') < 0) {
-				data.indexes.push('$modified');
+			if(indexes.indexOf('$modified') < 0) {
+				indexes.push('$modified');
 			}
 
-			if(data.indexes.length === 0) {
+			if(indexes.length === 0) {
 				return self;
 			}
 
@@ -1988,12 +2004,12 @@ NoPg.prototype.declareIndexes = function(name) {
 			}
 
 			return self._getType(where).then(function(type) {
-				return data.indexes.map(function build_step(index) {
+				return indexes.map(function build_step(index) {
 					return function step() {
 						return pg_declare_index(self, NoPg.Document, type, index).then(function() {
-							return pg_declare_index(self, NoPg.Document, type, index, "types_id");
+							return pg_declare_index(self, NoPg.Document, type, index, "types_id", uniqueIndexes.indexOf(index) >= 0);
 						}).then(function() {
-							return pg_declare_index(self, NoPg.Document, type, index, "type");
+							return pg_declare_index(self, NoPg.Document, type, index, "type", uniqueIndexes.indexOf(index) >= 0);
 						});
 					};
 				}).reduce($Q.when, $Q()).then(function() {
