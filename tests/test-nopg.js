@@ -12,6 +12,8 @@ var PGCONFIG = process.env.PGCONFIG || 'pg://postgres@localhost/test';
 var debug = require('nor-debug');
 var nopg = require('../src');
 
+var NOPG_TIMEOUT = process.env.NOPG_TIMEOUT ? parseInt(process.env.NOPG_TIMEOUT, 10) : undefined;
+
 /** */
 function not_in(a) {
 	debug.assert(a).is('array');
@@ -31,6 +33,10 @@ before(function(){
 
 /* */
 describe('nopg', function(){
+
+	if(NOPG_TIMEOUT >= 2000) {
+		this.timeout(NOPG_TIMEOUT);
+	}
 
 	describe('.start', function(){
 
@@ -1055,6 +1061,8 @@ describe('nopg', function(){
 				var item2 = db.fetch();
 				var items = db.fetch();
 
+				debug.log('items = ', items);
+
 				assert.strictEqual(type.$name, "Test2jiArvj8");
 
 				assert.strictEqual(item0.foo, 1);
@@ -1062,8 +1070,15 @@ describe('nopg', function(){
 				assert.strictEqual(item2.foo, 3);
 
 				assert.strictEqual(items.length, 2);
-				assert.strictEqual(item1.foo, items[0].foo);
-				assert.strictEqual(item2.foo, items[1].foo);
+
+				// There is a possibility that .create() might create these with the same timestamp, and default time based ordering would not work.
+				if(items[0].foo === 2) {
+					assert.strictEqual(items[0].foo, 2);
+					assert.strictEqual(items[1].foo, 3);
+				} else {
+					assert.strictEqual(items[0].foo, 3);
+					assert.strictEqual(items[1].foo, 2);
+				}
 
 				return db.commit();
 			});

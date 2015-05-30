@@ -1,6 +1,6 @@
 {
   "name": "nor-nopg",
-  "version": "0.1.117",
+  "version": "0.1.118",
   "description": "NoSQL Library for PostgreSQL",
   "bin": {
     "nor-nopg-import": "./tools/import.js",
@@ -54,7 +54,7 @@
   "devDependencies": {
     "lint"         : "*",
     "jshint"       : "*",
-    "mocha"        : "*",
+    "mocha"        : ">= 2.2.5",
     "async-profile" : "*",
     "nor-pgrunner" : "sendanor/nor-pgrunner"
   },

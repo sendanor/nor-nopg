@@ -3,6 +3,7 @@
 set -e
 
 export DEBUG_NOPG=true
+export NOPG_TIMEOUT=150000
 
 export PGCONFIG='postgresql://nopgtest:ng8SxY7ugQCmXwvu5sSd4C9hdvYboX4d@localhost/nopgtest'
 
