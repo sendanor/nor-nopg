@@ -22,6 +22,62 @@ We use [Trello board](//trello.com/b/6qC63gw5/nor-nopg) to organize development 
 Internal Database Schema
 ------------------------
 
+### Table `dbversions`
+
+|    Name    |      Type     |
+| ---------- | ------------- |
+| `version`  | `integer`     |
+| `modified` | `timestamptz` |
+
+### Table `types`
+
+|    Name     |      Type     |
+| ----------- | ------------- |
+| `id`        | `uuid`        |
+| `name`      | `text`        |
+| `schema`    | `json`        |
+| `validator` | `text`        |
+| `meta`      | `json`        |
+| `created`   | `timestamptz` |
+| `modified`  | `timestamptz` |
+
+### Table `documents`
+
+|    Name    |      Type     |
+| ---------- | ------------- |
+| `id`       | `uuid`        |
+| `content`  | `json`        |
+| `types_id` | `uuid`        |
+| `created`  | `timestamptz` |
+| `modified` | `timestamptz` |
+| `type`     | `text`        |
+
+### Table `attachments`
+
+|    Name        |      Type     |
+| -------------- | ------------- |
+| `id`           | `uuid`        |
+| `documents_id` | `uuid`        |
+| `content`      | `bytea`       |
+| `meta`         | `json`        |
+| `created`      | `timestamptz` |
+| `modified`     | `timestamptz` |
+
+### Table `libs`
+
+|    Name        |      Type     |
+| -------------- | ------------- |
+| `id`           | `uuid`        |
+| `name`         | `text`        |
+| `content`      | `text`        |
+| `meta`         | `json`        |
+| `created`      | `timestamptz` |
+| `modified`     | `timestamptz` |
+
+### Obsolete entity relationship diagram
+
+This database structure has not been updated.
+
 ![ERS](gfx/ers.png "ERS")
 
 Summary
