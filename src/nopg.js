@@ -562,7 +562,7 @@ function parse_where_type_condition(query, type) {
 		// NOTE: We need to use `get_type_id()` until we fix the possibility that some
 		// older rows do not have correct `type` field -- these are rows that were created
 		// before their current validation schema and do not pass it.
-		//query.where( new Predicate("types_id = get_type_id($", type) );
+		//query.where( new Predicate("types_id = get_type_id($)", type) );
 
 		// schema v18 should have fixed type's for all documents
 		query.where( new Predicate("type = $", type) );

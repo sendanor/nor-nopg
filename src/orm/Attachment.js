@@ -1,6 +1,7 @@
 /* nor-nopg -- NoPg.Attachment object implementation */
 "use strict";
 
+var is = require('nor-is');
 var debug = require('nor-debug');
 var util = require("util");
 //var events = require("events");
@@ -55,6 +56,11 @@ NoPgAttachment.prototype.getBuffer = function() {
 	// If we already got instance of Buffer, we don't need to do anything.
 	if( self.$content && (typeof self.$content === 'object') && (self.$content instanceof Buffer)) {
 		return self.$content;
+	}
+
+	// Workaround
+	if( self.$content && (typeof self.$content === 'object') && self.$content.type === 'Buffer' && is.array(self.$content.data)) {
+		return new Buffer(self.$content.data);
 	}
 
 	debug.assert(self.$content).is('array');
