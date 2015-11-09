@@ -47,13 +47,15 @@ module.exports = function expand_objects(doc, opts) {
 
 	// Merge same objects
 	ARRAY(uuids).forEach(function(uuid) {
-		var type = ARRAY(cache[uuid]).map(function(c) {
-			return c();
-		}).filter(function(sample) {
-			return (sample && sample.$type) ? true : false;
-		}).map(function(sample) {
-			return sample.$type;
-		}).valueOf().shift();
+
+		var type;
+		ARRAY(cache[uuid]).find(function(c) {
+			var s = c();
+			if(s && s.$type) {
+				type = s.$type;
+				return true;
+			}
+		});
 
 		var properties;
 		if(!is.obj(_expand_types)) {

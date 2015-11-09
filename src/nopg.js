@@ -29,6 +29,10 @@ var Query = require('./query.js');
 var InsertQuery = require('./insert_query.js');
 var Predicate = require('./Predicate.js');
 
+/* ----------- ENVIRONMENT SETTINGS ------------- */
+
+var PGCONFIG = process.env.PGCONFIG || undefined;
+
 /* ------- (OPTIONAL) NEWRELIC SUPPORT ---------- */
 
 var nr_fcall = require('nor-newrelic/src/fcall.js');
@@ -687,8 +691,7 @@ function _parse_function_predicate(ObjType, q, def_op, o, ret_type, traits) {
 
 	ret_type = ret_type || 'boolean';
 
-	// FIXME: This loop could be optimized to return directly once first function is found! #performance
-	var func = ARRAY(o).filter(is.func).valueOf().shift();
+	var func = ARRAY(o).find(is.func);
 
 	debug.assert(func).is('function');
 
@@ -1529,29 +1532,53 @@ function create_watchdog(db, opts) {
 /* Defaults */
 NoPg.defaults = {};
 
+NoPg.defaults.pgconfig = PGCONFIG;
+
 NoPg.defaults.timeout = 30000;
 
 if(process.env.NOPG_TIMEOUT !== undefined) {
 	NoPg.defaults.timeout = parseInt(process.env.NOPG_TIMEOUT, 10) || NoPg.defaults.timeout;
 }
 
-/** Start */
+/** Start a transaction
+ * @param pgconfig {string} PostgreSQL database configuration. Example: 
+                            `"postgres://user:pw@localhost:5432/test"`
+ * @param opts {object} Optional options.
+ * @param opts.timeout {number} The timeout, default is 
+                                from `NoPg.defaults.timeout`
+ * @param opts.pgconfig {string} See param `pgconfig`.
+ */
 NoPg.start = function(pgconfig, opts) {
 	return extend.promise( [NoPg], nr_fcall("nopg:start", function() {
-		opts = opts || {};
-		debug.assert(opts).is('object');
-		if(opts.timeout) {
-			debug.assert(opts.timeout).is('number');
-		}
-		var w;
 		var start_time = new Date();
+		var w;
+
+		var args = ARRAY([pgconfig, opts]);
+		pgconfig = args.find(is.string);
+		opts = args.find(is.object);
+		debug.assert(opts).ignore(undefined).is('object');
+
+		if(!opts) {
+			opts = {};
+		}
+
+		debug.assert(opts).is('object');
+
+		if(!pgconfig) {
+			pgconfig = opts.pgconfig || NoPg.defaults.pgconfig;
+		}
+
+		var timeout = opts.timeout || NoPg.defaults.timeout;
+		debug.assert(timeout).ignore(undefined).is('number');
+		debug.assert(pgconfig).is('string');
+
 		return pg.start(pgconfig).then(function(db) {
-			var end_time = new Date();
 
 			if(!db) { throw new TypeError("invalid db: " + util.inspect(db) ); }
-			w = create_watchdog(db, {"timeout": opts.timeout || NoPg.defaults.timeout});
+			w = create_watchdog(db, {"timeout": timeout});
 			var nopg_db = new NoPg(db);
 
+			var end_time = new Date();
 			nopg_db._record_sample({
 				'event': 'start',
 				'start': start_time,
@@ -1575,6 +1602,56 @@ NoPg.start = function(pgconfig, opts) {
 		});
 	}));
 };
+
+/** Execute a function in a transaction with automatic commit / rollback.
+ * @param pgconfig {string} PostgreSQL database configuration. Example: 
+                            `"postgres://user:pw@localhost:5432/test"`
+ * @param opts {object} Optional options.
+ * @param opts.timeout {number} The timeout, default is 
+                                from `NoPg.defaults.timeout`
+ * @param opts.pgconfig {string} See param `pgconfig`.
+ * @param fn {function} The function to be called.
+ */
+NoPg.transaction = function(pgconfig, opts, fn) {
+	return extend.promise( [NoPg], nr_fcall("nopg:transaction", function() {
+		var args = ARRAY([pgconfig, opts, fn]);
+		pgconfig = args.find(is.string);
+		opts = args.find(is.object);
+		fn = args.find(is.func);
+
+		debug.assert(pgconfig).ignore(undefined).is('string');
+		debug.assert(opts).ignore(undefined).is('object');
+		debug.assert(fn).is('function');
+
+		var _db;
+		return NoPg.start(pgconfig, opts).then(function(db) {
+			_db = db;
+			return db;
+		}).then(fn).then(function(res) {
+			return _db.commit().then(function() {
+				_db = undefined;
+				return res;
+			});
+		}).fail(function(err) {
+			if(!_db) {
+				//debug.error('Passing on error: ', err);
+				return _Q.reject(err);
+			}
+			return _db.rollback().fail(function(err2) {
+				debug.error("rollback failed: ", err2);
+				//debug.error('Passing on error: ', err);
+				return _Q.reject(err);
+			}).then(function() {
+				//debug.error('Passing on error: ', err);
+				return _Q.reject(err);
+			});
+		});
+
+	}));
+};
+
+// Aliases
+NoPg.fcall = NoPg.transaction;
 
 /** Fetch next value from queue */
 NoPg.prototype.fetch = function() {

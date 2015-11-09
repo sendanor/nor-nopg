@@ -16,7 +16,7 @@ if(NoPg.defaults.timeout < 3600000) {
 	NoPg.defaults.timeout = 3600000;
 }
 
-var PGCONFIG = argv.pg || process.env.PGCONFIG || 'psql://localhost:5432/test';
+var PGCONFIG = argv.pg || process.env.PGCONFIG || 'postgres://localhost:5432/test';
 
 var actions = {};
 
