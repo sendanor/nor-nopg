@@ -1635,15 +1635,15 @@ NoPg.transaction = function(pgconfig, opts, fn) {
 		}).fail(function(err) {
 			if(!_db) {
 				//debug.error('Passing on error: ', err);
-				return _Q.reject(err);
+				return $Q.reject(err);
 			}
 			return _db.rollback().fail(function(err2) {
 				debug.error("rollback failed: ", err2);
 				//debug.error('Passing on error: ', err);
-				return _Q.reject(err);
+				return $Q.reject(err);
 			}).then(function() {
 				//debug.error('Passing on error: ', err);
-				return _Q.reject(err);
+				return $Q.reject(err);
 			});
 		});
 
