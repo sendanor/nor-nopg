@@ -8,6 +8,13 @@ module.exports = [
 	 */
 	function(db) {
 
+		/** Fetch external documents
+		 * @param data {} 
+		 * @param config {} 
+		 * @param plv8 {} 
+		 * @param ERROR {} 
+		 * @param WARNING {} 
+		 */
 		function get_documents(data, config, plv8, ERROR, WARNING) {
 
 			function get_document(id, fields) {
@@ -190,8 +197,8 @@ module.exports = [
 
 			/** Get document(s) by expression */
 			function fetch_objects_by_expression(data, prop, fields, expression) {
-				if(!is_object(data)) { return error('fetch_object_by_uuid(data, ..., ...) not object: '+ data); }
-				if(!is_string(prop)) { return error('fetch_object_by_uuid(..., prop, ...) not string: '+ prop); }
+				if(!is_object(data)) { return error('fetch_objects_by_expression(data, ..., ...) not object: '+ data); }
+				if(!is_string(prop)) { return error('fetch_objects_by_expression(..., prop, ...) not string: '+ prop); }
 				if(!is_string(expression)) { return warn('Expression was not string: {' + expression + '}, typeof ' + (typeof expression)); }
 
 				prop = prop.trim();

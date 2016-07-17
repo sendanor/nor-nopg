@@ -408,6 +408,12 @@ function _parse_predicate_key(Type, opts, key) {
 
 /** Convert NoPg keywords to internal PostgreSQL name paths for PostgreSQL get_documents() function
  * Note! documents might contain data like `['user|name,email']` which tells the field list and should be converted to PostgreSQL names here.
+ * Format is either:
+ *  - `<expression>|<field-list>` -- Fetch external documents matching UUID(s) found by <expression> with properties specified by <field-list>
+ *  - where `<field-list>` is either `*` for all properties or `<field#1>[,<field#2>[,...]]`
+ *  - where `<expression>` is either:
+ *     - `[<Type>#]<property-name>` -- The local property by name `<property-name>` is used as an UUID or if it is an array, as a list of UUIDs to fetch these documents, optionally only documents with type `<Type>` are searched.
+ *     - `<property-name>{<Type>#<field-name>}` -- Documents matching `<Type>` with a property named `<field-name>` matching the UUID of the local document are fetched and UUIDs are saved as an array in a local property named `<property-name>`.
  */
 parse_predicate_document_relations = function parse_predicate_document_relations(ObjType, documents, traits) {
 	return ARRAY(documents).map(function(d) {
