@@ -419,8 +419,18 @@ parse_predicate_document_relations = function parse_predicate_document_relations
 	return ARRAY(documents).map(function(d) {
 
 		var parts = d.split('|');
-		var prop = parts.shift();
+		var expression = parts.shift();
 		var fields = parts.join('|') || '*';
+
+		var prop, type_name;
+		var external_index = expression.indexOf('{');
+		var type_index = expression.indexOf('#');
+		if( (type_index >= 0) && ( (external_index < 0) || (type_index < external_index) ) ) {
+			type_name = expression.substr(0, type_index);
+			prop = expression.substr(type_index+1);
+		} else {
+			prop = expression;
+		}
 
 		fields = ARRAY(fields.split(',')).map(function(f) {
 			if(f === '*') { return {'query':'*'}; }
@@ -437,12 +447,14 @@ parse_predicate_document_relations = function parse_predicate_document_relations
 
 		if(prop && (prop.length >= 1) && (prop[0] === '$')) {
 			return {
+				'type': type_name,
 				'prop': prop.substr(1),
 				'fields': fields
 			};
 		}
 
 		return {
+			'type': type_name,
 			'prop': get_predicate_datakey(ObjType) + '.' + prop,
 			'fields': fields
 		};

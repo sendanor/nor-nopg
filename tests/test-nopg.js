@@ -1373,6 +1373,160 @@ describe('nopg', function(){
 		});
 
 		/** */
+		it('fetching related documents by type', function(){
+			var user_type, group_type, group;
+			return nopg.start(PGCONFIG)
+			 .createType("Testfrdocbt_user")({
+				"$schema":{
+					"type":"object",
+					"properties": {
+						"name": {"type": "string"},
+						"group": {"type": "string"}
+					}
+				},
+				'relations': {
+					'group': 'Testfrdocbt_group'
+				}
+			 })
+			 .createType("Testfrdocbt_group")({
+				"$schema":{
+					"type": "object",
+					"properties": {
+						"name": {"type": "string"}
+					}
+				}
+			 })
+			 .create("Testfrdocbt_group")({"name":"Users"})
+			 .then(function(db) {
+				user_type = db.fetch();
+
+				try {
+					debug.assert(user_type).is('object');
+					debug.assert(user_type.$events).is('object');
+					debug.assert(user_type.$id).is('uuid');
+					debug.assert(user_type.$name).is('string').equals("Testfrdocbt_user");
+					debug.assert(user_type.$schema).is('object');
+					//debug.assert(user_type.$validator).is('function');
+					debug.assert(user_type.$meta).is('object');
+					debug.assert(user_type.$created).is('date string');
+					debug.assert(user_type.$modified).is('date string');
+
+					debug.assert( Object.keys(user_type).filter(not_in(['$events', '$id', '$name', '$schema', '$validator', '$meta', '$created', '$modified', 'relations'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('user_type = ', user_type);
+					throw e;
+				}
+
+				group_type = db.fetch();
+
+				try {
+					debug.assert(group_type).is('object');
+					debug.assert(group_type.$events).is('object');
+					debug.assert(group_type.$id).is('uuid');
+					debug.assert(group_type.$name).is('string').equals("Testfrdocbt_group");
+					debug.assert(group_type.$schema).is('object');
+					//debug.assert(group_type.$validator).is('function');
+					debug.assert(group_type.$meta).is('object');
+					debug.assert(group_type.$created).is('date string');
+					debug.assert(group_type.$modified).is('date string');
+
+					debug.assert( Object.keys(group_type).filter(not_in(['$events', '$id', '$name', '$schema', '$validator', '$meta', '$created', '$modified'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('group_type = ', group_type);
+					throw e;
+				}
+
+				group = db.fetch();
+
+				try {
+					debug.assert(group).is('object');
+					debug.assert(group.name).is('string').equals('Users');
+					debug.assert(group.$events).is('object');
+					debug.assert(group.$id).is('uuid');
+					debug.assert(group.$content).is('object');
+					debug.assert(group.$types_id).is('uuid').equals(group_type.$id);
+					debug.assert(group.$created).is('date string');
+					debug.assert(group.$modified).is('date string');
+					debug.assert(group.$type).is('string').equals('Testfrdocbt_group');
+
+					debug.assert( Object.keys(group).filter(not_in(['name', '$events', '$id', '$content', '$types_id', '$created', '$modified', '$type'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('group = ', group);
+					throw e;
+				}
+
+				return db.create('Testfrdocbt_user')({'name': 'foobar', 'group': group.$id});
+			}).then(function(db) {
+				var user = db.fetch();
+
+				try {
+					debug.assert(user).is('object');
+					debug.assert(user.name).is('string').equals('foobar');
+					debug.assert(user.group).is('uuid').equals(group.$id);
+					debug.assert(user.$events).is('object');
+					debug.assert(user.$id).is('uuid');
+					debug.assert(user.$content).is('object');
+					debug.assert(user.$types_id).is('uuid').equals(user_type.$id);
+					debug.assert(user.$created).is('date string');
+					debug.assert(user.$modified).is('date string');
+					debug.assert(user.$type).is('string').equals('Testfrdocbt_user');
+
+					debug.assert( Object.keys(user).filter(not_in(['name', 'group', '$events', '$id', '$content', '$types_id', '$created', '$modified', '$type'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('user = ', user);
+					throw e;
+				}
+
+
+				return db.searchSingle('Testfrdocbt_user')({'$id': user.$id}, {
+					'documents': ['Testfrdocbt_group#group']
+				});
+			}).then(function(db) {
+				var user = db.fetch();
+
+				try {
+					debug.assert(user).is('object');
+					debug.assert(user.name).is('string').equals('foobar');
+					debug.assert(user.group).is('uuid').equals(group.$id);
+					debug.assert(user.$events).is('object');
+					debug.assert(user.$id).is('uuid');
+					debug.assert(user.$content).is('object');
+					debug.assert(user.$types_id).is('uuid').equals(user_type.$id);
+					debug.assert(user.$created).is('date string');
+					debug.assert(user.$modified).is('date string');
+					debug.assert(user.$type).is('string').equals('Testfrdocbt_user');
+
+					debug.assert(user.$documents).is('object');
+
+					try {
+						debug.assert(user.$documents[user.group]).is('object');
+						debug.assert(user.$documents[user.group].name).is('string').equals('Users');
+						debug.assert(user.$documents[user.group].$events).is('object');
+						debug.assert(user.$documents[user.group].$id).is('uuid');
+						debug.assert(user.$documents[user.group].$content).is('object');
+						debug.assert(user.$documents[user.group].$types_id).is('uuid').equals(group_type.$id);
+						debug.assert(user.$documents[user.group].$created).is('date string');
+						debug.assert(user.$documents[user.group].$modified).is('date string');
+						debug.assert(user.$documents[user.group].$type).is('string').equals('Testfrdocbt_group');
+
+						debug.assert( Object.keys(user.$documents[user.group]).filter(not_in(['name', '$events', '$id', '$content', '$types_id', '$created', '$modified', '$type'])) ).is('array').length(0);
+					} catch(e) {
+						debug.log('user.$documents[user.group] = ', user.$documents[user.group]);
+						throw e;
+					}
+
+					debug.assert( Object.keys(user).filter(not_in(['name', 'group', '$events', '$id', '$content', '$types_id', '$created', '$modified', '$type', '$documents'])) ).is('array').length(0);
+
+				} catch(e) {
+					debug.log('user = ', user);
+					throw e;
+				}
+
+				return db.commit();
+			});
+		});
+
+		/** */
 		it('fetching related documents with field list', function(){
 			var user_type, group_type, group;
 			return nopg.start(PGCONFIG)
