@@ -2013,9 +2013,9 @@ NoPg.prototype.declareType = function(name, opts) {
 
 			return self._getType(where).then(function(type) {
 				if(type) {
-					return self._update(type, data);
+					return self._updateTypeCache(type.$name, self._update(type, data));
 				} else {
-					return self._createType(name)(data);
+					return self._updateTypeCache(name, self._createType(name)(data));
 				}
 			}).then(function declare_indexes(type) {
 
@@ -2161,27 +2161,48 @@ NoPg.prototype.typeExists = function(name) {
 	}));
 };
 
+/** Update type cache
+ * @param name {string} The name of the type
+ * @param type {object|function} The promise of type object or type object instance
+ */
+NoPg.prototype._updateTypeCache = function(name, type) {
+	var self = this;
+	debug.assert(name).is('string');
+	if(!is.func(type)) {
+		debug.assert(type).is('object');
+	}
+	var cache = self._cache;
+	debug.assert(cache).is('object');
+	var objects = cache.objects;
+	debug.assert(objects).is('object');
+	var types = cache.types;
+	debug.assert(types).is('object');
+	var cached_type = types[name] = $Q.when(type).then(function(result) {
+		var result_id;
+		if(is.obj(result)) {
+			result_id = result.$id;
+			types[name] = result;
+			if(is.uuid(result_id)) {
+				objects[result_id] = result;
+			}
+		}
+		return result;
+	});
+	return cached_type;
+};
+
 /** Get type directly */
 NoPg.prototype._getType = function(name, traits) {
 	var self = this;
 	if(!is.string(name)) {
 		return do_select(self, NoPg.Type, name, traits).then(_get_result(NoPg.Type));
 	}
+
 	if(self._cache.types.hasOwnProperty(name)) {
 		return $Q.when(self._cache.types[name]);
 	}
 
-	var cached = do_select(self, NoPg.Type, name, traits).then(_get_result(NoPg.Type));
-	cached = self._cache.types[name] = cached.then(function(result) {
-		if(is.obj(result)) {
-			self._cache.types[name] = result;
-			if(is.uuid(result.$id)) {
-				self._cache.objects[result.$id] = result;
-			}
-		}
-		return result;
-	});
-	return cached;
+	return self._updateTypeCache(name, do_select(self, NoPg.Type, name, traits).then(_get_result(NoPg.Type)));
 };
 
 /** Get type and save it to result queue. */

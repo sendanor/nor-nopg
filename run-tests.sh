@@ -1,6 +1,11 @@
-#!/bin/sh -x
+#!/bin/bash -x
 
 set -e
+
+function finish {
+	./node_modules/.bin/nor-pgrunner destroy
+}
+trap finish EXIT
 
 export DEBUG_NOPG=true
 export NOPG_TIMEOUT=150000
@@ -16,4 +21,3 @@ psql "$PGCONFIG" -c 'CREATE EXTENSION moddatetime;'
 ./src/bin/nopg.js -v init
 npm -s test
 
-./node_modules/.bin/nor-pgrunner destroy
