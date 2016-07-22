@@ -837,11 +837,6 @@ function parse_search_traits(traits) {
 
 	debug.assert(traits.fields).is('array');
 
-	// Append '$documents' to fields if traits.documents is specified and it is missing from there
-	if(traits.documents && (traits.fields.indexOf('$documents') === -1) ) {
-		traits.fields = traits.fields.concat(['$documents']);
-	}
-
 	// Order by $created by default
 	if(!traits.order) {
 		// FIXME: Check if `$created` exists in the ObjType!
@@ -878,6 +873,11 @@ function parse_search_traits(traits) {
 		traits.typeAwareness = traits.typeAwareness === true;
 	} else {
 		traits.typeAwareness = NoPg.defaults.enableTypeAwareness === true;
+	}
+
+	// Append '$documents' to fields if traits.documents is specified and it is missing from there
+	if((traits.documents || traits.typeAwareness) && (traits.fields.indexOf('$documents') === -1) ) {
+		traits.fields = traits.fields.concat(['$documents']);
 	}
 
 	return traits;
@@ -1010,10 +1010,6 @@ function prepare_select_query(self, types, search_opts, traits) {
 		// Search options for documents
 		search_opts = parse_search_opts(search_opts, traits);
 
-		// Fields to search for
-		var fields = parse_select_fields(ObjType, traits);
-		q.fields(fields);
-
 		/* Build `type_condition` */
 
 		// If we have the document_type we can limit the results with it
@@ -1074,6 +1070,24 @@ function prepare_select_query(self, types, search_opts, traits) {
 			if(traits.order) {
 				q.orders( _parse_select_order(ObjType, document_type_obj, traits.order, q, traits) );
 			}
+
+			debug.log('traits.typeAwareness = ', traits.typeAwareness);
+			if(document_type_obj) {
+				debug.log('document_type_obj = ', document_type_obj);
+				debug.log('document_type_obj.documents = ', document_type_obj.documents);
+			}
+
+			if(traits.typeAwareness && document_type_obj && document_type_obj.hasOwnProperty('documents')) {
+				// FIXME: Maybe we should make sure these documents settings do not collide?
+				debug.log('traits.documents = ', traits.documents);
+				debug.log('document_type_obj.documents = ', document_type_obj.documents);
+				traits.documents = [].concat(traits.documents || []).concat(document_type_obj.documents);
+				debug.log('traits.documents = ', traits.documents);
+			}
+
+			// Fields to search for
+			var fields = parse_select_fields(ObjType, traits);
+			q.fields(fields);
 
 			return q;
 		});
