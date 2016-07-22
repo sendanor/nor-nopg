@@ -874,6 +874,12 @@ function parse_search_traits(traits) {
 		traits.prepareOnly = traits.prepareOnly === true;
 	}
 
+	if(traits.hasOwnProperty('typeAwareness')) {
+		traits.typeAwareness = traits.typeAwareness === true;
+	} else {
+		traits.typeAwareness = NoPg.defaults.enableTypeAwareness === true;
+	}
+
 	return traits;
 }
 
@@ -1036,8 +1042,25 @@ function prepare_select_query(self, types, search_opts, traits) {
 
 		return $Q.fcall(function() {
 
-			// Only search type if it is missing, and traits.order is in use and this is not recursive call
-			if(! (traits.order && has_property_names(traits.order) && (!document_type_obj) && is.string(document_type) && (!_recursive)) ) {
+			// Do not search type if recursive call
+			if(_recursive) {
+				return q;
+			}
+
+			// Do not search type again if we already have it
+			if(document_type_obj) {
+				return q;
+			}
+
+			// Do not search type if not a string
+			if(!is.string(document_type)) {
+				return q;
+			}
+
+			var order_enabled = (traits.order && has_property_names(traits.order)) ? true : false;
+
+			// Only search type if order has been enabled or traits.typeAwareness enabled
+			if(!( order_enabled || traits.typeAwareness )) {
 				return q;
 			}
 
@@ -1556,6 +1579,16 @@ NoPg.defaults.timeout = 30000;
 
 if(process.env.NOPG_TIMEOUT !== undefined) {
 	NoPg.defaults.timeout = parseInt(process.env.NOPG_TIMEOUT, 10) || NoPg.defaults.timeout;
+}
+
+/** If enabled NoPg will be more aware of the properties of types.
+ * When a user provides a type as a string, it will be converted as
+ * a type object. This will enable additional features like optional 
+ * `traits.documents` support as a predefined in type.
+ */
+NoPg.defaults.enableTypeAwareness = false;
+if(process.env.NOPG_TYPE_AWARENESS !== undefined) {
+	NoPg.defaults.enableTypeAwareness = get_true_value(process.env.NOPG_TYPE_AWARENESS);
 }
 
 /** Start a transaction
