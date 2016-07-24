@@ -888,9 +888,7 @@ function parse_search_traits(traits) {
 	if(traits.hasOwnProperty('count')) {
 		traits.count = traits.count === true;
 		traits.fields = ['count'];
-		if(!traits.hasOwnProperty('group')) {
-			traits.group = ['$created'];
-		}
+		delete traits.order;
 	}
 
 	return traits;
@@ -1151,13 +1149,14 @@ function do_count(self, types, search_opts, traits) {
 		return prepare_select_query(self, types, search_opts, traits).then(function(q) {
 			var result = q.compile();
 
-			if(NoPg.debug) {
+			//if(NoPg.debug) {
 				debug.log('query = ', result.query);
 				debug.log('params = ', result.params);
-			}
+			//}
 
 			return do_query(self, result.query, result.params ).then(function(rows) {
 				if(!rows) { throw new TypeError("failed to parse result"); }
+				if(rows.length !== 1) { throw new TypeError("result has too many rows: " + rows.length); }
 				var row = rows.shift();
 				if(!row.count) { throw new TypeError("failed to parse result"); }
 				return parseInt(row.count, 10);
@@ -2015,7 +2014,7 @@ NoPg.prototype.count = function(type) {
 	var ObjType = NoPg.Document;
 	function count2(opts, traits) {
 		return extend.promise( [NoPg], nr_fcall("nopg:count", function() {
-			traits = merge(traits, {'count':true, 'group': ['$created']});
+			traits = merge(traits, {'count':true, 'order':null});
 			return do_count(self, [ObjType, type], opts, traits).then(save_result_to_queue(self)).then(function() { return self; });
 		}));
 	}
