@@ -23,8 +23,16 @@ function Query(opts) {
 	this._where = [];
 	this._group = [];
 	this._order = [];
+	this._count = false;
 
 }
+
+/** Enable or disable COUNT(*) feature
+ */
+Query.prototype.count = function(value) {
+	debug.assert(value).is('boolean');
+	this._count = value;
+};
 
 /** Setup fields
  * @returns {string} The parameter string presentation (like '$1')
@@ -71,6 +79,13 @@ Query.prototype.limit = function(o) {
 Query.prototype.orders = function(order) {
 	debug.assert(order).is('array');
 	this._order = this._order.concat(order);
+};
+
+/** Setup group
+ */
+Query.prototype.group = function(group) {
+	debug.assert(group).is('array');
+	this._group = this._group.concat(group);
 };
 
 /** 
@@ -134,7 +149,15 @@ Query.prototype.compile = function() {
 	ARRAY(this._fields).forEach(field_as);
 
 	// Get the query string
-	var query = "SELECT " + fields.join(', ') + " FROM " + this._table;
+	var query = "SELECT ";
+
+	if(this._count) {
+		query += 'COUNT(*) AS count';
+	} else {
+		query += fields.join(', ');
+	}
+
+	query += " FROM " + this._table;
 
 	if(this._where.length >= 1) {
 		query += " WHERE (" + get_string(this._where, ') AND (') + ')';

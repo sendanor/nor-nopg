@@ -1,5 +1,7 @@
 #!/bin/bash -x
 
+test="$1"
+
 set -e
 
 function finish {
@@ -19,5 +21,9 @@ psql "$PGCONFIG" -c 'CREATE EXTENSION tcn;'
 psql "$PGCONFIG" -c 'CREATE EXTENSION moddatetime;'
 
 ./src/bin/nopg.js -v init
-npm -s test
 
+if "x$test" = x; then
+	npm -s test
+else
+	npm -s run test-spec -- --grep "$test"
+fi

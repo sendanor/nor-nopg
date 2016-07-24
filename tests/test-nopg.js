@@ -329,6 +329,47 @@ describe('nopg', function(){
 			});
 		});
 
+		it('typed document count', function(){
+			return nopg.start(PGCONFIG)
+			  .createType("Test_TypedDocCount")()
+			  .create("Test_TypedDocCount")({"foo":1})
+			  .create("Test_TypedDocCount")({"foo":2})
+			  .create("Test_TypedDocCount")({"foo":3})
+			  .count("Test_TypedDocCount")()
+			  .then(function(db) {
+				var type = db.fetch();
+				var item0 = db.fetch();
+				var item1 = db.fetch();
+				var item2 = db.fetch();
+				var items = db.fetch();
+
+				try {
+					assert.strictEqual(type.$name, "Test_TypedDocCount");
+				} catch(e) {
+					debug.log('type = ', type);
+					throw e;
+				}
+
+				try {
+					assert.strictEqual(item0.foo, 1);
+				} catch(e) { debug.log('item0 = ', item0); throw e; }
+
+				try {
+					assert.strictEqual(item1.foo, 2);
+				} catch(e) { debug.log('item1 = ', item1); throw e; }
+
+				try {
+					assert.strictEqual(item2.foo, 3);
+				} catch(e) { debug.log('item2 = ', item2); throw e; }
+
+				try {
+					assert.strictEqual(items, 3);
+				} catch(e) { debug.log('items = ', items); throw e; }
+
+				return db.commit();
+			});
+		});
+
 		it('typed document search by property', function(){
 			return nopg.start(PGCONFIG)
 			  .createType("TestMxvLtb3x")()

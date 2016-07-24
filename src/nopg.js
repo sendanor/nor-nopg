@@ -843,6 +843,11 @@ function parse_search_traits(traits) {
 		traits.order = ['$created'];
 	}
 
+	// Enable group by
+	if(traits.hasOwnProperty('group')) {
+		traits.group = [].concat(traits.group);
+	}
+
 	if(!is.array(traits.order)) {
 		traits.order = [traits.order];
 	}
@@ -878,6 +883,14 @@ function parse_search_traits(traits) {
 	// Append '$documents' to fields if traits.documents is specified and it is missing from there
 	if((traits.documents || traits.typeAwareness) && (traits.fields.indexOf('$documents') === -1) ) {
 		traits.fields = traits.fields.concat(['$documents']);
+	}
+
+	if(traits.hasOwnProperty('count')) {
+		traits.count = traits.count === true;
+		traits.fields = ['count'];
+		if(!traits.hasOwnProperty('group')) {
+			traits.group = ['$created'];
+		}
 	}
 
 	return traits;
@@ -1007,6 +1020,10 @@ function prepare_select_query(self, types, search_opts, traits) {
 		// Traits for search operation
 		traits = parse_search_traits(traits);
 
+		if(traits.hasOwnProperty('count')) {
+			q.count(traits.count);
+		}
+
 		// Search options for documents
 		search_opts = parse_search_opts(search_opts, traits);
 
@@ -1054,9 +1071,10 @@ function prepare_select_query(self, types, search_opts, traits) {
 			}
 
 			var order_enabled = (traits.order && has_property_names(traits.order)) ? true : false;
+			var group_enabled = (traits.group && has_property_names(traits.group)) ? true : false;
 
 			// Only search type if order has been enabled or traits.typeAwareness enabled
-			if(!( order_enabled || traits.typeAwareness )) {
+			if(!( group_enabled || order_enabled || traits.typeAwareness )) {
 				return q;
 			}
 
@@ -1071,18 +1089,22 @@ function prepare_select_query(self, types, search_opts, traits) {
 				q.orders( _parse_select_order(ObjType, document_type_obj, traits.order, q, traits) );
 			}
 
-			debug.log('traits.typeAwareness = ', traits.typeAwareness);
-			if(document_type_obj) {
-				debug.log('document_type_obj = ', document_type_obj);
-				debug.log('document_type_obj.documents = ', document_type_obj.documents);
+			if(traits.group) {
+				q.group( _parse_select_order(ObjType, document_type_obj, traits.group, q, traits) );
 			}
+
+			//debug.log('traits.typeAwareness = ', traits.typeAwareness);
+			//if(document_type_obj) {
+			//	debug.log('document_type_obj = ', document_type_obj);
+			//	debug.log('document_type_obj.documents = ', document_type_obj.documents);
+			//}
 
 			if(traits.typeAwareness && document_type_obj && document_type_obj.hasOwnProperty('documents')) {
 				// FIXME: Maybe we should make sure these documents settings do not collide?
-				debug.log('traits.documents = ', traits.documents);
-				debug.log('document_type_obj.documents = ', document_type_obj.documents);
+				//debug.log('traits.documents = ', traits.documents);
+				//debug.log('document_type_obj.documents = ', document_type_obj.documents);
 				traits.documents = [].concat(traits.documents || []).concat(document_type_obj.documents);
-				debug.log('traits.documents = ', traits.documents);
+				//debug.log('traits.documents = ', traits.documents);
 			}
 
 			// Fields to search for
@@ -1114,6 +1136,33 @@ function do_select(self, types, search_opts, traits) {
 			return do_query(self, result.query, result.params ).then(get_results(result.ObjType, {
 				'fieldMap': result.fieldMap
 			}));
+		});
+	});
+}
+
+/** Generic SELECT COUNT(*) query
+ * @param self {object} The NoPg connection/transaction object
+ * @param types {} 
+ * @param search_opts {} 
+ * @param traits {object} 
+ */
+function do_count(self, types, search_opts, traits) {
+	return nr_fcall("nopg:do_count", function() {
+		return prepare_select_query(self, types, search_opts, traits).then(function(q) {
+			var result = q.compile();
+
+			if(NoPg.debug) {
+				debug.log('query = ', result.query);
+				debug.log('params = ', result.params);
+			}
+
+			return do_query(self, result.query, result.params ).then(function(rows) {
+				if(!rows) { throw new TypeError("failed to parse result"); }
+				var row = rows.shift();
+				if(!row.count) { throw new TypeError("failed to parse result"); }
+				return parseInt(row.count, 10);
+			})
+
 		});
 	});
 }
@@ -1958,6 +2007,19 @@ NoPg.prototype.search = function(type) {
 		}));
 	}
 	return search2;
+};
+
+/** Count documents */
+NoPg.prototype.count = function(type) {
+	var self = this;
+	var ObjType = NoPg.Document;
+	function count2(opts, traits) {
+		return extend.promise( [NoPg], nr_fcall("nopg:count", function() {
+			traits = merge(traits, {'count':true, 'group': ['$created']});
+			return do_count(self, [ObjType, type], opts, traits).then(save_result_to_queue(self)).then(function() { return self; });
+		}));
+	}
+	return count2;
 };
 
 /** Search single document */
