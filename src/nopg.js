@@ -2064,6 +2064,22 @@ NoPg.prototype.del = function(obj) {
 
 NoPg.prototype['delete'] = NoPg.prototype.del;
 
+/** Delete type */
+NoPg.prototype.delType = function(name) {
+	debug.assert(name).is('string');
+	var self = this;
+	return extend.promise( [NoPg], nr_fcall("nopg:delType", function() {
+		return self._getType(name).then(function(type) {
+			if(!(type instanceof NoPg.Type)) {
+				throw new TypeError("invalid type received: " + util.inspect(type) );
+			}
+			return do_delete(self, NoPg.Type, type).then(function() { return self; });
+		});
+	}));
+};
+
+NoPg.prototype.deleteType = NoPg.prototype.delType;
+
 /** Create a new type. We recommend using `._declareType()` instead unless you want an error if the type exists already. Use like `db._createType([TYPE-NAME])([OPT(S)])`. Returns the result instead of saving it to `self` queue. */
 NoPg.prototype._createType = function(name) {
 	var self = this;
