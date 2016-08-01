@@ -14,6 +14,12 @@ var nopg = require('nor-nopg');
 
 Before using the database you should initialize it by calling: `nor-nopg --pg=psql://localhost:5432/test init`
 
+See also
+--------
+
+* [nor-app](https://github.com/sendanor/nor-app) -- provides a HTTP interface in to a nor-nopg database
+* [nopg](https://github.com/sendanor/nor-nopg-cli) -- Shell scripting CLI for nor-nopg
+
 TODO
 ----
 
