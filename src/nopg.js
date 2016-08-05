@@ -1637,10 +1637,14 @@ NoPg.defaults = {};
 
 NoPg.defaults.pgconfig = PGCONFIG;
 
+/** The timeout for transactions to auto rollback. If this is `0`, there will be no timeout. If it is `undefined`, the default timeout of 30 seconds will be used. */
+var NOPG_TIMEOUT = process.env.NOPG_TIMEOUT;
+
+/** The default timeout for transactions to automatically rollback. If this is `undefined`, there will be no timeout. Defaults to 30 seconds. */
 NoPg.defaults.timeout = 30000;
 
-if(process.env.NOPG_TIMEOUT !== undefined) {
-	NoPg.defaults.timeout = parseInt(process.env.NOPG_TIMEOUT, 10) || NoPg.defaults.timeout;
+if(NOPG_TIMEOUT !== undefined) {
+	NoPg.defaults.timeout = parseInt(process.env.NOPG_TIMEOUT, 10) || undefined;
 }
 
 /** If enabled NoPg will be more aware of the properties of types.
@@ -1658,7 +1662,7 @@ if(process.env.NOPG_TYPE_AWARENESS !== undefined) {
                             `"postgres://user:pw@localhost:5432/test"`
  * @param opts {object} Optional options.
  * @param opts.timeout {number} The timeout, default is 
-                                from `NoPg.defaults.timeout`
+                                from `NoPg.defaults.timeout`.
  * @param opts.pgconfig {string} See param `pgconfig`.
  */
 NoPg.start = function(pgconfig, opts) {
@@ -1688,7 +1692,9 @@ NoPg.start = function(pgconfig, opts) {
 		return pg.start(pgconfig).then(function(db) {
 
 			if(!db) { throw new TypeError("invalid db: " + util.inspect(db) ); }
-			w = create_watchdog(db, {"timeout": timeout});
+			if(timeout !== undefined) {
+				w = create_watchdog(db, {"timeout": timeout});
+			}
 			var nopg_db = new NoPg(db);
 
 			var end_time = new Date();
@@ -1700,8 +1706,10 @@ NoPg.start = function(pgconfig, opts) {
 
 			return nopg_db;
 		}).then(function(db) {
-			w.reset(db);
-			db._watchdog = w;
+			if(w) {
+				w.reset(db);
+				db._watchdog = w;
+			}
 			return pg_query("SET plv8.start_proc = 'plv8_init'")(db);
 		/*
 		}).then(function(db) {
