@@ -22,7 +22,7 @@ psql "$PGCONFIG" -c 'CREATE EXTENSION moddatetime;'
 
 ./src/bin/nopg.js -v init
 
-if "x$test" = x; then
+if test "x$test" = x; then
 	npm -s test
 else
 	npm -s run test-spec -- --grep "$test"
