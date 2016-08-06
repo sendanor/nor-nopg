@@ -28,6 +28,8 @@ var pghelpers = require('./pghelpers.js');
 var Query = require('./query.js');
 var InsertQuery = require('./insert_query.js');
 var Predicate = require('./Predicate.js');
+var EventEmitter = require('events');
+var util = require('util');
 
 /* ----------- ENVIRONMENT SETTINGS ------------- */
 
@@ -91,7 +93,13 @@ function NoPg(db) {
 		'types': {},
 		'objects': {}
 	};
+	EventEmitter.call(this);
 }
+util.inherits(NoPg, EventEmitter);
+
+/** NoPg has event `timeout` -- when automatic timeout happens */
+/** NoPg has event `rollback` -- when rollback hapens */
+/** NoPg has event `commit` -- when commit hapens */
 
 // Exports
 module.exports = NoPg;
@@ -528,9 +536,9 @@ function do_query(self, query, values) {
 	return nr_fcall("nopg:do_query", function() {
 
 		if(!query) { throw new TypeError("invalid: query: " + util.inspect(query)); }
+
 		if(NoPg.debug) {
-			debug.log('query = ', query);
-			debug.log('values = ', values);
+			debug.log('query = ', query, '\nvalues = ', values);
 		}
 
 		debug.assert(self).is('object');
@@ -1126,10 +1134,15 @@ function do_select(self, types, search_opts, traits) {
 		return prepare_select_query(self, types, search_opts, traits).then(function(q) {
 			var result = q.compile();
 
-			if(NoPg.debug) {
-				debug.log('query = ', result.query);
-				debug.log('params = ', result.params);
-			}
+			// Unnecessary since do_query() does it too
+			//if(NoPg.debug) {
+			//	debug.log('query = ', result.query);
+			//	debug.log('params = ', result.params);
+			//}
+
+			debug.assert(result).is('object');
+			debug.assert(result.query).is('string');
+			debug.assert(result.params).is('array');
 
 			return do_query(self, result.query, result.params ).then(get_results(result.ObjType, {
 				'fieldMap': result.fieldMap
@@ -1536,7 +1549,7 @@ NoPg.prototype._finish_samples = function() {
 
 };
 
-/** Run query `SET $key = $value` on the PostgreSQL server */
+/** Run query on the PostgreSQL server */
 function pg_query(query, params) {
 	return function(db) {
 		var start_time = new Date();
@@ -1575,15 +1588,22 @@ function create_watchdog(db, opts) {
 	/* Setup */
 
 	w.timeout = setTimeout(function() {
-
-		var tr_open, tr_commit, tr_rollback, state, tr_unknown;
-
 		debug.warn('Got timeout.');
+		w.timeout = undefined;
+		$Q.fcall(function() {
+			var tr_open, tr_commit, tr_rollback, state, tr_unknown;
 
-		// NoPg instance
-		if(w.db === undefined) {
-			debug.warn("Timeout exceeded and database instance undefined. Nothing done.");
-		} else if(w.db && w.db._tr_state) {
+			// NoPg instance
+			if(w.db === undefined) {
+				debug.warn("Timeout exceeded and database instance undefined. Nothing done.");
+				return;
+			}
+
+			if(!(w.db && w.db._tr_state)) {
+				debug.warn("Timeout exceeded but db was not NoPg instance.");
+				return;
+			}
+
 			state = w.db._tr_state;
 			tr_open = (state === 'open') ? true : false;
 			tr_commit = (state === 'commit') ? true : false;
@@ -1592,25 +1612,31 @@ function create_watchdog(db, opts) {
 
 			if(tr_unknown) {
 				debug.warn("Timeout exceeded and transaction state was unknown ("+state+"). Nothing done.");
-			} else if(tr_open) {
-				debug.warn("Timeout exceeded and transaction still open. Closing it by rollback.");
-				w.db.rollback().fail(function(err) {
-					debug.error("Rollback failed: " + (err.stack || err) );
-				}).done();
-			} else {
-				if(tr_commit) {
-					debug.log('...but commit was already done.');
-				}
-				if(tr_rollback) {
-					debug.log('...but rollback was already done.');
-				}
+				return;
 			}
 
-		} else {
-			debug.warn("Timeout exceeded but db was not NoPg instance.");
-		}
+			if(tr_open) {
+				debug.warn("Timeout exceeded and transaction still open. Closing it by rollback.");
+				return w.db.rollback().fail(function(err) {
+					debug.error("Rollback failed: " + (err.stack || err) );
+				});
+			}
 
-		w.timeout = undefined;
+			if(tr_commit) {
+				debug.log('...but commit was already done.');
+				return;
+			}
+
+			if(tr_rollback) {
+				debug.log('...but rollback was already done.');
+				return;
+			}
+
+		}).fin(function() {
+			if(w && w.db) {
+				w.db.emit('timeout');
+			}
+		}).done();
 	}, opts.timeout);
 
 	/* Set object */
@@ -1834,6 +1860,7 @@ NoPg.prototype.commit = function() {
 			if(is.obj(self._watchdog)) {
 				self._watchdog.clear();
 			}
+			self.emit('commit');
 			return self;
 		});
 	}));
@@ -1858,6 +1885,8 @@ NoPg.prototype.rollback = function() {
 			if(is.obj(self._watchdog)) {
 				self._watchdog.clear();
 			}
+
+			self.emit('rollback');
 			return self;
 		});
 	}) );
