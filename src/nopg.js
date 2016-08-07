@@ -93,11 +93,10 @@ function NoPg(db) {
 		'types': {},
 		'objects': {}
 	};
-	EventEmitter.call(this);
+	self._events = new EventEmitter();
 }
-util.inherits(NoPg, EventEmitter);
 
-/** NoPg has event `timeout` -- when automatic timeout happens */
+/** NoPg has event `timeout` -- when automatic timeout happens, and rollback issued, and connection is freed */
 /** NoPg has event `rollback` -- when rollback hapens */
 /** NoPg has event `commit` -- when commit hapens */
 
@@ -1173,7 +1172,7 @@ function do_count(self, types, search_opts, traits) {
 				var row = rows.shift();
 				if(!row.count) { throw new TypeError("failed to parse result"); }
 				return parseInt(row.count, 10);
-			})
+			});
 
 		});
 	});
@@ -1591,7 +1590,7 @@ function create_watchdog(db, opts) {
 		debug.warn('Got timeout.');
 		w.timeout = undefined;
 		$Q.fcall(function() {
-			var tr_open, tr_commit, tr_rollback, state, tr_unknown;
+			var tr_open, tr_commit, tr_rollback, state, tr_unknown, tr_disconnect;
 
 			// NoPg instance
 			if(w.db === undefined) {
@@ -1608,7 +1607,8 @@ function create_watchdog(db, opts) {
 			tr_open = (state === 'open') ? true : false;
 			tr_commit = (state === 'commit') ? true : false;
 			tr_rollback = (state === 'rollback') ? true : false;
-			tr_unknown = ((!tr_open) && (!tr_commit) && (!tr_rollback)) ? true : false;
+			tr_disconnect = (state === 'disconnect') ? true : false;
+			tr_unknown = ((!tr_open) && (!tr_commit) && (!tr_rollback) && (!tr_disconnect)) ? true : false;
 
 			if(tr_unknown) {
 				debug.warn("Timeout exceeded and transaction state was unknown ("+state+"). Nothing done.");
@@ -1622,19 +1622,24 @@ function create_watchdog(db, opts) {
 				});
 			}
 
+			if(tr_disconnect) {
+				//debug.log('...but .disconnect() was already done.');
+				return;
+			}
+
 			if(tr_commit) {
-				debug.log('...but commit was already done.');
+				//debug.log('...but .commit() was already done.');
 				return;
 			}
 
 			if(tr_rollback) {
-				debug.log('...but rollback was already done.');
+				//debug.log('...but .rollback() was already done.');
 				return;
 			}
 
 		}).fin(function() {
 			if(w && w.db) {
-				w.db.emit('timeout');
+				w.db._events.emit('timeout');
 			}
 		}).done();
 	}, opts.timeout);
@@ -1737,15 +1742,48 @@ NoPg.start = function(pgconfig, opts) {
 				db._watchdog = w;
 			}
 			return pg_query("SET plv8.start_proc = 'plv8_init'")(db);
-		/*
-		}).then(function(db) {
-			return pg_table_exists(db, NoPg.DBVersion.meta.table).then(function(exists) {
-				if(!exists) {
-					debug.warn('Detected uninitialized database.');
-				}
-				return db;
+		});
+	}));
+};
+
+/** Start a connection (without transaction)
+ * @param pgconfig {string} PostgreSQL database configuration. Example: 
+                            `"postgres://user:pw@localhost:5432/test"`
+ * @param opts {object} Optional options.
+ * @param opts.pgconfig {string} See param `pgconfig`.
+ */
+NoPg.connect = function(pgconfig, opts) {
+	return extend.promise( [NoPg], nr_fcall("nopg:connect", function() {
+		var start_time = new Date();
+
+		var args = ARRAY([pgconfig, opts]);
+		pgconfig = args.find(is.string);
+		opts = args.find(is.object);
+		debug.assert(opts).ignore(undefined).is('object');
+		if(!opts) {
+			opts = {};
+		}
+
+		debug.assert(opts).is('object');
+
+		if(!pgconfig) {
+			pgconfig = opts.pgconfig || NoPg.defaults.pgconfig;
+		}
+
+		debug.assert(pgconfig).is('string');
+
+		return pg.connect(pgconfig).then(function(db) {
+			if(!db) { throw new TypeError("invalid db: " + util.inspect(db) ); }
+			var nopg_db = new NoPg(db);
+			var end_time = new Date();
+			nopg_db._record_sample({
+				'event': 'connect',
+				'start': start_time,
+				'end': end_time
 			});
-		*/
+			return nopg_db;
+		}).then(function(db) {
+			return pg_query("SET plv8.start_proc = 'plv8_init'")(db);
 		});
 	}));
 };
@@ -1860,7 +1898,7 @@ NoPg.prototype.commit = function() {
 			if(is.obj(self._watchdog)) {
 				self._watchdog.clear();
 			}
-			self.emit('commit');
+			self._events.emit('commit');
 			return self;
 		});
 	}));
@@ -1886,11 +1924,161 @@ NoPg.prototype.rollback = function() {
 				self._watchdog.clear();
 			}
 
-			self.emit('rollback');
+			self._events.emit('rollback');
 			return self;
 		});
 	}) );
 };
+
+/** Disconnect */
+NoPg.prototype.disconnect = function() {
+	var self = this;
+	var start_time = new Date();
+	return extend.promise( [NoPg], nr_fcall("nopg:disconnect", function() {
+		return self._db.disconnect().then(function() {
+			var end_time = new Date();
+			self._record_sample({
+				'event': 'disconnect',
+				'start': start_time,
+				'end': end_time
+			});
+			self._finish_samples();
+			self._tr_state = 'disconnect';
+			if(is.obj(self._watchdog)) {
+				self._watchdog.clear();
+			}
+			self._events.emit('disconnect');
+			return self;
+		});
+	}));
+};
+
+/** */
+var tcn_event_mapping = {
+	'documents,I': 'create',
+	'documents,U': 'update',
+	'documents,D': 'delete',
+	'types,I': 'createType',
+	'types,U': 'updateType',
+	'types,D': 'deleteType',
+	'attachments,I': 'createAttachment',
+	'attachments,U': 'updateAttachment',
+	'attachments,D': 'deleteAttachment',
+	'libs,I': 'createLib',
+	'libs,U': 'updateLib',
+	'libs,D': 'deleteLib',
+	'dbversions,I': 'createDBVersion',
+	'dbversions,U': 'updateDBVersion',
+	'dbversions,D': 'deleteDBVersion'
+};
+
+var tcn_event_names = Object.keys(tcn_event_mapping).map(function(key) {
+	return tcn_event_mapping[key];
+});
+
+/** Returns a listener for notifications from TCN extension */
+function create_tcn_listener(events) {
+	return function tcn_listener(payload) {
+		debug.assert(payload).is('string');
+		var parts = payload.split(',');
+
+		var table = parts.shift(); // eg. `"documents"`
+		debug.assert(table).is('string').minLength(2);
+		debug.assert(table.charAt(0)).equals('"');
+		debug.assert(table.charAt(table.length-1)).equals('"');
+		table = table.substr(1, table.length-2);
+
+		var op = parts.shift(); // eg. `I`
+		debug.assert(op).is('string');
+
+		var opts = parts.join(','); // eg. `"id"='b6913d79-d37a-5977-94b5-95bdfe5cccda'...`
+		var i = opts.indexOf('=');
+		if(i < 0) { throw new TypeError("No primary key!"); }
+
+		var key = opts.substr(0, i); // eg. `"id"`
+		debug.assert(key).is('string').minLength(2);
+		debug.assert(key.charAt(0)).equals('"');
+		debug.assert(key.charAt(key.length-1)).equals('"');
+		key = key.substr(1, key.length-2);
+
+		var value = opts.substr(i+1); // eg. `'b6913d79-d37a-5977-94b5-95bdfe5cccda'...`
+		debug.assert(value).is('string').minLength(2);
+		debug.assert(value.charAt(0)).equals("'");
+		i = value.indexOf("'", 1);
+		if(i < 0) { throw new TypeError("Parse error! Could not find end of input."); }
+		value = value.substr(1, i-1);
+
+		var event = tcn_event_mapping[''+table+','+op];
+		if(event) {
+			events.emit(event, value);
+		} else {
+			debug.warn('Could not find event name for tcn action ' + table + ' with op ' + op);
+		}
+	};
+}
+
+/** Start listening tcn events */
+NoPg.prototype.setupTCN = function() {
+	var self = this;
+	return extend.promise( [NoPg], nr_fcall("nopg:setupTCN", function() {
+
+		// Verify we are not already listening TCN
+		if(self._tcn_listener) {
+			return;
+		}
+
+		var counter = 0;
+		var tcn_listener = self._tcn_listener = create_tcn_listener(self._events);
+
+		function new_listener(event/*, listener*/) {
+
+			// Ignore if not tcn event
+			if(tcn_event_names.indexOf(event) < 0) {
+				return;
+			}
+
+			if(counter === 0) {
+				self._db.on('tcn', tcn_listener);
+			}
+			counter += 1;
+		}
+
+		function remove_listener(event/*, listener*/) {
+
+			// Ignore if not tcn event
+			if(tcn_event_names.indexOf(event) < 0) {
+				return;
+			}
+
+			counter -= 1;
+			if(counter === 0) {
+				self._db.removeListener('tcn', tcn_listener);
+			}
+
+		}
+
+		self._events.on('newListener', new_listener);
+		self._events.on('removeListener', remove_listener);
+		return self;
+	}));
+};
+
+/** Start listening events */
+['addListener', 'on', 'once', 'removeListener'].forEach(function(fn) {
+	NoPg.prototype[fn] = function(event, listener) {
+		var self = this;
+		return extend.promise( [NoPg], nr_fcall("nopg:"+fn, function() {
+			return $Q.fcall(function() {
+				if( (tcn_event_names.indexOf(event) >= 0) && (!self._tcn_listener) ) {
+					return self.setupTCN();
+				}
+			}).then(function() {
+				self._events[fn](event, listener);
+				return self;
+			});
+		}));
+	};
+});
 
 /** Checks if server has compatible version */
 NoPg.prototype.testServerVersion = function() {

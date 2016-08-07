@@ -3,7 +3,7 @@
 nor-nopg
 ========
 
-NoSQL Client Module for PostgreSQL databases.
+This is a Node.js library which implements NoSQL features over a PostgreSQL v9.3 database.
 
 Usage
 -----
@@ -19,72 +19,6 @@ See also
 
 * [nor-app](https://github.com/sendanor/nor-app) -- provides a HTTP interface in to a nor-nopg database
 * [nopg](https://github.com/sendanor/nor-nopg-cli) -- Shell scripting CLI for nor-nopg
-
-TODO
-----
-
-We use [Trello board](//trello.com/b/6qC63gw5/nor-nopg) to organize development and keep track on things to do.
-
-Internal Database Schema
-------------------------
-
-### Table `dbversions`
-
-|    Name    |      Type     |
-| ---------- | ------------- |
-| `version`  | `integer`     |
-| `modified` | `timestamptz` |
-
-### Table `types`
-
-|    Name     |      Type     |
-| ----------- | ------------- |
-| `id`        | `uuid`        |
-| `name`      | `text`        |
-| `schema`    | `json`        |
-| `validator` | `text`        |
-| `meta`      | `json`        |
-| `created`   | `timestamptz` |
-| `modified`  | `timestamptz` |
-
-### Table `documents`
-
-|    Name    |      Type     |
-| ---------- | ------------- |
-| `id`       | `uuid`        |
-| `content`  | `json`        |
-| `types_id` | `uuid`        |
-| `created`  | `timestamptz` |
-| `modified` | `timestamptz` |
-| `type`     | `text`        |
-
-### Table `attachments`
-
-|    Name        |      Type     |
-| -------------- | ------------- |
-| `id`           | `uuid`        |
-| `documents_id` | `uuid`        |
-| `content`      | `bytea`       |
-| `meta`         | `json`        |
-| `created`      | `timestamptz` |
-| `modified`     | `timestamptz` |
-
-### Table `libs`
-
-|    Name        |      Type     |
-| -------------- | ------------- |
-| `id`           | `uuid`        |
-| `name`         | `text`        |
-| `content`      | `text`        |
-| `meta`         | `json`        |
-| `created`      | `timestamptz` |
-| `modified`     | `timestamptz` |
-
-### Obsolete entity relationship diagram
-
-This database structure has not been updated.
-
-![ERS](gfx/ers.png "ERS")
 
 Summary
 -------
@@ -524,3 +458,70 @@ Commercial Support
 ------------------
 
 You can buy commercial support from [Sendanor](http://sendanor.com/software).
+
+TODO
+----
+
+We use [Trello board](//trello.com/b/6qC63gw5/nor-nopg) to organize development and keep track on things to do.
+
+Internal Database Schema
+------------------------
+
+### Table `dbversions`
+
+|    Name    |      Type     |
+| ---------- | ------------- |
+| `version`  | `integer`     |
+| `modified` | `timestamptz` |
+
+### Table `types`
+
+|    Name     |      Type     |
+| ----------- | ------------- |
+| `id`        | `uuid`        |
+| `name`      | `text`        |
+| `schema`    | `json`        |
+| `validator` | `text`        |
+| `meta`      | `json`        |
+| `created`   | `timestamptz` |
+| `modified`  | `timestamptz` |
+
+### Table `documents`
+
+|    Name    |      Type     |
+| ---------- | ------------- |
+| `id`       | `uuid`        |
+| `content`  | `json`        |
+| `types_id` | `uuid`        |
+| `created`  | `timestamptz` |
+| `modified` | `timestamptz` |
+| `type`     | `text`        |
+
+### Table `attachments`
+
+|    Name        |      Type     |
+| -------------- | ------------- |
+| `id`           | `uuid`        |
+| `documents_id` | `uuid`        |
+| `content`      | `bytea`       |
+| `meta`         | `json`        |
+| `created`      | `timestamptz` |
+| `modified`     | `timestamptz` |
+
+### Table `libs`
+
+|    Name        |      Type     |
+| -------------- | ------------- |
+| `id`           | `uuid`        |
+| `name`         | `text`        |
+| `content`      | `text`        |
+| `meta`         | `json`        |
+| `created`      | `timestamptz` |
+| `modified`     | `timestamptz` |
+
+### Obsolete entity relationship diagram
+
+This database structure has not been updated.
+
+![ERS](gfx/ers.png "ERS")
+
