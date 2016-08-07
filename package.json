@@ -33,7 +33,7 @@
   "dependencies": {
     "q"            : "^1.0.1",
     "nor-extend"   : "^1.0.0",
-    "nor-pg"       : "^1.0.0",
+    "nor-pg"       : "^1.1.0",
     "nor-debug"    : "^1.0.0",
     "nor-is"       : "^1.0.0",
     "nor-fs"       : "^1.0.0",
