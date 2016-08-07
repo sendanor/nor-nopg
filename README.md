@@ -100,6 +100,90 @@ nopg.start(PGCONFIG).init().then(function(db) {
 });
 ```
 
+Events
+------
+
+NoPG (from v1.1.0) has integrated support for events using [PostgreSQL's tcn 
+extension](https://www.postgresql.org/docs/9.3/static/tcn.html).
+
+***Please note:*** You need to use `.connect()` instead of `.start(...)`, since 
+listening in a transaction will block other threads!
+
+### Event: `create`
+
+* `id` - UUID of the document which has been created
+
+### Event: `update`
+
+* `id` - UUID of the document which has been changed
+
+### Event: `delete`
+
+* `id` - UUID of the document which has been deleted
+
+### Event: `createType`
+
+* `id` - UUID of the type which has been created
+
+### Event: `updateType`
+
+* `id` - UUID of the type which has been changed
+
+### Event: `deleteType`
+
+* `id` - UUID of the type which has been deleted
+
+### Event: `createAttachment`
+
+* `id` - UUID of the attachment which has been created
+
+### Event: `updateAttachment`
+
+* `id` - UUID of the attachment which has been changed
+
+### Event: `deleteAttachment`
+
+* `id` - UUID of the attachment which has been deleted
+
+### Event: `createLib`
+
+* `id` - UUID of the lib which has been created
+
+### Event: `updateLib`
+
+* `id` - UUID of the lib which has been changed
+
+### Event: `deleteLib`
+
+* `id` - UUID of the lib which has been deleted
+
+### Non-TCN events
+
+We also implement few events which are not through PostgreSQL. These will 
+happen only on the local instance.
+
+#### Event: `disconnect`
+
+When connection will be disconnected.
+
+#### Event: `commit`
+
+When transaction has been commited.
+
+#### Event: `rollback`
+
+When transaction has been rollback'd.
+
+### User-defined events
+
+If you want your application to use custom `LISTEN` or `NOTIFY`, we recommend 
+directly using 
+[`nor-pg`](https://github.com/sendanor/nor-pg#events-usage-example). It has a 
+nice familiar interface for it.
+
+There is no reason to implement this feature in NoPG since implementing it 
+wouldn't invent anything new; it would be direct wrapper for `nor-pg`.
+
 Our promise implementation
 --------------------------
 
