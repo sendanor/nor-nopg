@@ -113,6 +113,14 @@ listening in a transaction will block other threads!
 
 * `id` - UUID of the document which has been created
 
+```javascript
+nopg.connect(PGCONFIG).then(function(db) {
+	return db.on('create', function db_on_create(id) {
+		// Document with UUID as `id` was created
+	});
+});
+```
+
 ### Event: `update`
 
 * `id` - UUID of the document which has been changed
