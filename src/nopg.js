@@ -2296,7 +2296,7 @@ NoPg.prototype.setupTCN = function() {
 			}
 
 			// Start listening tcn events for this channel
-			debug.log('Listening channel ' + channel_name + ' for ' + event_name);
+			//debug.log('Listening channel ' + channel_name + ' for ' + event_name);
 			self._db.on(channel_name, tcn_listener);
 			counter[event_name] = 1;
 		}
@@ -2318,7 +2318,7 @@ NoPg.prototype.setupTCN = function() {
 
 			counter[event_name] -= 1;
 			if(counter[event_name] === 0) {
-				debug.log('Stopped listening channel ' + channel_name + ' for ' + event_name);
+				//debug.log('Stopped listening channel ' + channel_name + ' for ' + event_name);
 				self._db.removeListener(channel_name, tcn_listeners[event_name]);
 				delete counter[event_name];
 			}
