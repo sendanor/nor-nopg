@@ -2287,29 +2287,29 @@ describe('nopg', function(){
 			debug.assert( nopg.parseTCNChannelName({}) ).is('string').equals('tcn');
 
 			// Parses tcn event names correctly
-			debug.assert( nopg.parseTCNChannelName({'type':'User'}) ).is('string').equals('tcn_User');
+			debug.assert( nopg.parseTCNChannelName({'type':'User'}) ).is('string').equals('tcnuser');
 			debug.assert( nopg.parseTCNChannelName({'id':'b6913d79-d37a-5977-94b5-95bdfe5cccda'}) ).is('string').equals('tcn');
 			debug.assert( nopg.parseTCNChannelName({'name':'create'}) ).is('string').equals('tcn');
-			debug.assert( nopg.parseTCNChannelName({'type':'User','id':'b6913d79-d37a-5977-94b5-95bdfe5cccda'}) ).is('string').equals('tcn_User');
-			debug.assert( nopg.parseTCNChannelName({'type':'User','id':'b6913d79-d37a-5977-94b5-95bdfe5cccda','name':'create'}) ).is('string').equals('tcn_User');
-			debug.assert( nopg.parseTCNChannelName({'name':'create','type':'User'}) ).is('string').equals('tcn_User');
+			debug.assert( nopg.parseTCNChannelName({'type':'User','id':'b6913d79-d37a-5977-94b5-95bdfe5cccda'}) ).is('string').equals('tcnuser');
+			debug.assert( nopg.parseTCNChannelName({'type':'User','id':'b6913d79-d37a-5977-94b5-95bdfe5cccda','name':'create'}) ).is('string').equals('tcnuser');
+			debug.assert( nopg.parseTCNChannelName({'name':'create','type':'User'}) ).is('string').equals('tcnuser');
 
-			debug.assert( nopg.parseTCNChannelName('User') ).is('string').equals('tcn_User');
+			debug.assert( nopg.parseTCNChannelName('User') ).is('string').equals('tcnuser');
 			debug.assert( nopg.parseTCNChannelName('b6913d79-d37a-5977-94b5-95bdfe5cccda') ).is('string').equals('tcn');
 			debug.assert( nopg.parseTCNChannelName('create') ).is('string').equals('tcn');
-			debug.assert( nopg.parseTCNChannelName('User#b6913d79-d37a-5977-94b5-95bdfe5cccda') ).is('string').equals('tcn_User');
-			debug.assert( nopg.parseTCNChannelName('User#b6913d79-d37a-5977-94b5-95bdfe5cccda@create') ).is('string').equals('tcn_User');
-			debug.assert( nopg.parseTCNChannelName('User#create') ).is('string').equals('tcn_User');
+			debug.assert( nopg.parseTCNChannelName('User#b6913d79-d37a-5977-94b5-95bdfe5cccda') ).is('string').equals('tcnuser');
+			debug.assert( nopg.parseTCNChannelName('User#b6913d79-d37a-5977-94b5-95bdfe5cccda@create') ).is('string').equals('tcnuser');
+			debug.assert( nopg.parseTCNChannelName('User#create') ).is('string').equals('tcnuser');
 
 			// Hmm, should we throw an exception if it isn't TCN event?
-			debug.assert( nopg.parseTCNChannelName({'name':'timeout','type':'User'}) ).is('string').equals('tcn_User');
-			debug.assert( nopg.parseTCNChannelName({'name':'commit','type':'User'}) ).is('string').equals('tcn_User');
-			debug.assert( nopg.parseTCNChannelName({'name':'rollback','type':'User'}) ).is('string').equals('tcn_User');
-			debug.assert( nopg.parseTCNChannelName({'name':'disconnect','type':'User'}) ).is('string').equals('tcn_User');
-			debug.assert( nopg.parseTCNChannelName('User#timeout') ).is('string').equals('tcn_User');
-			debug.assert( nopg.parseTCNChannelName('User#commit') ).is('string').equals('tcn_User');
-			debug.assert( nopg.parseTCNChannelName('User#rollback') ).is('string').equals('tcn_User');
-			debug.assert( nopg.parseTCNChannelName('User#disconnect') ).is('string').equals('tcn_User');
+			debug.assert( nopg.parseTCNChannelName({'name':'timeout','type':'User'}) ).is('string').equals('tcnuser');
+			debug.assert( nopg.parseTCNChannelName({'name':'commit','type':'User'}) ).is('string').equals('tcnuser');
+			debug.assert( nopg.parseTCNChannelName({'name':'rollback','type':'User'}) ).is('string').equals('tcnuser');
+			debug.assert( nopg.parseTCNChannelName({'name':'disconnect','type':'User'}) ).is('string').equals('tcnuser');
+			debug.assert( nopg.parseTCNChannelName('User#timeout') ).is('string').equals('tcnuser');
+			debug.assert( nopg.parseTCNChannelName('User#commit') ).is('string').equals('tcnuser');
+			debug.assert( nopg.parseTCNChannelName('User#rollback') ).is('string').equals('tcnuser');
+			debug.assert( nopg.parseTCNChannelName('User#disconnect') ).is('string').equals('tcnuser');
 
 		});
 
