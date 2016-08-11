@@ -12,9 +12,12 @@ var NoPg = require('../');
 var debug = require('nor-debug');
 
 // Set default timeout for these operations as 1 hour unless it is already longer
-if(NoPg.defaults.timeout < 3600000) {
-	NoPg.defaults.timeout = 3600000;
-}
+//if(NoPg.defaults.timeout < 3600000) {
+//	NoPg.defaults.timeout = 3600000;
+//}
+
+/// Disable timeout
+NoPg.defaults.timeout = 0;
 
 var PGCONFIG = argv.pg || process.env.PGCONFIG || 'postgres://localhost:5432/test';
 

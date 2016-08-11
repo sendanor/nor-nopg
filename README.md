@@ -109,9 +109,58 @@ extension](https://www.postgresql.org/docs/9.3/static/tcn.html).
 ***Please note:*** You need to use `.connect()` instead of `.start(...)`, since 
 listening in a transaction will block other threads!
 
+### Event: `Type#create`
+
+* Listener gets arguments:
+  * `id` - UUID of the document which has been created
+  * `eventName` - Name of the event
+  * `type` - Type name
+
+```javascript
+nopg.connect(PGCONFIG).then(function(db) {
+	return db.on('User#create', function db_on_create(id) {
+		// User with UUID as `id` was created
+	});
+});
+```
+
+### Event: `<Type>#<ID>@<eventName>`
+
+* Listener gets arguments:
+  * `id` - UUID of the document which has been created
+  * `eventName` - Name of the event
+  * `type` - Type name
+
+```javascript
+nopg.connect(PGCONFIG).then(function(db) {
+	return db.on('User#create', function db_on_create(id) {
+		// User with UUID as `id` was created
+		db.on('User#'+id+'@', function db_on_create(id, eventName) {
+			// User with UUID as `id` was updated or deleted
+		}).fail(...).done();
+	});
+});
+```
+
+### Event: `Type#update`
+
+* Listener gets arguments:
+  * `id` - UUID of the document which has been changed
+  * `eventName` - Name of the event
+  * `type` - Type name
+
+### Event: `Type#deleteType`
+
+* Listener gets arguments:
+  * `id` - UUID of the type which has been deleted
+  * `eventName` - Name of the event
+  * `type` - Type name
+
 ### Event: `create`
 
-* `id` - UUID of the document which has been created
+* Listener gets arguments:
+  * `id` - UUID of the document which has been created
+  * `eventName` - Name of the event
 
 ```javascript
 nopg.connect(PGCONFIG).then(function(db) {
@@ -123,47 +172,69 @@ nopg.connect(PGCONFIG).then(function(db) {
 
 ### Event: `update`
 
-* `id` - UUID of the document which has been changed
+* Listener gets arguments:
+  * `id` - UUID of the document which has been changed
+  * `eventName` - Name of the event
 
 ### Event: `delete`
 
-* `id` - UUID of the document which has been deleted
+* Listener gets arguments:
+  * `id` - UUID of the document which has been deleted
+  * `eventName` - Name of the event
 
 ### Event: `createType`
 
-* `id` - UUID of the type which has been created
+* Listener gets arguments:
+  * `id` - UUID of the type which has been created
+  * `eventName` - Name of the event
 
 ### Event: `updateType`
 
-* `id` - UUID of the type which has been changed
+* Listener gets arguments:
+  * `id` - UUID of the type which has been changed
+  * `eventName` - Name of the event
 
 ### Event: `deleteType`
 
-* `id` - UUID of the type which has been deleted
+* Listener gets arguments:
+  * `id` - UUID of the type which has been deleted
+  * `eventName` - Name of the event
 
 ### Event: `createAttachment`
 
-* `id` - UUID of the attachment which has been created
+* Listener gets arguments:
+  * `id` - UUID of the attachment which has been created
+  * `eventName` - Name of the event
 
 ### Event: `updateAttachment`
 
-* `id` - UUID of the attachment which has been changed
+* Listener gets arguments:
+  * `id` - UUID of the attachment which has been changed
+  * `eventName` - Name of the event
 
 ### Event: `deleteAttachment`
 
-* `id` - UUID of the attachment which has been deleted
+* Listener gets arguments:
+  * `id` - UUID of the attachment which has been deleted
+  * `eventName` - Name of the event
 
 ### Event: `createLib`
 
-* `id` - UUID of the lib which has been created
+* Listener gets arguments:
+  * `id` - UUID of the lib which has been created
+  * `eventName` - Name of the event
 
 ### Event: `updateLib`
 
-* `id` - UUID of the lib which has been changed
+* Listener gets arguments:
+  * `id` - UUID of the lib which has been changed
+  * `eventName` - Name of the event
 
 ### Event: `deleteLib`
 
-* `id` - UUID of the lib which has been deleted
+* Listener gets arguments:
+  * `id` - UUID of the lib which has been deleted
+  * `eventName` - Name of the event
 
 ### Non-TCN events
 

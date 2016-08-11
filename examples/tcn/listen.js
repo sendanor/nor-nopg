@@ -7,24 +7,54 @@ var nopg = require('../../src/index.js');
 
 _Q.fcall(function() {
 	return nopg.connect(PGCONFIG).then(function(db) {
-		return db.on('create', function db_on_create(id) {
-			// internal tcn payload = "documents",I,"id"='0c402f6f-8126-5dc3-a4df-20035bc8304d'
-			debug.log('id =', id);
-		}).on('update', function db_on_update(id) {
-			// internal tcn payload = "documents",U,"id"='b6913d79-d37a-5977-94b5-95bdfe5cccda'
-			debug.log('id =', id);
-		}).on('delete', function db_on_delete(id) {
-			// internal tcn payload = "documents",D,"id"='0e6fe442-e392-5a38-9ff3-b13d7c6a95fa'
-			debug.log('id =', id);
-		}).on('createType', function db_on_createType(id) {
-			// internal tcn payload = "types",I,"id"='0c402f6f-8126-5dc3-a4df-20035bc8304d'
-			debug.log('id =', id);
-		}).on('updateType', function db_on_updateType(id) {
-			// internal tcn payload = "types",U,"id"='0c402f6f-8126-5dc3-a4df-20035bc8304d'
-			debug.log('id =', id);
-		}).on('deleteType', function db_on_deleteType(id) {
-			// internal tcn payload = "types",D,"id"='0c402f6f-8126-5dc3-a4df-20035bc8304d'
-			debug.log('id =', id);
+		return db.on('create', function db_on_create(id, event, type) {
+			debug.log('id =', id, '\n',
+				'event = ', event, '\n',
+				'type = ', type, '\n' );
+		}).on('update', function db_on_update(id, event, type) {
+			debug.log('id =', id, '\n',
+				'event = ', event, '\n',
+				'type = ', type, '\n' );
+		}).on('delete', function db_on_delete(id, event, type) {
+			debug.log('id =', id, '\n',
+				'event = ', event, '\n',
+				'type = ', type, '\n' );
+		}).on('createType', function db_on_createType(id, event, type) {
+			debug.log('id =', id, '\n',
+				'event = ', event, '\n',
+				'type = ', type, '\n' );
+		}).on('updateType', function db_on_updateType(id, event, type) {
+			debug.log('id =', id, '\n',
+				'event = ', event, '\n',
+				'type = ', type, '\n' );
+		}).on('deleteType', function db_on_deleteType(id, event, type) {
+			debug.log('id =', id, '\n',
+				'event = ', event, '\n',
+				'type = ', type, '\n' );
+		}).on('Test#create', function db_on_Test_create(id, event, type) {
+			debug.log('id =', id, '\n',
+				'event = ', event, '\n',
+				'type = ', type, '\n' );
+		}).on('Test#update', function db_on_Test_update(id, event, type) {
+			debug.log('id =', id, '\n',
+				'event = ', event, '\n',
+				'type = ', type, '\n' );
+		}).on('Test#delete', function db_on_Test_delete(id, event, type) {
+			debug.log('id =', id, '\n',
+				'event = ', event, '\n',
+				'type = ', type, '\n' );
+		}).on('Test3#createType', function db_on_Test3_createType(id, event, type) {
+			debug.log('id =', id, '\n',
+				'event = ', event, '\n',
+				'type = ', type, '\n' );
+		}).on('Test3#updateType', function db_on_Test3_updateType(id, event, type) {
+			debug.log('id =', id, '\n',
+				'event = ', event, '\n',
+				'type = ', type, '\n' );
+		}).on('Test3#deleteType', function db_on_Test3_deleteType(id, event, type) {
+			debug.log('id =', id, '\n',
+				'event = ', event, '\n',
+				'type = ', type, '\n' );
 		});
 	});
 }).fail(function(err) {

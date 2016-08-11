@@ -30,6 +30,7 @@ var InsertQuery = require('./insert_query.js');
 var Predicate = require('./Predicate.js');
 var EventEmitter = require('events');
 var util = require('util');
+var pg_escape = require('pg-escape');
 
 /* ----------- ENVIRONMENT SETTINGS ------------- */
 
@@ -1953,7 +1954,93 @@ NoPg.prototype.disconnect = function() {
 	}));
 };
 
-/** */
+/** Returns CREATE TRIGGER query for Type specific TCN */
+NoPg.createTriggerQueriesForType = function create_tcn_queries(type, op) {
+	debug.assert(type).is('string');
+	debug.assert(op).ignore(undefined).is('string');
+
+	if(op === undefined) {
+		return [].concat(create_tcn_queries(type, "insert"))
+			.concat(create_tcn_queries(type, "update"))
+			.concat(create_tcn_queries(type, "delete"));
+	}
+
+	if(['insert', 'delete', 'update'].indexOf(op) < 0) {
+		throw new TypeError("op is invalid: " + op);
+	}
+	op = op.toLowerCase();
+
+	var table_name = 'documents';
+	var trigger_name = table_name + '_' + op + '_' + type + '_tcn_trigger';
+	var channel_name = 'tcn' + type.toLowerCase();
+
+	if(op === 'insert') {
+		return [
+			pg_escape('DROP TRIGGER IF EXISTS %I ON %I', trigger_name, table_name),
+			pg_escape(
+				'CREATE TRIGGER %I'+
+				' AFTER '+op.toUpperCase()+' ON %I FOR EACH ROW'+
+				' WHEN (NEW.type = %L)'+
+				' EXECUTE PROCEDURE triggered_change_notification(%L)',
+				trigger_name,
+				table_name,
+				type,
+				channel_name
+			)
+		];
+	}
+
+	if(op === 'update') {
+		return [
+			pg_escape('DROP TRIGGER IF EXISTS %I ON %I', trigger_name, table_name),
+			pg_escape(
+				'CREATE TRIGGER %I'+
+				' AFTER '+op.toUpperCase()+' ON %I FOR EACH ROW'+
+				' WHEN (NEW.type = %L OR OLD.type = %L)'+
+				' EXECUTE PROCEDURE triggered_change_notification(%L)',
+				trigger_name,
+				table_name,
+				type,
+				type,
+				channel_name
+			)
+		];
+	}
+
+	if(op === 'delete') {
+		return [
+			pg_escape('DROP TRIGGER IF EXISTS %I ON %I', trigger_name, table_name),
+			pg_escape(
+				'CREATE TRIGGER %I'+
+				' AFTER '+op.toUpperCase()+' ON %I FOR EACH ROW'+
+				' WHEN (OLD.type = %L)'+
+				' EXECUTE PROCEDURE triggered_change_notification(%L)',
+				trigger_name,
+				table_name,
+				type,
+				channel_name
+			)
+		];
+	}
+
+	throw new TypeError("op invalid: "+ op);
+};
+
+/** Setup triggers for specific type */
+NoPg.prototype.setupTriggersForType = function(type) {
+	var self = this;
+	return extend.promise( [NoPg], nr_fcall("nopg:setupTriggersForType", function() {
+		return ARRAY(NoPg.createTriggerQueriesForType(type)).map(function step_builder(query) {
+			return function step() {
+				return do_query(self, query);
+			};
+		}).reduce($Q.when, $Q()).then(function() {
+			return self;
+		});
+	}));
+};
+
+/** {object:string} Maps `<table>,<I|U|D>` into NoPg event name */
 var tcn_event_mapping = {
 	'documents,I': 'create',
 	'documents,U': 'update',
@@ -1966,93 +2053,274 @@ var tcn_event_mapping = {
 	'attachments,D': 'deleteAttachment',
 	'libs,I': 'createLib',
 	'libs,U': 'updateLib',
-	'libs,D': 'deleteLib',
-	'dbversions,I': 'createDBVersion',
-	'dbversions,U': 'updateDBVersion',
-	'dbversions,D': 'deleteDBVersion'
+	'libs,D': 'deleteLib'
 };
 
+/** {array:string} Each tcn event name */
 var tcn_event_names = Object.keys(tcn_event_mapping).map(function(key) {
 	return tcn_event_mapping[key];
 });
 
-/** Returns a listener for notifications from TCN extension */
-function create_tcn_listener(events) {
-	return function tcn_listener(payload) {
-		debug.assert(payload).is('string');
-		var parts = payload.split(',');
+/** {array:string} Internal event names used by local NoPg connection */
+var local_event_names = [
+	'timeout',
+	'commit',
+	'rollback',
+	'disconnect'
+];
 
-		var table = parts.shift(); // eg. `"documents"`
-		debug.assert(table).is('string').minLength(2);
-		debug.assert(table.charAt(0)).equals('"');
-		debug.assert(table.charAt(table.length-1)).equals('"');
-		table = table.substr(1, table.length-2);
+/** Returns true if argument is an event name */
+NoPg.isTCNEventName = function is_event_name(name) {
+	return is.string(name) && (tcn_event_names.indexOf(name) >= 0);
+};
 
-		var op = parts.shift(); // eg. `I`
-		debug.assert(op).is('string');
+/** Returns true if argument is an event name */
+NoPg.isLocalEventName = function is_event_name(name) {
+	return is.string(name) && (local_event_names.indexOf(name) >= 0);
+};
 
-		var opts = parts.join(','); // eg. `"id"='b6913d79-d37a-5977-94b5-95bdfe5cccda'...`
-		var i = opts.indexOf('=');
-		if(i < 0) { throw new TypeError("No primary key!"); }
+/** Returns true if argument is an event name */
+NoPg.isEventName = function is_event_name(name) {
+	return NoPg.isTCNEventName(name) || NoPg.isLocalEventName(name);
+};
 
-		var key = opts.substr(0, i); // eg. `"id"`
-		debug.assert(key).is('string').minLength(2);
-		debug.assert(key.charAt(0)).equals('"');
-		debug.assert(key.charAt(key.length-1)).equals('"');
-		key = key.substr(1, key.length-2);
+/** Convert event name from object to string
+ * @param name {string} The name of an event, eg. `[(type_id|type)#][id@][(eventName|id|type)]`. [See more](https://trello.com/c/qrSpMOfk/6-event-support).
+ * @returns {object} Parsed values, eg. `{"type":"User", "name":"create", "id": "b6913d79-d37a-5977-94b5-95bdfe5cccda"}`, where only available properties are defined. If type_id was used, the type will have an UUID and you should convert it to string presentation if necessary.
+ */
+NoPg.stringifyEventName = function parse_event_name(event) {
+	debug.assert(event).is('object');
+	debug.assert(event.type).ignore(undefined).is('string');
+	debug.assert(event.name).ignore(undefined).is('string');
+	debug.assert(event.id).ignore(undefined).is('string');
 
-		var value = opts.substr(i+1); // eg. `'b6913d79-d37a-5977-94b5-95bdfe5cccda'...`
-		debug.assert(value).is('string').minLength(2);
-		debug.assert(value.charAt(0)).equals("'");
-		i = value.indexOf("'", 1);
-		if(i < 0) { throw new TypeError("Parse error! Could not find end of input."); }
-		value = value.substr(1, i-1);
+	var has_name = event.hasOwnProperty('name');
 
-		var event = tcn_event_mapping[''+table+','+op];
-		if(event) {
-			events.emit(event, value);
-		} else {
-			debug.warn('Could not find event name for tcn action ' + table + ' with op ' + op);
+	if(has_name && NoPg.isLocalEventName(event.name) ) {
+		return event.name;
+	}
+
+	var name = '';
+	if(event.hasOwnProperty('type')) {
+		name += event.type + '#';
+	}
+	if(event.hasOwnProperty('id')) {
+		name += event.id + '@';
+	}
+	if(has_name) {
+		name += event.name;
+	}
+	return name;
+};
+
+/** Parse event name from string into object.
+ * @param name {string} The name of an event, eg. `[(type_id|type)#][id@][(eventName|id|type)]`. [See more](https://trello.com/c/qrSpMOfk/6-event-support).
+ * @returns {object} Parsed values, eg. `{"type":"User", "name":"create", "id": "b6913d79-d37a-5977-94b5-95bdfe5cccda"}`, where only available properties are defined. If type_id was used, the type will have an UUID and you should convert it to string presentation if necessary.
+ */
+NoPg.parseEventName = function parse_event_name(name) {
+	debug.assert(name).is('string');
+
+	return merge.apply(undefined, ARRAY(name.replace(/([#@])/g, "$1\n").split("\n")).map(function(arg) {
+		arg = arg.trim();
+		var key;
+		var is_type = arg[arg.length-1] === '#';
+		var is_id = arg[arg.length-1] === '@';
+
+		if(is_type || is_id) {
+			arg = arg.substr(0, arg.length-1).trim();
+			key = is_type ? 'type' : 'id';
+			var result = {};
+			result[key] = arg;
+			return result;
 		}
+
+		if(is.uuid(arg)) {
+			return {'id': arg};
+		}
+
+		if(NoPg.isEventName(arg)) {
+			return {'name': arg};
+		}
+
+		if(arg) {
+			return {'type':arg};
+		}
+
+		return {};
+	}).valueOf());
+};
+
+/** Parse tcn channel name to listen from NoPg event name
+ * @param event {string|object} The name of an event, eg. `[(type_id|type)#][id@][(eventName|id|type)]`. [See more](https://trello.com/c/qrSpMOfk/6-event-support).
+ * @returns {string} Channel name for TCN, eg. `tcn_User` or `tcn` for non-typed events.
+ * @todo Hmm, should we throw an exception if it isn't TCN event?
+ */
+NoPg.parseTCNChannelName = function parse_tcn_channel_name(event) {
+	if(is.string(event)) {
+		event = NoPg.parseEventName(event);
+	}
+	debug.assert(event).is('object');
+	if(event.hasOwnProperty('type')) {
+		return 'tcn' + event.type.toLowerCase();
+	}
+	return 'tcn';
+};
+
+/** Parse TCN payload string
+ * @param payload {string} The payload string from PostgreSQL's tcn extension
+ * @returns {object} 
+ */
+NoPg.parseTCNPayload = function nopg_parse_tcn_payload(payload) {
+
+	debug.assert(payload).is('string');
+
+	var parts = payload.split(',');
+
+	var table = parts.shift(); // eg. `"documents"`
+	debug.assert(table).is('string').minLength(2);
+	debug.assert(table.charAt(0)).equals('"');
+	debug.assert(table.charAt(table.length-1)).equals('"');
+	table = table.substr(1, table.length-2);
+
+	var op = parts.shift(); // eg. `I`
+	debug.assert(op).is('string');
+
+	var opts = parts.join(','); // eg. `"id"='b6913d79-d37a-5977-94b5-95bdfe5cccda'...`
+	var i = opts.indexOf('=');
+	if(i < 0) { throw new TypeError("No primary key!"); }
+
+	var key = opts.substr(0, i); // eg. `"id"`
+	debug.assert(key).is('string').minLength(2);
+	debug.assert(key.charAt(0)).equals('"');
+	debug.assert(key.charAt(key.length-1)).equals('"');
+	key = key.substr(1, key.length-2);
+
+	var value = opts.substr(i+1); // eg. `'b6913d79-d37a-5977-94b5-95bdfe5cccda'...`
+	debug.assert(value).is('string').minLength(2);
+	debug.assert(value.charAt(0)).equals("'");
+	i = value.indexOf("'", 1);
+	if(i < 0) { throw new TypeError("Parse error! Could not find end of input."); }
+	value = value.substr(1, i-1);
+
+	var keys = {};
+	keys[key] = value;
+
+	return {
+		'table': table,
+		'op': op,
+		'keys': keys
+	};
+};
+
+/** Returns a listener for notifications from TCN extension
+ * @param events {EventEmitter} The event emitter where we should trigger matching events.
+ * @param when {object} We should only trigger events that match this specification. Object with optional properties `type`, `id` and `name`.
+ */
+function create_tcn_listener(events, when) {
+
+	debug.assert(events).is('object');
+	debug.assert(when).is('object');
+
+	// Normalize event object back to event name
+	var when_str = NoPg.stringifyEventName(when);
+
+	return function tcn_listener(payload) {
+		payload = NoPg.parseTCNPayload(payload);
+		var event = tcn_event_mapping[''+payload.table+','+payload.op];
+
+		if(!event) {
+			debug.warn('Could not find event name for payload: ', payload);
+			return;
+		}
+
+		// Verify we don't emit, if matching id enabled and does not match
+		if( when.hasOwnProperty('id') && (payload.keys.id !== when.id) ) {
+			return;
+		}
+
+		// Verify we don't emit, if matching event name enabled and does not match
+		if( when.hasOwnProperty('name') && (event !== when.name) ) {
+			return;
+		}
+
+		events.emit(when_str, payload.keys.id, event, when.type);
 	};
 }
 
-/** Start listening tcn events */
+/** Start listening new event listener
+ */
 NoPg.prototype.setupTCN = function() {
 	var self = this;
 	return extend.promise( [NoPg], nr_fcall("nopg:setupTCN", function() {
 
-		// Verify we are not already listening TCN
-		if(self._tcn_listener) {
+		// Only setup TCN once
+		if(self._tcn_setup) {
 			return;
 		}
 
-		var counter = 0;
-		var tcn_listener = self._tcn_listener = create_tcn_listener(self._events);
+		self._tcn_setup = true;
 
+		/** {object:number} An object which contains counters by normalized event name. The counts how many times we are listening specific channel, so we can stop listening it when the counter goes 0. */
+		var counter = {};
+
+		/* Listeners for each normalized event name */
+		var tcn_listeners = {};
+
+		/** Listener for new listeners */
 		function new_listener(event/*, listener*/) {
 
 			// Ignore if not tcn event
-			if(tcn_event_names.indexOf(event) < 0) {
+			if(NoPg.isLocalEventName(event)) {
 				return;
 			}
 
-			if(counter === 0) {
-				self._db.on('tcn', tcn_listener);
+			event = NoPg.parseEventName(event);
+
+			// Stringifying back the event normalizes the original event name
+			var event_name = NoPg.stringifyEventName(event);
+
+			var channel_name = NoPg.parseTCNChannelName(event);
+
+			// If we are already listening, just increase the counter.
+			if(counter.hasOwnProperty(event_name)) {
+				counter[event_name] += 1;
+				return;
 			}
-			counter += 1;
+
+			// Create the listener if necessary
+			var tcn_listener;
+			if(!tcn_listeners.hasOwnProperty(event_name)) {
+				tcn_listener = tcn_listeners[event_name] = create_tcn_listener(self._events, event);
+			} else {
+				tcn_listener = tcn_listeners[event_name];
+			}
+
+			// Start listening tcn events for this channel
+			debug.log('Listening channel ' + channel_name + ' for ' + event_name);
+			self._db.on(channel_name, tcn_listener);
+			counter[event_name] = 1;
 		}
 
+		/** Listener for removing listeners */
 		function remove_listener(event/*, listener*/) {
 
 			// Ignore if not tcn event
-			if(tcn_event_names.indexOf(event) < 0) {
+			if(NoPg.isLocalEventName(event)) {
 				return;
 			}
 
-			counter -= 1;
-			if(counter === 0) {
-				self._db.removeListener('tcn', tcn_listener);
+			event = NoPg.parseEventName(event);
+
+			// Stringifying back the event normalizes the original event name
+			var event_name = NoPg.stringifyEventName(event);
+
+			var channel_name = NoPg.parseTCNChannelName(event);
+
+			counter[event_name] -= 1;
+			if(counter[event_name] === 0) {
+				debug.log('Stopped listening channel ' + channel_name + ' for ' + event_name);
+				self._db.removeListener(channel_name, tcn_listeners[event_name]);
+				delete counter[event_name];
 			}
 
 		}
@@ -2063,17 +2331,29 @@ NoPg.prototype.setupTCN = function() {
 	}));
 };
 
-/** Start listening events */
+/** Build wrappers for event methods */
 ['addListener', 'on', 'once', 'removeListener'].forEach(function(fn) {
 	NoPg.prototype[fn] = function(event, listener) {
 		var self = this;
 		return extend.promise( [NoPg], nr_fcall("nopg:"+fn, function() {
 			return $Q.fcall(function() {
-				if( (tcn_event_names.indexOf(event) >= 0) && (!self._tcn_listener) ) {
-					return self.setupTCN();
+				event = NoPg.parseEventName(event);
+				debug.assert(event).is('object');
+
+				// Setup tcn listeners only if necessary
+				if( event.hasOwnProperty('event') && NoPg.isLocalEventName(event.name) ) {
+					return;
 				}
+
+				// FIXME: If type is declared as an uuid, we should convert it to string. But for now, just throw an exception.
+				if(event.hasOwnProperty('type') && is.uuid(event.type)) {
+					throw new TypeError("Types as UUID in events not supported yet!");
+				}
+
+				return self.setupTCN();
+
 			}).then(function() {
-				self._events[fn](event, listener);
+				self._events[fn](NoPg.stringifyEventName(event), listener);
 				return self;
 			});
 		}));
@@ -2308,13 +2588,22 @@ NoPg.prototype.deleteType = NoPg.prototype.delType;
 /** Create a new type. We recommend using `._declareType()` instead unless you want an error if the type exists already. Use like `db._createType([TYPE-NAME])([OPT(S)])`. Returns the result instead of saving it to `self` queue. */
 NoPg.prototype._createType = function(name) {
 	var self = this;
+	debug.assert(name).ignore(undefined).is('string');
 	function createType2(data) {
-		return extend.promise( [NoPg], nr_fcall("nopg:createType", function() {
+		return extend.promise( [NoPg], nr_fcall("nopg:_createType", function() {
 			data = data || {};
 			if(name !== undefined) {
 				data.$name = ''+name;
 			}
-			return do_insert(self, NoPg.Type, data).then(_get_result(NoPg.Type));
+			return do_insert(self, NoPg.Type, data).then(_get_result(NoPg.Type)).then(function(result) {
+				return $Q.fcall(function() {
+					if(name !== undefined) {
+						return self.setupTriggersForType(name);
+					}
+				}).then(function() {
+					return result;
+				});
+			});
 		}));
 	}
 	return createType2;
@@ -2325,11 +2614,7 @@ NoPg.prototype.createType = function(name) {
 	var self = this;
 	function createType2(data) {
 		return extend.promise( [NoPg], nr_fcall("nopg:createType", function() {
-			data = data || {};
-			if(name !== undefined) {
-				data.$name = ''+name;
-			}
-			return do_insert(self, NoPg.Type, data).then(_get_result(NoPg.Type)).then(save_result_to(self));
+			return self._createType(name)(data).then(save_result_to(self));
 		}));
 	}
 	return createType2;

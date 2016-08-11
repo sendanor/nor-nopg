@@ -2065,6 +2065,291 @@ describe('nopg', function(){
 			});
 		});
 
+		it('.isTCNEventName() can detect TCN event names', function(){
+
+			debug.assert( nopg.isTCNEventName ).is('function');
+
+			debug.assert( nopg.isTCNEventName() ).is('boolean').equals(false);
+			debug.assert( nopg.isTCNEventName('') ).is('boolean').equals(false);
+			debug.assert( nopg.isTCNEventName('timeout') ).is('boolean').equals(false);
+			debug.assert( nopg.isTCNEventName('commit') ).is('boolean').equals(false);
+			debug.assert( nopg.isTCNEventName('rollback') ).is('boolean').equals(false);
+			debug.assert( nopg.isTCNEventName('disconnect') ).is('boolean').equals(false);
+
+			debug.assert( nopg.isTCNEventName('create') ).is('boolean').equals(true);
+			debug.assert( nopg.isTCNEventName('update') ).is('boolean').equals(true);
+			debug.assert( nopg.isTCNEventName('delete') ).is('boolean').equals(true);
+			debug.assert( nopg.isTCNEventName('createType') ).is('boolean').equals(true);
+			debug.assert( nopg.isTCNEventName('updateType') ).is('boolean').equals(true);
+			debug.assert( nopg.isTCNEventName('deleteType') ).is('boolean').equals(true);
+			debug.assert( nopg.isTCNEventName('createAttachment') ).is('boolean').equals(true);
+			debug.assert( nopg.isTCNEventName('updateAttachment') ).is('boolean').equals(true);
+			debug.assert( nopg.isTCNEventName('deleteAttachment') ).is('boolean').equals(true);
+			debug.assert( nopg.isTCNEventName('createLib') ).is('boolean').equals(true);
+			debug.assert( nopg.isTCNEventName('updateLib') ).is('boolean').equals(true);
+			debug.assert( nopg.isTCNEventName('deleteLib') ).is('boolean').equals(true);
+
+		});
+
+		it('.isLocalEventName() can detect local event names', function(){
+
+			debug.assert( nopg.isLocalEventName ).is('function');
+
+			debug.assert( nopg.isLocalEventName('timeout') ).is('boolean').equals(true);
+			debug.assert( nopg.isLocalEventName('commit') ).is('boolean').equals(true);
+			debug.assert( nopg.isLocalEventName('rollback') ).is('boolean').equals(true);
+			debug.assert( nopg.isLocalEventName('disconnect') ).is('boolean').equals(true);
+
+			debug.assert( nopg.isLocalEventName() ).is('boolean').equals(false);
+			debug.assert( nopg.isLocalEventName('') ).is('boolean').equals(false);
+
+			debug.assert( nopg.isLocalEventName('create') ).is('boolean').equals(false);
+			debug.assert( nopg.isLocalEventName('update') ).is('boolean').equals(false);
+			debug.assert( nopg.isLocalEventName('delete') ).is('boolean').equals(false);
+			debug.assert( nopg.isLocalEventName('createType') ).is('boolean').equals(false);
+			debug.assert( nopg.isLocalEventName('updateType') ).is('boolean').equals(false);
+			debug.assert( nopg.isLocalEventName('deleteType') ).is('boolean').equals(false);
+			debug.assert( nopg.isLocalEventName('createAttachment') ).is('boolean').equals(false);
+			debug.assert( nopg.isLocalEventName('updateAttachment') ).is('boolean').equals(false);
+			debug.assert( nopg.isLocalEventName('deleteAttachment') ).is('boolean').equals(false);
+			debug.assert( nopg.isLocalEventName('createLib') ).is('boolean').equals(false);
+			debug.assert( nopg.isLocalEventName('updateLib') ).is('boolean').equals(false);
+			debug.assert( nopg.isLocalEventName('deleteLib') ).is('boolean').equals(false);
+
+		});
+
+		it('.isEventName() can detect event names', function(){
+
+			debug.assert( nopg.isEventName ).is('function');
+
+			debug.assert( nopg.isEventName() ).is('boolean').equals(false);
+			debug.assert( nopg.isEventName('') ).is('boolean').equals(false);
+
+			debug.assert( nopg.isEventName('timeout') ).is('boolean').equals(true);
+			debug.assert( nopg.isEventName('commit') ).is('boolean').equals(true);
+			debug.assert( nopg.isEventName('rollback') ).is('boolean').equals(true);
+			debug.assert( nopg.isEventName('disconnect') ).is('boolean').equals(true);
+
+			debug.assert( nopg.isEventName('create') ).is('boolean').equals(true);
+			debug.assert( nopg.isEventName('update') ).is('boolean').equals(true);
+			debug.assert( nopg.isEventName('delete') ).is('boolean').equals(true);
+			debug.assert( nopg.isEventName('createType') ).is('boolean').equals(true);
+			debug.assert( nopg.isEventName('updateType') ).is('boolean').equals(true);
+			debug.assert( nopg.isEventName('deleteType') ).is('boolean').equals(true);
+			debug.assert( nopg.isEventName('createAttachment') ).is('boolean').equals(true);
+			debug.assert( nopg.isEventName('updateAttachment') ).is('boolean').equals(true);
+			debug.assert( nopg.isEventName('deleteAttachment') ).is('boolean').equals(true);
+			debug.assert( nopg.isEventName('createLib') ).is('boolean').equals(true);
+			debug.assert( nopg.isEventName('updateLib') ).is('boolean').equals(true);
+			debug.assert( nopg.isEventName('deleteLib') ).is('boolean').equals(true);
+
+		});
+
+		it('.stringifyEventName() can stringify event objects', function(){
+
+			debug.assert( nopg.stringifyEventName ).is('function');
+
+			debug.assert( nopg.stringifyEventName({}) ).is('string').equals('');
+
+			// Parses tcn event names correctly
+			debug.assert( nopg.stringifyEventName({'type':'User'}) ).is('string').equals('User#');
+			debug.assert( nopg.stringifyEventName({'id':'b6913d79-d37a-5977-94b5-95bdfe5cccda'}) ).is('string').equals('b6913d79-d37a-5977-94b5-95bdfe5cccda@');
+			debug.assert( nopg.stringifyEventName({'name':'create'}) ).is('string').equals('create');
+			debug.assert( nopg.stringifyEventName({'type':'User','id':'b6913d79-d37a-5977-94b5-95bdfe5cccda'}) ).is('string').equals('User#b6913d79-d37a-5977-94b5-95bdfe5cccda@');
+			debug.assert( nopg.stringifyEventName({'type':'User','id':'b6913d79-d37a-5977-94b5-95bdfe5cccda','name':'create'}) ).is('string').equals('User#b6913d79-d37a-5977-94b5-95bdfe5cccda@create');
+			debug.assert( nopg.stringifyEventName({'name':'create','type':'User'}) ).is('string').equals('User#create');
+
+			// Types, etc are ignored if event name is local.
+			debug.assert( nopg.stringifyEventName({'name':'timeout','type':'User'}) ).is('string').equals('timeout');
+			debug.assert( nopg.stringifyEventName({'name':'commit','type':'User'}) ).is('string').equals('commit');
+			debug.assert( nopg.stringifyEventName({'name':'rollback','type':'User'}) ).is('string').equals('rollback');
+			debug.assert( nopg.stringifyEventName({'name':'disconnect','type':'User'}) ).is('string').equals('disconnect');
+
+		});
+
+		it('.parseEventName() can stringify event objects', function(){
+
+			debug.assert( nopg.parseEventName ).is('function');
+
+			var obj;
+
+			//
+			obj = nopg.parseEventName('');
+			debug.assert( obj ).is('object');
+			debug.assert( Object.keys(obj) ).is('array').length(0);
+
+			//
+			obj = nopg.parseEventName('User#');
+			debug.assert( obj ).is('object');
+			debug.assert( obj.type ).is('string').equals('User');
+			debug.assert( Object.keys(obj) ).is('array').length(1);
+
+			//
+			obj = nopg.parseEventName('User');
+			debug.assert( obj ).is('object');
+			debug.assert( obj.type ).is('string').equals('User');
+			debug.assert( Object.keys(obj) ).is('array').length(1);
+
+			//
+			obj = nopg.parseEventName('b6913d79-d37a-5977-94b5-95bdfe5cccda');
+			debug.assert( obj ).is('object');
+			debug.assert( obj.id ).is('string').equals('b6913d79-d37a-5977-94b5-95bdfe5cccda');
+			debug.assert( Object.keys(obj) ).is('array').length(1);
+
+			//
+			obj = nopg.parseEventName('create');
+			debug.assert( obj ).is('object');
+			debug.assert( obj.name ).is('string').equals('create');
+			debug.assert( Object.keys(obj) ).is('array').length(1);
+
+			//
+			obj = nopg.parseEventName('update');
+			debug.assert( obj ).is('object');
+			debug.assert( obj.name ).is('string').equals('update');
+			debug.assert( Object.keys(obj) ).is('array').length(1);
+
+			//
+			obj = nopg.parseEventName('b6913d79-d37a-5977-94b5-95bdfe5cccda#');
+			debug.assert( obj ).is('object');
+			debug.assert( obj.type ).is('string').equals('b6913d79-d37a-5977-94b5-95bdfe5cccda');
+			debug.assert( Object.keys(obj) ).is('array').length(1);
+
+			//
+			obj = nopg.parseEventName('b6913d79-d37a-5977-94b5-95bdfe5cccda#3fbacacb-45ee-5733-be50-3d78c6c90e6b@');
+			debug.assert( obj ).is('object');
+			debug.assert( obj.type ).is('string').equals('b6913d79-d37a-5977-94b5-95bdfe5cccda');
+			debug.assert( obj.id ).is('string').equals('3fbacacb-45ee-5733-be50-3d78c6c90e6b');
+			debug.assert( Object.keys(obj) ).is('array').length(2);
+
+			//
+			obj = nopg.parseEventName('b6913d79-d37a-5977-94b5-95bdfe5cccda#3fbacacb-45ee-5733-be50-3d78c6c90e6b');
+			debug.assert( obj ).is('object');
+			debug.assert( obj.type ).is('string').equals('b6913d79-d37a-5977-94b5-95bdfe5cccda');
+			debug.assert( obj.id ).is('string').equals('3fbacacb-45ee-5733-be50-3d78c6c90e6b');
+			debug.assert( Object.keys(obj) ).is('array').length(2);
+
+			//
+			obj = nopg.parseEventName('3fbacacb-45ee-5733-be50-3d78c6c90e6b@');
+			debug.assert( obj ).is('object');
+			debug.assert( obj.id ).is('string').equals('3fbacacb-45ee-5733-be50-3d78c6c90e6b');
+			debug.assert( Object.keys(obj) ).is('array').length(1);
+
+			//
+			obj = nopg.parseEventName('3fbacacb-45ee-5733-be50-3d78c6c90e6b');
+			debug.assert( obj ).is('object');
+			debug.assert( obj.id ).is('string').equals('3fbacacb-45ee-5733-be50-3d78c6c90e6b');
+			debug.assert( Object.keys(obj) ).is('array').length(1);
+
+			//
+			obj = nopg.parseEventName('3fbacacb-45ee-5733-be50-3d78c6c90e6b@create');
+			debug.assert( obj ).is('object');
+			debug.assert( obj.id ).is('string').equals('3fbacacb-45ee-5733-be50-3d78c6c90e6b');
+			debug.assert( obj.name ).is('string').equals('create');
+			debug.assert( Object.keys(obj) ).is('array').length(2);
+
+			//
+			obj = nopg.parseEventName('3fbacacb-45ee-5733-be50-3d78c6c90e6b#create');
+			debug.assert( obj ).is('object');
+			debug.assert( obj.type ).is('string').equals('3fbacacb-45ee-5733-be50-3d78c6c90e6b');
+			debug.assert( obj.name ).is('string').equals('create');
+			debug.assert( Object.keys(obj) ).is('array').length(2);
+
+			//
+			obj = nopg.parseEventName('b6913d79-d37a-5977-94b5-95bdfe5cccda#3fbacacb-45ee-5733-be50-3d78c6c90e6b@create');
+			debug.assert( obj ).is('object');
+			debug.assert( obj.type ).is('string').equals('b6913d79-d37a-5977-94b5-95bdfe5cccda');
+			debug.assert( obj.id ).is('string').equals('3fbacacb-45ee-5733-be50-3d78c6c90e6b');
+			debug.assert( obj.name ).is('string').equals('create');
+			debug.assert( Object.keys(obj) ).is('array').length(3);
+
+			//
+			obj = nopg.parseEventName('User#3fbacacb-45ee-5733-be50-3d78c6c90e6b@create');
+			debug.assert( obj ).is('object');
+			debug.assert( obj.type ).is('string').equals('User');
+			debug.assert( obj.id ).is('string').equals('3fbacacb-45ee-5733-be50-3d78c6c90e6b');
+			debug.assert( obj.name ).is('string').equals('create');
+			debug.assert( Object.keys(obj) ).is('array').length(3);
+
+			//
+			obj = nopg.parseEventName('User#create');
+			debug.assert( obj ).is('object');
+			debug.assert( obj.type ).is('string').equals('User');
+			debug.assert( obj.name ).is('string').equals('create');
+			debug.assert( Object.keys(obj) ).is('array').length(2);
+
+		});
+
+
+		it('.parseTCNChannelName() can parse event to channel name', function(){
+
+			debug.assert( nopg.parseTCNChannelName ).is('function');
+
+			debug.assert( nopg.parseTCNChannelName({}) ).is('string').equals('tcn');
+
+			// Parses tcn event names correctly
+			debug.assert( nopg.parseTCNChannelName({'type':'User'}) ).is('string').equals('tcn_User');
+			debug.assert( nopg.parseTCNChannelName({'id':'b6913d79-d37a-5977-94b5-95bdfe5cccda'}) ).is('string').equals('tcn');
+			debug.assert( nopg.parseTCNChannelName({'name':'create'}) ).is('string').equals('tcn');
+			debug.assert( nopg.parseTCNChannelName({'type':'User','id':'b6913d79-d37a-5977-94b5-95bdfe5cccda'}) ).is('string').equals('tcn_User');
+			debug.assert( nopg.parseTCNChannelName({'type':'User','id':'b6913d79-d37a-5977-94b5-95bdfe5cccda','name':'create'}) ).is('string').equals('tcn_User');
+			debug.assert( nopg.parseTCNChannelName({'name':'create','type':'User'}) ).is('string').equals('tcn_User');
+
+			debug.assert( nopg.parseTCNChannelName('User') ).is('string').equals('tcn_User');
+			debug.assert( nopg.parseTCNChannelName('b6913d79-d37a-5977-94b5-95bdfe5cccda') ).is('string').equals('tcn');
+			debug.assert( nopg.parseTCNChannelName('create') ).is('string').equals('tcn');
+			debug.assert( nopg.parseTCNChannelName('User#b6913d79-d37a-5977-94b5-95bdfe5cccda') ).is('string').equals('tcn_User');
+			debug.assert( nopg.parseTCNChannelName('User#b6913d79-d37a-5977-94b5-95bdfe5cccda@create') ).is('string').equals('tcn_User');
+			debug.assert( nopg.parseTCNChannelName('User#create') ).is('string').equals('tcn_User');
+
+			// Hmm, should we throw an exception if it isn't TCN event?
+			debug.assert( nopg.parseTCNChannelName({'name':'timeout','type':'User'}) ).is('string').equals('tcn_User');
+			debug.assert( nopg.parseTCNChannelName({'name':'commit','type':'User'}) ).is('string').equals('tcn_User');
+			debug.assert( nopg.parseTCNChannelName({'name':'rollback','type':'User'}) ).is('string').equals('tcn_User');
+			debug.assert( nopg.parseTCNChannelName({'name':'disconnect','type':'User'}) ).is('string').equals('tcn_User');
+			debug.assert( nopg.parseTCNChannelName('User#timeout') ).is('string').equals('tcn_User');
+			debug.assert( nopg.parseTCNChannelName('User#commit') ).is('string').equals('tcn_User');
+			debug.assert( nopg.parseTCNChannelName('User#rollback') ).is('string').equals('tcn_User');
+			debug.assert( nopg.parseTCNChannelName('User#disconnect') ).is('string').equals('tcn_User');
+
+		});
+
+		it('.parseTCNPayload() can parse payload to object', function(){
+
+			debug.assert( nopg.parseTCNPayload ).is('function');
+
+			var obj;
+
+			//
+			obj = nopg.parseTCNPayload('"documents",I,"id"=\'b6913d79-d37a-5977-94b5-95bdfe5cccda\'');
+			debug.assert( obj ).is('object');
+			debug.assert( obj.table ).is('string').equals("documents");
+			debug.assert( obj.op ).is('string').equals("I");
+			debug.assert( obj.keys ).is('object');
+			debug.assert( obj.keys.id ).is('string').equals("b6913d79-d37a-5977-94b5-95bdfe5cccda");
+			debug.assert( Object.keys(obj.keys) ).is('array').length(1);
+			debug.assert( Object.keys(obj) ).is('array').length(3);
+
+			//
+			obj = nopg.parseTCNPayload('"types",U,"id"=\'b6913d79-d37a-5977-94b5-95bdfe5cccda\'');
+			debug.assert( obj ).is('object');
+			debug.assert( obj.table ).is('string').equals("types");
+			debug.assert( obj.op ).is('string').equals("U");
+			debug.assert( obj.keys ).is('object');
+			debug.assert( obj.keys.id ).is('string').equals("b6913d79-d37a-5977-94b5-95bdfe5cccda");
+			debug.assert( Object.keys(obj.keys) ).is('array').length(1);
+			debug.assert( Object.keys(obj) ).is('array').length(3);
+
+			//
+			obj = nopg.parseTCNPayload('"libs",D,"id"=\'b6913d79-d37a-5977-94b5-95bdfe5cccda\'');
+			debug.assert( obj ).is('object');
+			debug.assert( obj.table ).is('string').equals("libs");
+			debug.assert( obj.op ).is('string').equals("D");
+			debug.assert( obj.keys ).is('object');
+			debug.assert( obj.keys.id ).is('string').equals("b6913d79-d37a-5977-94b5-95bdfe5cccda");
+			debug.assert( Object.keys(obj.keys) ).is('array').length(1);
+			debug.assert( Object.keys(obj) ).is('array').length(3);
+
+		});
 
 
 // End of tests
@@ -2074,3 +2359,4 @@ describe('nopg', function(){
 });
 
 /* EOF */
+
