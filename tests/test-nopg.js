@@ -2352,6 +2352,144 @@ describe('nopg', function(){
 		});
 
 
+		it('typed document creation with method', function(){
+			return nopg.start(PGCONFIG).createType("MethodTest")({"$schema":{"type":"object"}}).createMethod("MethodTest")("tag", function() {
+				return this.hello.toUpperCase();
+			}).createDocumentBuilder("MethodTest")().create("MethodTest")({"hello":"world"}).then(function(db) {
+				var type = db.fetch();
+
+				try {
+					debug.assert(type).is('object');
+					debug.assert(type.$events).is('object');
+					debug.assert(type.$id).is('uuid');
+					debug.assert(type.$name).is('string').equals("MethodTest");
+					debug.assert(type.$schema).is('object');
+					debug.assert(type.$meta).is('object');
+					debug.assert(type.$created).is('date string');
+					debug.assert(type.$modified).is('date string');
+
+					debug.assert( Object.keys(type).filter(not_in(['$events', '$id', '$name', '$schema', '$validator', '$meta', '$created', '$modified'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('type = ', type);
+					throw e;
+				}
+
+				var method = db.fetch();
+
+				try {
+					debug.assert(method).is('object');
+					debug.assert(method.$events).is('object');
+					debug.assert(method.$id).is('uuid');
+					debug.assert(method.$types_id).is('uuid').equals(type.$id);
+					debug.assert(method.$type).is('string').equals('MethodTest');
+					debug.assert(method.$active).is('boolean').equals(true);
+					debug.assert(method.$name).is('string').equals("tag");
+					debug.assert(method.$body).is('string');
+					debug.assert(method.$meta).is('object');
+					debug.assert(method.$created).is('date string');
+					debug.assert(method.$modified).is('date string');
+
+					debug.assert( Object.keys(method).filter(not_in(['$events', '$active', '$id', '$meta', '$types_id', '$body', '$name', '$created', '$modified', '$type'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('method = ', method);
+					throw e;
+				}
+
+				var createDocumentBuilder = db.fetch();
+				debug.assert(createDocumentBuilder).is('function');
+
+				var doc = createDocumentBuilder( db.fetch() );
+
+				try {
+					debug.assert(doc).is('object');
+					debug.assert(doc.hello).is('string').equals('world');
+					debug.assert(doc.tag).is('function');
+					debug.assert(doc.tag()).is('string').equals('WORLD');
+					debug.assert(doc.$events).is('object');
+					debug.assert(doc.$id).is('uuid');
+					debug.assert(doc.$content).is('object');
+					debug.assert(doc.$types_id).is('uuid').equals(type.$id);
+					debug.assert(doc.$created).is('date string');
+					debug.assert(doc.$modified).is('date string');
+					debug.assert(doc.$type).is('string').equals('MethodTest');
+
+					debug.assert( Object.keys(doc).filter(not_in(['hello', 'tag', '$events', '$id', '$content', '$types_id', '$created', '$modified', '$type'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('doc = ', doc);
+					throw e;
+				}
+
+				return db.commit();
+			});
+		});
+
+		it('typed document search with methods', function(){
+			return nopg.start(PGCONFIG)
+			  .createType("MethodTestYmMGe0M6")()
+			  .createMethod("MethodTestYmMGe0M6")("tag", function() {
+				return (''+this.foo).toUpperCase();
+			}).createMethod("MethodTestYmMGe0M6")("tags", function() {
+				return [this.tag()];
+			}).createDocumentBuilder("MethodTestYmMGe0M6")()
+			  .create("MethodTestYmMGe0M6")({"foo":'bar1'})
+			  .create("MethodTestYmMGe0M6")({"foo":'bar2'})
+			  .create("MethodTestYmMGe0M6")({"foo":'bar3'})
+			  .search("MethodTestYmMGe0M6")()
+			  .then(function(db) {
+				var type = db.fetch();
+				var method1 = db.fetch();
+				var method2 = db.fetch();
+				var docbuilder = db.fetch();
+				var item0 = docbuilder(db.fetch());
+				var item1 = docbuilder(db.fetch());
+				var item2 = docbuilder(db.fetch());
+				var items = docbuilder(db.fetch());
+
+				try {
+					assert.strictEqual(type.$name, "MethodTestYmMGe0M6");
+				} catch(e) {
+					debug.log('type = ', type);
+					throw e;
+				}
+
+				try {
+					assert.strictEqual(item0.foo, 'bar1');
+					debug.assert(item0.tag).is('function');
+					debug.assert(item0.tags).is('function');
+					assert.strictEqual(item0.tag(), 'BAR1');
+					debug.assert(item0.tags()).is('array').length(1);
+				} catch(e) { debug.log('item0 = ', item0); throw e; }
+
+				try {
+					assert.strictEqual(item1.foo, 'bar2');
+					debug.assert(item1.tag).is('function');
+					debug.assert(item1.tags).is('function');
+					assert.strictEqual(item1.tag(), 'BAR2');
+					debug.assert(item1.tags()).is('array').length(1);
+				} catch(e) { debug.log('item1 = ', item1); throw e; }
+
+				try {
+					assert.strictEqual(item2.foo, 'bar3');
+					debug.assert(item2.tag).is('function');
+					debug.assert(item2.tags).is('function');
+					assert.strictEqual(item2.tag(), 'BAR3');
+					debug.assert(item2.tags()).is('array').length(1);
+				} catch(e) { debug.log('item2 = ', item2); throw e; }
+
+				try {
+					assert.strictEqual(items.length, 3);
+					assert.strictEqual(item0.foo, items[0].foo);
+					assert.strictEqual(item1.foo, items[1].foo);
+					assert.strictEqual(item2.foo, items[2].foo);
+					assert.strictEqual(item0.tag(), items[0].tag());
+					assert.strictEqual(item1.tag(), items[1].tag());
+					assert.strictEqual(item2.tag(), items[2].tag());
+				} catch(e) { debug.log('items = ', items); throw e; }
+
+				return db.commit();
+			});
+		});
+
 // End of tests
 
 	});

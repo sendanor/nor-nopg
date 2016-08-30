@@ -301,6 +301,7 @@ The module has simple ORM mappings for all of our PostgreSQL tables.
 | `NoPg.Type`            | `types`          | `meta`              |
 | `NoPg.Attachment`      | `attachments`    | `meta`              |
 | `NoPg.Lib`             | `libs`           | `meta`              |
+| `NoPg.Method`          | `methods`        | `meta`              |
 | `NoPg.DBVersion`       | `dbversions`     | n/a                 |
 
 ### Using database constructors
@@ -646,6 +647,20 @@ Internal Database Schema
 | `schema`    | `json`        |
 | `validator` | `text`        |
 | `meta`      | `json`        |
+| `created`   | `timestamptz` |
+| `modified`  | `timestamptz` |
+
+### Table `methods`
+
+|    Name     |      Type     |
+| ----------- | ------------- |
+| `id`        | `uuid`        |
+| `types_id`  | `uuid`        |
+| `type`      | `text`        |
+| `name`      | `text`        |
+| `body`      | `text`        |
+| `meta`      | `json`        |
+| `active`    | `boolean`     |
 | `created`   | `timestamptz` |
 | `modified`  | `timestamptz` |
 

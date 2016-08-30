@@ -131,6 +131,7 @@ NoPg.Document = orm.Document;
 NoPg.Type = orm.Type;
 NoPg.Attachment = orm.Attachment;
 NoPg.Lib = orm.Lib;
+NoPg.Method = orm.Method;
 NoPg.DBVersion = orm.DBVersion;
 
 /** Parse obj.$documents.expressions into the object */
@@ -1465,6 +1466,7 @@ NoPg._getObjectType = function(doc) {
 	if(doc instanceof NoPg.Type      ) { return NoPg.Type;       }
 	if(doc instanceof NoPg.Attachment) { return NoPg.Attachment; }
 	if(doc instanceof NoPg.Lib       ) { return NoPg.Lib;        }
+	if(doc instanceof NoPg.Method    ) { return NoPg.Method;     }
 	if(doc instanceof NoPg.DBVersion ) { return NoPg.DBVersion;  }
 };
 
@@ -2053,7 +2055,10 @@ var tcn_event_mapping = {
 	'attachments,D': 'deleteAttachment',
 	'libs,I': 'createLib',
 	'libs,U': 'updateLib',
-	'libs,D': 'deleteLib'
+	'libs,D': 'deleteLib',
+	'methods,I': 'createMethod',
+	'methods,U': 'updateMethod',
+	'methods,D': 'deleteMethod'
 };
 
 /** {array:string} Each tcn event name */
@@ -2698,6 +2703,181 @@ NoPg.prototype.declareType = function(name, opts) {
 	}
 	return declareType2;
 };
+
+/* Start of Method Implementation */
+
+/** Search methods */
+NoPg.prototype._searchMethods = function(type) {
+	var self = this;
+	var ObjType = NoPg.Method;
+	debug.assert(type).is('string');
+	return function nopg_prototype_search_methods_(opts, traits) {
+		debug.assert(opts).ignore(undefined).is('object');
+		opts = opts || {};
+		opts.$type = type;
+		return do_select(self, ObjType, opts, traits).then(get_results(NoPg.Method));
+	};
+};
+
+/** Search methods */
+NoPg.prototype.searchMethods = function(type) {
+	var self = this;
+	debug.assert(type).is('string');
+	var self_search_methods = self._searchMethods(type);
+	return function nopg_prototype_search_methods_(opts, traits) {
+		return extend.promise( [NoPg], nr_fcall("nopg:searchMethods", function() {
+			return self_search_methods(opts, traits).then(save_result_to_queue(self)).then(function() { return self; });
+		}));
+	};
+};
+
+/** Get active method if it exists */
+NoPg.prototype._getMethod = function nopg_prototype_get_method(type) {
+	var self = this;
+	debug.assert(type).is('string');
+	return function nopg_prototype_get_method_(name) {
+		debug.assert(name).is('string');
+		var where = {
+			'$type': type,
+			'$name': name,
+			'$active': true
+		};
+		var traits = {
+			'order': ['$created']
+		};
+		return do_select(self, NoPg.Method, where, traits).then(_get_result(NoPg.Method));
+	};
+};
+
+/** Create a new method. We recommend using `._declareMethod()` instead of this unless you want an error if the method exists already. Use like `db._createMethod([TYPE-NAME])(METHOD-NAME, METHOD-BODY, [OPT(S)])`. Returns the result instead of saving it to `self` queue. */
+NoPg.prototype._createMethod = function(type) {
+	var self = this;
+	debug.assert(type).is('string');
+	function createMethod2(name, body, data) {
+		return extend.promise( [NoPg], nr_fcall("nopg:_createMethod", function() {
+
+			debug.assert(data).ignore(undefined).is('object');
+			data = data || {};
+
+			debug.assert(name).is('string');
+
+			if(is.func(body)) {
+				body = '' + body;
+			}
+			debug.assert(body).ignore(undefined).is('string');
+			body = body || "";
+
+			data.$type = ''+type;
+			data.$name = ''+name;
+			data.$body = ''+body;
+
+			return self._getType(type).then(function(type_obj) {
+				data.$types_id = type_obj.$id;
+				return do_insert(self, NoPg.Method, data).then(_get_result(NoPg.Method));
+			});
+		}));
+	}
+	return createMethod2;
+};
+
+/** Create a new method. We recommend using `.declareMethod()` instead unless you want an error if the type exists already. Use like `db.createMethod([TYPE-NAME])(METHOD-NAME, METHOD-BODY, [OPT(S)])`. */
+NoPg.prototype.createMethod = function(type) {
+	var self = this;
+	var self_create_method = self._createMethod(type);
+	function createMethod2(name, body, data) {
+		return extend.promise( [NoPg], nr_fcall("nopg:createMethod", function() {
+			return self_create_method(name, body, data).then(save_result_to(self));
+		}));
+	}
+	return createMethod2;
+};
+
+/** Create a new method or replace existing with new values. Use like `db.declareMethod([TYPE-NAME])(METHOD-NAME, METHOD-BODY, [OPT(S)])`. */
+NoPg.prototype.declareMethod = function(type) {
+	var self = this;
+	function declareMethod2(name, body, data) {
+		return extend.promise( [NoPg], nr_fcall("nopg:declareMethod", function() {
+
+			debug.assert(type).is('string');
+			debug.assert(name).is('string');
+			debug.assert(data).ignore(undefined).is('object');
+			data = data || {};
+
+			data.$active = true;
+			return self._getMethod(type)(name).then(function(method) {
+				if(method) {
+					return self._update(method, {'$active': false});
+				}
+			}).then(function() {
+				return self._createMethod(type)(name, body, data).then(function(method) {
+					return self.push(method);
+				});
+			});
+		}));
+	}
+	return declareMethod2;
+};
+
+/** Returns a document builder function */
+NoPg.prototype._createDocumentBuilder = function nopg_prototype_create_document_builder(type) {
+	var self = this;
+	debug.assert(type).is('string');
+	var self_search_methods = self._searchMethods(type);
+	return function nopg_prototype_create_document_builder_() {
+		return self_search_methods({'$active': true}).then(function(methods) {
+
+			/** Appends methods to doc */
+			function doc_builder(doc) {
+
+				if(is.array(doc)) {
+					return ARRAY(doc).map(doc_builder).valueOf();
+				}
+
+				if(is.object(doc)) {
+					ARRAY(methods).forEach(function(method) {
+						doc[method.$name] = FUNCTION.parse(method.$body).bind(doc);
+					});
+				}
+
+				return doc;
+			}
+
+			/** Removes methods from doc */
+			function reset_methods(doc) {
+
+				if(is.array(doc)) {
+					return ARRAY(doc).map(reset_methods).valueOf();
+				}
+
+				if(is.object(doc)) {
+					ARRAY(methods).forEach(function(method) {
+						delete doc[method.$name];
+					});
+				}
+
+				return doc;
+			}
+
+			doc_builder.reset = reset_methods;
+
+			return doc_builder;
+		});
+	};
+};
+
+/** Returns a document builder function */
+NoPg.prototype.createDocumentBuilder = function(type) {
+	var self = this;
+	debug.assert(type).is('string');
+	var self_create_document_builder = self._createDocumentBuilder(type);
+	return function nopg_prototype_create_document_builder_() {
+		return extend.promise( [NoPg], nr_fcall("nopg:createDocumentBuilder", function() {
+			return self_create_document_builder().then(save_result_to_queue(self)).then(function() { return self; });
+		}));
+	};
+};
+
+/***** End of Method implementation *****/
 
 /** Create a new type or replace existing type with the new values. Use like `db.declareType([TYPE-NAME])([OPT(S)])`. */
 NoPg.prototype.declareIndexes = function(name) {
