@@ -9,7 +9,7 @@ var NoPgORM = require("./ORM.js");
 var meta = require('./meta.js')({
 	"table": "types",
 	"datakey": '$meta',
-	"keys": ['$id', '$name', '$schema', '$validator', '$meta', '$created', '$modified', '$methods'],
+	"keys": ['$id', '$name', '$schema', '$validator', '$meta', '$created', '$modified'],
 	"parsers": {
 		"$validator": "function"
 	}

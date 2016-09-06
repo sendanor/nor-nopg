@@ -2490,6 +2490,73 @@ describe('nopg', function(){
 			});
 		});
 
+		it('typed document search with methods and automatic documentBuilders', function(){
+			return nopg.start(PGCONFIG)
+			  .createType("AutoMethodTestYmMGe0M6")()
+			  .createMethod("AutoMethodTestYmMGe0M6")("tag", function() {
+				return (''+this.foo).toUpperCase();
+			}).createMethod("AutoMethodTestYmMGe0M6")("tags", function() {
+				return [this.tag()];
+			}).initDocumentBuilder("AutoMethodTestYmMGe0M6")()
+			  .create("AutoMethodTestYmMGe0M6")({"foo":'bar1'})
+			  .create("AutoMethodTestYmMGe0M6")({"foo":'bar2'})
+			  .create("AutoMethodTestYmMGe0M6")({"foo":'bar3'})
+			  .search("AutoMethodTestYmMGe0M6")()
+			  .then(function(db) {
+				var type = db.fetch();
+				var method1 = db.fetch();
+				var method2 = db.fetch();
+				//var docbuilder = db.fetch();
+				var item0 = db.fetch();
+				var item1 = db.fetch();
+				var item2 = db.fetch();
+				var items = db.fetch();
+
+				try {
+					assert.strictEqual(type.$name, "AutoMethodTestYmMGe0M6");
+				} catch(e) {
+					debug.log('type = ', type);
+					throw e;
+				}
+
+				try {
+					assert.strictEqual(item0.foo, 'bar1');
+					debug.assert(item0.tag).is('function');
+					debug.assert(item0.tags).is('function');
+					assert.strictEqual(item0.tag(), 'BAR1');
+					debug.assert(item0.tags()).is('array').length(1);
+				} catch(e) { debug.log('item0 = ', item0); throw e; }
+
+				try {
+					assert.strictEqual(item1.foo, 'bar2');
+					debug.assert(item1.tag).is('function');
+					debug.assert(item1.tags).is('function');
+					assert.strictEqual(item1.tag(), 'BAR2');
+					debug.assert(item1.tags()).is('array').length(1);
+				} catch(e) { debug.log('item1 = ', item1); throw e; }
+
+				try {
+					assert.strictEqual(item2.foo, 'bar3');
+					debug.assert(item2.tag).is('function');
+					debug.assert(item2.tags).is('function');
+					assert.strictEqual(item2.tag(), 'BAR3');
+					debug.assert(item2.tags()).is('array').length(1);
+				} catch(e) { debug.log('item2 = ', item2); throw e; }
+
+				try {
+					assert.strictEqual(items.length, 3);
+					assert.strictEqual(item0.foo, items[0].foo);
+					assert.strictEqual(item1.foo, items[1].foo);
+					assert.strictEqual(item2.foo, items[2].foo);
+					assert.strictEqual(item0.tag(), items[0].tag());
+					assert.strictEqual(item1.tag(), items[1].tag());
+					assert.strictEqual(item2.tag(), items[2].tag());
+				} catch(e) { debug.log('items = ', items); throw e; }
+
+				return db.commit();
+			});
+		});
+
 // End of tests
 
 	});

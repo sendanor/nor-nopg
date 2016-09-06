@@ -1021,7 +1021,8 @@ function prepare_select_query(self, types, search_opts, traits) {
 		// Create the initial query object
 		var q = new Query({
 			'method': 'select',
-			'ObjType': ObjType
+			'ObjType': ObjType,
+			'document_type': document_type
 		});
 
 		// Traits for search operation
@@ -1145,9 +1146,26 @@ function do_select(self, types, search_opts, traits) {
 			debug.assert(result.query).is('string');
 			debug.assert(result.params).is('array');
 
+			var builder;
+			var type = result.documentType;
+
+			if( (result.ObjType === NoPg.Document) &&
+			  is.string(type) &&
+			  self._documentBuilders &&
+			  self._documentBuilders.hasOwnProperty(type) &&
+			  (self._documentBuilders[type] instanceof Function) ) {
+				builder = self._documentBuilders[type];
+			}
+
 			return do_query(self, result.query, result.params ).then(get_results(result.ObjType, {
 				'fieldMap': result.fieldMap
-			}));
+			})).then(function(data) {
+				if(!builder) {
+					return data;
+				}
+				debug.log('data = ', data);
+				return builder(data);
+			});
 		});
 	});
 }
@@ -2493,7 +2511,15 @@ NoPg.prototype.create = function(type) {
 				});
 			}
 
-			return do_insert(self, NoPg.Document, data).then(_get_result(NoPg.Document)).then(save_result_to(self));
+			return do_insert(self, NoPg.Document, data).then(_get_result(NoPg.Document)).then(function(result) {
+				if(self._documentBuilders && type && is.string(type.$name) && self._documentBuilders.hasOwnProperty(type.$name) && self._documentBuilders[type.$name] instanceof Function) {
+					return self._documentBuilders[type.$name](result);
+				}
+				if(self._documentBuilders && is.string(type) && self._documentBuilders.hasOwnProperty(type) && self._documentBuilders[type] instanceof Function) {
+					return self._documentBuilders[type](result);
+				}
+				return result;
+			}).then(save_result_to(self));
 		}));
 	}
 
@@ -2558,7 +2584,12 @@ NoPg.prototype.update = function(obj, data) {
 	var self = this;
 	var ObjType = NoPg._getObjectType(obj) || NoPg.Document;
 	return extend.promise( [NoPg], nr_fcall("nopg:update", function() {
-		return do_update(self, ObjType, obj, data).then(_get_result(ObjType)).then(save_result_to(self));
+		return do_update(self, ObjType, obj, data).then(_get_result(ObjType)).then(function(result) {
+			if(self._documentBuilders && obj && is.string(obj.$type) && self._documentBuilders.hasOwnProperty(obj.$type) && self._documentBuilders[obj.$type] instanceof Function) {
+				return self._documentBuilders[obj.$type](result);
+			}
+			return result;
+		}).then(save_result_to(self));
 	}));
 };
 
@@ -2706,6 +2737,26 @@ NoPg.prototype.declareType = function(name, opts) {
 
 /* Start of Method Implementation */
 
+/** Delete method */
+NoPg.prototype.delMethod = function(type) {
+	debug.assert(type).is('string');
+	var self = this;
+	var self_get_method = self._getMethod(type);
+	return function(name) {
+		debug.assert(name).is('string');
+		return extend.promise( [NoPg], nr_fcall("nopg:delMethod", function() {
+			return self_get_method(name).then(function(method) {
+				if(!(method instanceof NoPg.Method)) {
+					throw new TypeError("invalid method received: " + util.inspect(method) );
+				}
+				return do_delete(self, NoPg.Method, method).then(function() { return self; });
+			});
+		}));
+	};
+};
+
+NoPg.prototype.deleteMethod = NoPg.prototype.delMethod;
+
 /** Search methods */
 NoPg.prototype._searchMethods = function(type) {
 	var self = this;
@@ -2715,6 +2766,9 @@ NoPg.prototype._searchMethods = function(type) {
 		debug.assert(opts).ignore(undefined).is('object');
 		opts = opts || {};
 		opts.$type = type;
+		if(!opts.hasOwnProperty('$active')) {
+			opts.$active = true;
+		}
 		return do_select(self, ObjType, opts, traits).then(get_results(NoPg.Method));
 	};
 };
@@ -2804,14 +2858,14 @@ NoPg.prototype.declareMethod = function(type) {
 			data = data || {};
 
 			data.$active = true;
+
 			return self._getMethod(type)(name).then(function(method) {
-				if(method) {
-					return self._update(method, {'$active': false});
+				if( method && (body === method.$body)) {
+					return self._update(method, merge({}, data, {'$body':body}));
 				}
-			}).then(function() {
-				return self._createMethod(type)(name, body, data).then(function(method) {
-					return self.push(method);
-				});
+				return self._createMethod(type)(name, body, data);
+			}).then(function(method) {
+				return self.push(method);
 			});
 		}));
 	}
@@ -2873,6 +2927,37 @@ NoPg.prototype.createDocumentBuilder = function(type) {
 	return function nopg_prototype_create_document_builder_() {
 		return extend.promise( [NoPg], nr_fcall("nopg:createDocumentBuilder", function() {
 			return self_create_document_builder().then(save_result_to_queue(self)).then(function() { return self; });
+		}));
+	};
+};
+
+/** Setups a document builder function in session cache */
+NoPg.prototype._initDocumentBuilder = function nopg_prototype_init_document_builder(type) {
+	var self = this;
+	debug.assert(type).is('string');
+	if(!self._documentBuilders) {
+		self._documentBuilders = {};
+	}
+	var create_document_builder = self._createDocumentBuilder(type);
+	return function nopg_prototype_init_document_builder_() {
+		if(self._documentBuilders.hasOwnProperty(type)) {
+			return self;
+		}
+		return create_document_builder().then(function(builder) {
+			self._documentBuilders[type] = builder;
+			return self;
+		});
+	};
+};
+
+/** Setups a document builder function in session cache */
+NoPg.prototype.initDocumentBuilder = function(type) {
+	var self = this;
+	debug.assert(type).is('string');
+	var self_init_document_builder = self._initDocumentBuilder(type);
+	return function nopg_prototype_init_document_builder_() {
+		return extend.promise( [NoPg], nr_fcall("nopg:initDocumentBuilder", function() {
+			return self_init_document_builder();
 		}));
 	};
 };

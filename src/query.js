@@ -16,6 +16,7 @@ function Query(opts) {
 	debug.assert(opts.method).ignore(undefined).is('string');
 
 	this.ObjType = opts.ObjType;
+	this.document_type = opts.document_type;
 	this._table = opts.table || (this.ObjType && this.ObjType.meta.table);
 	this._method = opts.method || 'select';
 
@@ -183,7 +184,7 @@ Query.prototype.compile = function() {
 	query = Query.numerifyPlaceHolders(query);
 
 	// Return results
-	return {'query':query, 'params':params, 'fieldMap': field_map, 'ObjType': this.ObjType};
+	return {'query':query, 'params':params, 'fieldMap': field_map, 'ObjType': this.ObjType, 'documentType': this.document_type};
 };
 
 // Exports
