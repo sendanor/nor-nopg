@@ -1153,9 +1153,10 @@ function do_select(self, types, search_opts, traits) {
 			  is.string(type) &&
 			  self._documentBuilders &&
 			  self._documentBuilders.hasOwnProperty(type) &&
-			  (self._documentBuilders[type] instanceof Function) ) {
+			  is.func(self._documentBuilders[type]) ) {
 				builder = self._documentBuilders[type];
 			}
+			debug.assert(builder).ignore(undefined).is('function');
 
 			return do_query(self, result.query, result.params ).then(get_results(result.ObjType, {
 				'fieldMap': result.fieldMap
@@ -2511,12 +2512,17 @@ NoPg.prototype.create = function(type) {
 				});
 			}
 
+			var builder;
+			if(self._documentBuilders && is.string(type) && self._documentBuilders.hasOwnProperty(type) && is.func(self._documentBuilders[type])) {
+				builder = self._documentBuilders[type];
+			} else if(self._documentBuilders && type && is.string(type.$name) && self._documentBuilders.hasOwnProperty(type.$name) && is.func(self._documentBuilders[type.$name])) {
+				builder = self._documentBuilders[type.$name];
+			}
+			debug.assert(builder).ignore(undefined).is('function');
+
 			return do_insert(self, NoPg.Document, data).then(_get_result(NoPg.Document)).then(function(result) {
-				if(self._documentBuilders && type && is.string(type.$name) && self._documentBuilders.hasOwnProperty(type.$name) && self._documentBuilders[type.$name] instanceof Function) {
-					return self._documentBuilders[type.$name](result);
-				}
-				if(self._documentBuilders && is.string(type) && self._documentBuilders.hasOwnProperty(type) && self._documentBuilders[type] instanceof Function) {
-					return self._documentBuilders[type](result);
+				if(builder) {
+					return builder(result);
 				}
 				return result;
 			}).then(save_result_to(self));
@@ -2584,9 +2590,16 @@ NoPg.prototype.update = function(obj, data) {
 	var self = this;
 	var ObjType = NoPg._getObjectType(obj) || NoPg.Document;
 	return extend.promise( [NoPg], nr_fcall("nopg:update", function() {
+
+		var builder;
+		if(self._documentBuilders && obj && is.string(obj.$type) && self._documentBuilders.hasOwnProperty(obj.$type) && is.func(self._documentBuilders[obj.$type])) {
+			builder = self._documentBuilders[obj.$type];
+		}
+		debug.assert(builder).ignore(undefined).is('function');
+
 		return do_update(self, ObjType, obj, data).then(_get_result(ObjType)).then(function(result) {
-			if(self._documentBuilders && obj && is.string(obj.$type) && self._documentBuilders.hasOwnProperty(obj.$type) && self._documentBuilders[obj.$type] instanceof Function) {
-				return self._documentBuilders[obj.$type](result);
+			if(builder) {
+				return builder(result);
 			}
 			return result;
 		}).then(save_result_to(self));
@@ -2881,19 +2894,21 @@ NoPg.prototype._createDocumentBuilder = function nopg_prototype_create_document_
 		return self_search_methods({'$active': true}).then(function(methods) {
 
 			/** Appends methods to doc */
-			function doc_builder(doc) {
-
-				if(is.array(doc)) {
-					return ARRAY(doc).map(doc_builder).valueOf();
-				}
-
+			function _doc_builder(doc) {
 				if(is.object(doc)) {
 					ARRAY(methods).forEach(function(method) {
 						doc[method.$name] = FUNCTION.parse(method.$body).bind(doc);
 					});
 				}
-
 				return doc;
+			}
+
+			/** Appends methods to doc */
+			function doc_builder(doc) {
+				if(is.array(doc)) {
+					return ARRAY(doc).map(_doc_builder).valueOf();
+				}
+				return _doc_builder(doc);
 			}
 
 			/** Removes methods from doc */

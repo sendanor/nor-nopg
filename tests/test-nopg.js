@@ -1388,7 +1388,7 @@ describe('nopg', function(){
 					try {
 						debug.assert(user.$documents[user.group]).is('object');
 						debug.assert(user.$documents[user.group].name).is('string').equals('Users');
-						debug.assert(user.$documents[user.group].$events).is('object');
+						//debug.assert(user.$documents[user.group].$events).is('object');
 						debug.assert(user.$documents[user.group].$id).is('uuid');
 						debug.assert(user.$documents[user.group].$content).is('object');
 						debug.assert(user.$documents[user.group].$types_id).is('uuid').equals(group_type.$id);
@@ -1542,7 +1542,7 @@ describe('nopg', function(){
 					try {
 						debug.assert(user.$documents[user.group]).is('object');
 						debug.assert(user.$documents[user.group].name).is('string').equals('Users');
-						debug.assert(user.$documents[user.group].$events).is('object');
+						//debug.assert(user.$documents[user.group].$events).is('object');
 						debug.assert(user.$documents[user.group].$id).is('uuid');
 						debug.assert(user.$documents[user.group].$content).is('object');
 						debug.assert(user.$documents[user.group].$types_id).is('uuid').equals(group_type.$id);
@@ -1708,7 +1708,7 @@ describe('nopg', function(){
 						debug.assert(user.$documents[user.group].sort_order).is('number').equals(10);
 						debug.assert(user.$documents[user.group].password).is('undefined');
 						debug.assert(user.$documents[user.group].email).is('undefined');
-						debug.assert(user.$documents[user.group].$events).is('object');
+						//debug.assert(user.$documents[user.group].$events).is('object');
 						debug.assert(user.$documents[user.group].$id).is('uuid');
 						debug.assert(user.$documents[user.group].$content).is('object');
 						debug.assert(user.$documents[user.group].$type).is('string').equals('Test_TyWXGCr_group');
@@ -1890,7 +1890,7 @@ describe('nopg', function(){
 						debug.assert(group_res.$documents[user1.$id].sort_order).is('number').equals(1000);
 						debug.assert(group_res.$documents[user1.$id].password).is('undefined');
 						debug.assert(group_res.$documents[user1.$id].email).is('undefined');
-						debug.assert(group_res.$documents[user1.$id].$events).is('object');
+						//debug.assert(group_res.$documents[user1.$id].$events).is('object');
 						debug.assert(group_res.$documents[user1.$id].$id).is('uuid');
 						debug.assert(group_res.$documents[user1.$id].$content).is('object');
 						debug.assert(group_res.$documents[user1.$id].$type).is('string').equals('Test_ReversedRelations_user');
@@ -2039,9 +2039,9 @@ describe('nopg', function(){
 					try {
 						debug.assert(user.$documents[user.group]).is('object');
 						debug.assert(user.$documents[user.group].name).is('string').equals('Users');
-						debug.assert(user.$documents[user.group].$events).is('object');
+						//debug.assert(user.$documents[user.group].$events).is('object');
 						debug.assert(user.$documents[user.group].$id).is('uuid');
-						debug.assert(user.$documents[user.group].$content).is('object');
+						//debug.assert(user.$documents[user.group].$content).is('object');
 						debug.assert(user.$documents[user.group].$types_id).is('uuid').equals(group_type.$id);
 						debug.assert(user.$documents[user.group].$created).is('date string');
 						debug.assert(user.$documents[user.group].$modified).is('date string');

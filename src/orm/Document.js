@@ -49,4 +49,16 @@ NoPgDocument.prototype.update = function(data) {
 	return self;
 };
 
+/** Get plain data presentation */
+NoPgDocument.prototype.toData = function() {
+	var self = this;
+	return meta(self).toData();
+};
+
+/** Get JSON data presentation */
+NoPgDocument.prototype.toJSON = function() {
+	var self = this;
+	return self.toData();
+};
+
 /* EOF */

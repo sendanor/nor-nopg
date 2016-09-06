@@ -10,7 +10,7 @@ function finish {
 trap finish EXIT
 
 export DEBUG_NOPG=true
-export NOPG_TIMEOUT=150000
+export NOPG_TIMEOUT=2000
 export PGCONFIG="$(./node_modules/.bin/nor-pgrunner create)"
 
 #psql "$PGCONFIG" < scripts/cleanup.sql;

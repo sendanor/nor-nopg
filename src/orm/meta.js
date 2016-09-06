@@ -130,6 +130,42 @@ function meta(opts) {
 			return data;
 		};
 
+		/** Unresolve to data presentation */
+		obj.toData = function() {
+			var data = {};
+
+			// Copy table columns
+			ARRAY(builder.keys).filter(function(key) {
+				return key[0] === '$';
+			}).map(function(key) {
+				return key.substr(1);
+			}).forEach(function(key) {
+				if(self['$'+key] === undefined) {
+					return;
+				}
+
+				if(is.func(self['$'+key])) {
+					self['$'+key] = FUNCTION(self['$'+key]).stringify();
+				}
+
+				data['$'+key] = copy(self['$'+key]);
+			});
+
+			// Copy plain data
+			ARRAY(Object.keys(self)).filter(function(key) {
+				return key[0] !== '$';
+			}).forEach(function(key) {
+				if(is.func(self[key])) {
+					data[key] = self[key].call(self);
+				} else {
+					data[key] = copy(self[key]);
+				}
+			});
+
+			//debug.log("data after toData: ", data);
+			return data;
+		};
+
 		return obj;
 	}
 
