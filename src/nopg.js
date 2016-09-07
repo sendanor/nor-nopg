@@ -1247,6 +1247,8 @@ function do_update(self, ObjType, obj, orig_data) {
 			data = (new ObjType(obj)).update(orig_data).valueOf();
 		}
 
+		debug.log('data = ', data);
+
 		// Select only keys that start with $
 		var keys = ARRAY(ObjType.meta.keys)
 			// Remove leading '$' character from keys
@@ -1254,11 +1256,13 @@ function do_update(self, ObjType, obj, orig_data) {
 			.map( parse_keyword_name )
 			// Ignore keys that aren't going to be changed
 			.filter(function(key) {
-				return data[key];
+				return data.hasOwnProperty(key);
 			// Ignore keys that were not changed
 			}).filter(function(key) {
 				return json_cmp(data[key], obj['$'+key]) ? false : true;
 			});
+
+		debug.log('keys = ', keys.valueOf());
 
 		// Return with the current object if there is no keys to update
 		if(keys.valueOf().length === 0) {
@@ -2870,7 +2874,11 @@ NoPg.prototype.declareMethod = function(type) {
 			debug.assert(data).ignore(undefined).is('object');
 			data = data || {};
 
-			data.$active = true;
+			if(!data.hasOwnProperty('$active')) {
+				data.$active = true;
+			} else if(data.$active !== true) {
+				data.$active = null;
+			}
 
 			return self._getMethod(type)(name).then(function(method) {
 				if( method && (body === method.$body)) {
