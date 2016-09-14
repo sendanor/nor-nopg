@@ -132,6 +132,7 @@ NoPg.Type = orm.Type;
 NoPg.Attachment = orm.Attachment;
 NoPg.Lib = orm.Lib;
 NoPg.Method = orm.Method;
+NoPg.View = orm.View;
 NoPg.DBVersion = orm.DBVersion;
 
 /** Parse obj.$documents.expressions into the object */
@@ -1490,6 +1491,7 @@ NoPg._getObjectType = function(doc) {
 	if(doc instanceof NoPg.Attachment) { return NoPg.Attachment; }
 	if(doc instanceof NoPg.Lib       ) { return NoPg.Lib;        }
 	if(doc instanceof NoPg.Method    ) { return NoPg.Method;     }
+	if(doc instanceof NoPg.View    ) { return NoPg.View;     }
 	if(doc instanceof NoPg.DBVersion ) { return NoPg.DBVersion;  }
 };
 
@@ -2081,7 +2083,10 @@ var tcn_event_mapping = {
 	'libs,D': 'deleteLib',
 	'methods,I': 'createMethod',
 	'methods,U': 'updateMethod',
-	'methods,D': 'deleteMethod'
+	'methods,D': 'deleteMethod',
+	'views,I': 'createView',
+	'views,U': 'updateView',
+	'views,D': 'deleteView'
 };
 
 /** {array:string} Each tcn event name */
@@ -2986,6 +2991,152 @@ NoPg.prototype.initDocumentBuilder = function(type) {
 };
 
 /***** End of Method implementation *****/
+
+/* Start of View Implementation */
+
+/** Delete view */
+NoPg.prototype.delView = function(type) {
+	debug.assert(type).is('string');
+	var self = this;
+	var self_get_view = self._getView(type);
+	return function(name) {
+		debug.assert(name).is('string');
+		return extend.promise( [NoPg], nr_fcall("nopg:delView", function() {
+			return self_get_view(name).then(function(view) {
+				if(!(view instanceof NoPg.View)) {
+					throw new TypeError("invalid view received: " + util.inspect(view) );
+				}
+				return do_delete(self, NoPg.View, view).then(function() { return self; });
+			});
+		}));
+	};
+};
+
+NoPg.prototype.deleteView = NoPg.prototype.delView;
+
+/** Search views */
+NoPg.prototype._searchViews = function(type) {
+	var self = this;
+	var ObjType = NoPg.View;
+	debug.assert(type).is('string');
+	return function nopg_prototype_search_views_(opts, traits) {
+		debug.assert(opts).ignore(undefined).is('object');
+		opts = opts || {};
+		opts.$type = type;
+		return do_select(self, ObjType, opts, traits).then(get_results(NoPg.View));
+	};
+};
+
+/** Search views */
+NoPg.prototype.searchViews = function(type) {
+	var self = this;
+	debug.assert(type).is('string');
+	var self_search_views = self._searchViews(type);
+	return function nopg_prototype_search_views_(opts, traits) {
+		return extend.promise( [NoPg], nr_fcall("nopg:searchViews", function() {
+			return self_search_views(opts, traits).then(save_result_to_queue(self)).then(function() { return self; });
+		}));
+	};
+};
+
+/** Get view */
+NoPg.prototype.getView = function(type) {
+	var self = this;
+	debug.assert(type).is('string');
+	var self_get_view = self._getView(type);
+	return function nopg_prototype_get_view_(opts, traits) {
+		return extend.promise( [NoPg], nr_fcall("nopg:getView", function() {
+			return self_get_view(opts, traits).then(save_result_to_queue(self)).then(function() { return self; });
+		}));
+	};
+};
+
+/** Get active view if it exists */
+NoPg.prototype._getView = function nopg_prototype_get_view(type) {
+	var self = this;
+	debug.assert(type).is('string');
+	return function nopg_prototype_get_view_(name) {
+		debug.assert(name).is('string');
+		var where = {
+			'$type': type,
+			'$name': name
+		};
+		var traits = {
+			'order': ['$created']
+		};
+		return do_select(self, NoPg.View, where, traits).then(_get_result(NoPg.View));
+	};
+};
+
+/** Create a new view. We recommend using `._declareView()` instead of this unless you want an error if the view exists already. Use like `db._createView([TYPE-NAME])(METHOD-NAME, METHOD-BODY, [OPT(S)])`. Returns the result instead of saving it to `self` queue. */
+NoPg.prototype._createView = function(type) {
+	var self = this;
+	debug.assert(type).is('string');
+	function createView2(name, data) {
+		return extend.promise( [NoPg], nr_fcall("nopg:_createView", function() {
+
+			debug.assert(data).ignore(undefined).is('object');
+			data = data || {};
+
+			debug.assert(name).is('string').minLength(1);
+
+			data.$type = ''+type;
+			data.$name = ''+name;
+
+			return self._getType(type).then(function(type_obj) {
+				debug.assert(type_obj).is('object');
+				debug.assert(type_obj.$id).is('uuid');
+				data.$types_id = type_obj.$id;
+				return do_insert(self, NoPg.View, data).then(_get_result(NoPg.View));
+			});
+		}));
+	}
+	return createView2;
+};
+
+/** Create a new view. We recommend using `.declareView()` instead unless you want an error if the type exists already. Use like `db.createView([TYPE-NAME])(METHOD-NAME, METHOD-BODY, [OPT(S)])`. */
+NoPg.prototype.createView = function(type) {
+	var self = this;
+	var self_create_view = self._createView(type);
+	function createView2(name, data) {
+		return extend.promise( [NoPg], nr_fcall("nopg:createView", function() {
+			return self_create_view(name, data).then(save_result_to(self));
+		}));
+	}
+	return createView2;
+};
+
+/** Create a new view or replace existing with new values. Use like `db.declareView([TYPE-NAME])(METHOD-NAME, METHOD-BODY, [OPT(S)])`. */
+NoPg.prototype.declareView = function(type) {
+	var self = this;
+	function declareView2(name, data) {
+		return extend.promise( [NoPg], nr_fcall("nopg:declareView", function() {
+
+			debug.assert(type).is('string');
+			debug.assert(name).is('string');
+			debug.assert(data).ignore(undefined).is('object');
+			data = data || {};
+
+			if(!data.hasOwnProperty('$active')) {
+				data.$active = true;
+			} else if(data.$active !== true) {
+				data.$active = false;
+			}
+
+			return self._getView(type)(name).then(function(view) {
+				if(view) {
+					return self._update(view, data);
+				}
+				return self._createView(type)(name, data);
+			}).then(function(view) {
+				return self.push(view);
+			});
+		}));
+	}
+	return declareView2;
+};
+
+/* End of views */
 
 /** Create a new type or replace existing type with the new values. Use like `db.declareType([TYPE-NAME])([OPT(S)])`. */
 NoPg.prototype.declareIndexes = function(name) {

@@ -2557,6 +2557,93 @@ describe('nopg', function(){
 			});
 		});
 
+		it('typed document creation with view', function(){
+			return nopg.start(PGCONFIG)
+			 .createType("ViewTest")({"$schema":{"type":"object"}})
+			 .createView("ViewTest")("onlyNames", {'listFields':['name']})
+			 .create("ViewTest")({"name":"hello", "description": "1" })
+			 .create("ViewTest")({"name":"world", "description": "2"})
+			 .create("ViewTest")({"name":"foo", "description": "3"})
+			 .create("ViewTest")({"name":"bar", "description": "4"})
+			 .getView("ViewTest")("onlyNames")
+			 .then(function(db) {
+				var type = db.fetch();
+
+				try {
+					debug.assert(type).is('object');
+					debug.assert(type.$events).is('object');
+					debug.assert(type.$id).is('uuid');
+					debug.assert(type.$name).is('string').equals("ViewTest");
+					debug.assert(type.$schema).is('object');
+					debug.assert(type.$meta).is('object');
+					debug.assert(type.$created).is('date string');
+					debug.assert(type.$modified).is('date string');
+
+					debug.assert( Object.keys(type).filter(not_in(['$events', '$id', '$name', '$schema', '$validator', '$meta', '$created', '$modified'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('type = ', type);
+					throw e;
+				}
+
+				var view = db.fetch();
+
+				try {
+					debug.assert(view).is('object');
+					debug.assert(view.$events).is('object');
+					debug.assert(view.$id).is('uuid');
+					debug.assert(view.$types_id).is('uuid').equals(type.$id);
+					debug.assert(view.$type).is('string').equals('ViewTest');
+					debug.assert(view.$active).is('boolean').equals(true);
+					debug.assert(view.$name).is('string').equals("onlyNames");
+					debug.assert(view.$meta).is('object');
+					debug.assert(view.$created).is('date string');
+					debug.assert(view.$modified).is('date string');
+					debug.assert(view.listFields).is('array').length(1);
+					debug.assert(view.listFields[0]).is('string').equals('name');
+
+					debug.assert( Object.keys(view).filter(not_in(['$events', '$active', '$id', '$meta', '$types_id', '$name', '$created', '$modified', '$type', 'listFields'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('view = ', view);
+					throw e;
+				}
+
+				var doc1 = db.fetch();
+				var doc2 = db.fetch();
+				var doc3 = db.fetch();
+				var doc4 = db.fetch();
+
+				debug.assert(doc1).is('object');
+				debug.assert(doc2).is('object');
+				debug.assert(doc3).is('object');
+				debug.assert(doc4).is('object');
+
+				var view2 = db.fetch();
+				debug.assert(view2).is('object');
+
+				try {
+					debug.assert(view2).is('object');
+					debug.assert(view2.$events).is('object');
+					debug.assert(view2.$id).is('uuid');
+					debug.assert(view2.$types_id).is('uuid').equals(type.$id);
+					debug.assert(view2.$type).is('string').equals('ViewTest');
+					debug.assert(view2.$active).is('boolean').equals(true);
+					debug.assert(view2.$name).is('string').equals("onlyNames");
+					debug.assert(view2.$meta).is('object');
+					debug.assert(view2.$created).is('date string');
+					debug.assert(view2.$modified).is('date string');
+					debug.assert(view2.listFields).is('array').length(1);
+					debug.assert(view2.listFields[0]).is('string').equals('name');
+
+					debug.assert( Object.keys(view2).filter(not_in(['$events', '$active', '$id', '$meta', '$types_id', '$name', '$created', '$modified', '$type', 'listFields'])) ).is('array').length(0);
+				} catch(e) {
+					debug.log('view2 = ', view2);
+					throw e;
+				}
+
+				return db.commit();
+			});
+		});
+
 // End of tests
 
 	});

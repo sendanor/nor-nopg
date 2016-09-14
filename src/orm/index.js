@@ -6,6 +6,7 @@ module.exports = {
 	'Attachment': require('./Attachment.js'),
 	'Lib': require('./Lib.js'),
 	'Method': require('./Method.js'),
+	'View': require('./View.js'),
 	'DBVersion': require('./DBVersion.js'),
 	'meta': require('./meta.js')
 };
