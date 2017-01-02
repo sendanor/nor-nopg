@@ -1248,7 +1248,7 @@ function do_update(self, ObjType, obj, orig_data) {
 			data = (new ObjType(obj)).update(orig_data).valueOf();
 		}
 
-		debug.log('data = ', data);
+		//debug.log('data = ', data);
 
 		// Select only keys that start with $
 		var keys = ARRAY(ObjType.meta.keys)
@@ -1263,7 +1263,7 @@ function do_update(self, ObjType, obj, orig_data) {
 				return json_cmp(data[key], obj['$'+key]) ? false : true;
 			});
 
-		debug.log('keys = ', keys.valueOf());
+		//debug.log('keys = ', keys.valueOf());
 
 		// Return with the current object if there is no keys to update
 		if(keys.valueOf().length === 0) {
