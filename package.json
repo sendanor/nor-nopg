@@ -42,7 +42,7 @@
     "nor-function": "^1.0.0",
     "nor-is": "^1.0.0",
     "nor-newrelic": "^1.0.0",
-    "nor-pg": "^1.1.1",
+    "nor-pg": "^1.2.0",
     "nor-ref": "^1.0.0",
     "optimist": "^0.6.1",
     "pg-escape": "^0.2.0",
