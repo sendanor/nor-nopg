@@ -1,4 +1,6 @@
-#!/usr/bin/env node
+#!/bin/sh
+':' //; exec "$(command -v nodejs || command -v node)" "$0" "$@"
+
 "use strict";
 
 // Workaround since the CLI command does not yet support NewRelic

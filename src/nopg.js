@@ -29,7 +29,6 @@ var Query = require('./query.js');
 var InsertQuery = require('./insert_query.js');
 var Predicate = require('./Predicate.js');
 var EventEmitter = require('events');
-var util = require('util');
 var pg_escape = require('pg-escape');
 
 /* ----------- ENVIRONMENT SETTINGS ------------- */
