@@ -1566,18 +1566,13 @@ function pg_declare_index(self, ObjType, type, field, typefield, is_unique) {
 			var new_indexdef_v1 = pg_create_index_query_v1(self, ObjType, type, field, typefield, is_unique);
 			var new_indexdef_v2 = pg_create_index_query_v2(self, ObjType, type, field, typefield, is_unique);
 
-			if (new_indexdef_v1 === old_indexdef) {
-				return self;
-			}
-
-			if (new_indexdef_v2 === old_indexdef) {
-				return self;
-			}
+			if (new_indexdef_v1 === old_indexdef) return self;
+			if (new_indexdef_v2 === old_indexdef) return self;
 
 			if (NoPg.debug) {
 				debug.info('Rebuilding index...');
 				debug.log('old index is: ', old_indexdef);
-				debug.log('new index is: ', new_indexdef);
+				debug.log('new index is: ', new_indexdef_v1);
 			}
 
 			return pg_drop_index(self, ObjType, type, field, typefield).then(function() {
