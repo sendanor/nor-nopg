@@ -1494,7 +1494,7 @@ function pg_create_index(self, ObjType, type, field, typefield, is_unique) {
 		return do_query(self, query, params).then(function verify_index_was_created_correctly(res) {
 			// Check that the index was created correctly
 			return pg_get_indexdef(self, name).then(function(indexdef) {
-				if ( (indexdef !== query) || (indexdef !== query_v2) ) {
+				if (!( (indexdef === query) || (indexdef === query_v2) )) {
 					debug.log('attempted to use: ', query, '\n',
 					          '.but created as: ', indexdef);
 					throw new TypeError("Failed to create index correctly!");
