@@ -1,4 +1,8 @@
-[![Build Status](https://secure.travis-ci.org/sendanor/nor-nopg.png?branch=master)](http://travis-ci.org/sendanor/nor-nopg)
+[![view on npm](http://img.shields.io/npm/v/nor-nopg.svg)](https://www.npmjs.org/package/nor-nopg)
+[![npm module downloads](http://img.shields.io/npm/dt/nor-nopg.svg)](https://www.npmjs.org/package/nor-nopg)
+[![Build Status](https://travis-ci.org/sendanor/nor-nopg.svg?branch=master)](https://travis-ci.org/sendanor/nor-nopg)
+[![Coverage Status](https://coveralls.io/repos/github/sendanor/nor-nopg/badge.svg?branch=master)](https://coveralls.io/github/sendanor/nor-nopg?branch=master)
+[![Dependency Status](https://david-dm.org/sendanor/nor-nopg.svg)](https://david-dm.org/sendanor/nor-nopg)
 
 nor-nopg
 ========
