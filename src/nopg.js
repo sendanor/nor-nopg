@@ -1,7 +1,7 @@
 /**
  * nor-nopg -- NoSQL database library for PostgreSQL
- * Copyright 2014 Sendanor <info@sendanor.fi>,
- *           2014 Jaakko-Heikki Heusala <jheusala@iki.fi>
+ * Copyright 2014-2018 Sendanor <info@sendanor.fi>,
+ *           2014-2018 Jaakko-Heikki Heusala <jheusala@iki.fi>
  */
 
 "use strict";
@@ -417,13 +417,17 @@ function _parse_predicate_key(Type, opts, key) {
 }
 
 /** Convert NoPg keywords to internal PostgreSQL name paths for PostgreSQL get_documents() function
- * Note! documents might contain data like `['user|name,email']` which tells the field list and should be converted to PostgreSQL names here.
- * Format is either:
- *  - `<expression>|<field-list>` -- Fetch external documents matching UUID(s) found by <expression> with properties specified by <field-list>
+ * Note! documents might contain data like `['user|name,email']` which tells the field list and should be converted to
+ * PostgreSQL names here. Format is either:
+ *  - `<expression>|<field-list>` -- Fetch external documents matching UUID(s) found by <expression> with properties
+ * specified by <field-list>
  *  - where `<field-list>` is either `*` for all properties or `<field#1>[,<field#2>[,...]]`
  *  - where `<expression>` is either:
- *     - `[<Type>#]<property-name>` -- The local property by name `<property-name>` is used as an UUID or if it is an array, as a list of UUIDs to fetch these documents, optionally only documents with type `<Type>` are searched.
- *     - `<property-name>{<Type>#<field-name>}` -- Documents matching `<Type>` with a property named `<field-name>` matching the UUID of the local document are fetched and UUIDs are saved as an array in a local property named `<property-name>`.
+ *     - `[<Type>#]<property-name>` -- The local property by name `<property-name>` is used as an UUID or if it is an
+ * array, as a list of UUIDs to fetch these documents, optionally only documents with type `<Type>` are searched.
+ *     - `<property-name>{<Type>#<field-name>}` -- Documents matching `<Type>` with a property named `<field-name>`
+ * matching the UUID of the local document are fetched and UUIDs are saved as an array in a local property named
+ * `<property-name>`.
  */
 parse_predicate_document_relations = function parse_predicate_document_relations(ObjType, documents, traits) {
 	return ARRAY(documents).map(function(d) {
@@ -1344,12 +1348,22 @@ function pg_get_indexdef(self, name) {
 	});
 }
 
-/** Convert special characters in field name to "_" for index naming */
+/** Convert special characters in field name to "_" for index naming
+ * @param field
+ * @return {string}
+ */
 function pg_convert_index_name(field) {
 	return field.toLowerCase().replace(/[^a-z0-9]+/g, "_");
 }
 
-/** Returns index name */
+/** Returns index name
+ * @param self
+ * @param ObjType
+ * @param type
+ * @param field
+ * @param typefield
+ * @return {*}
+ */
 function pg_create_index_name(self, ObjType, type, field, typefield) {
 	var name;
 	var colname = _parse_predicate_key(ObjType, {'epoch':false}, field);
@@ -1366,7 +1380,14 @@ function pg_create_index_name(self, ObjType, type, field, typefield) {
 	return name;
 }
 
-/** Internal DROP INDEX query */
+/** Internal DROP INDEX query
+ * @param self
+ * @param ObjType
+ * @param type
+ * @param field
+ * @param typefield
+ * @return {*}
+ */
 function pg_drop_index(self, ObjType, type, field, typefield) {
 	return nr_fcall("nopg:pg_drop_index", function() {
 		//var pgcast = parse_predicate_pgcast(ObjType, type, field);
@@ -1382,7 +1403,10 @@ function pg_drop_index(self, ObjType, type, field, typefield) {
 	});
 }
 
-/** Wrap parenthesis around casts */
+/** Wrap parenthesis around casts
+ * @param x
+ * @return {*}
+ */
 function wrap_casts(x) {
 	x = '' + x;
 	if(/^\(.+\)$/.test(x)) {
@@ -1397,8 +1421,16 @@ function wrap_casts(x) {
 	return x;
 }
 
-/** Returns index query */
-function pg_create_index_query_internal(self, ObjType, type, field, typefield, is_unique) {
+/** Returns index query
+ * @param self
+ * @param ObjType
+ * @param type
+ * @param field
+ * @param typefield
+ * @param is_unique
+ * @return {string | *}
+ */
+function pg_create_index_query_internal_v1(self, ObjType, type, field, typefield, is_unique) {
 	var query;
 	var pgcast = parse_predicate_pgcast(ObjType, type, field);
 	var colname = _parse_predicate_key(ObjType, {'epoch':false}, field);
@@ -1484,7 +1516,10 @@ function pg_declare_index(self, ObjType, type, field, typefield, is_unique) {
 
 /* ------------- PUBLIC FUNCTIONS --------------- */
 
-/** Returns the NoPg constructor type of `doc`, otherwise returns undefined. */
+/** Returns the NoPg constructor type of `doc`, otherwise returns undefined.
+ * @param doc
+ * @return {*}
+ */
 NoPg._getObjectType = function(doc) {
 	if(doc instanceof NoPg.Document  ) { return NoPg.Document;   }
 	if(doc instanceof NoPg.Type      ) { return NoPg.Type;       }
@@ -1495,7 +1530,10 @@ NoPg._getObjectType = function(doc) {
 	if(doc instanceof NoPg.DBVersion ) { return NoPg.DBVersion;  }
 };
 
-/** Returns the NoPg constructor type of `doc`, otherwise throws an exception of `TypeError`. */
+/** Returns the NoPg constructor type of `doc`, otherwise throws an exception of `TypeError`.
+ * @param doc
+ * @return {*}
+ */
 NoPg.getObjectType = function(doc) {
 	var ObjType = NoPg._getObjectType(doc);
 	if(!ObjType) {
@@ -1504,7 +1542,9 @@ NoPg.getObjectType = function(doc) {
 	return ObjType;
 };
 
-/** Record internal timing statistic object */
+/** Record internal timing statistic object
+ * @param data
+ */
 NoPg.prototype._record_sample = function(data) {
 	var self = this;
 
@@ -1576,7 +1616,11 @@ NoPg.prototype._finish_samples = function() {
 
 };
 
-/** Run query on the PostgreSQL server */
+/** Run query on the PostgreSQL server
+ * @param query
+ * @param params
+ * @return {Function}
+ */
 function pg_query(query, params) {
 	return function(db) {
 		var start_time = new Date();
@@ -1597,7 +1641,11 @@ function pg_query(query, params) {
 	};
 }
 
-/** Create watchdog timer */
+/** Create watchdog timer
+ * @param db
+ * @param opts
+ * @return {{}}
+ */
 function create_watchdog(db, opts) {
 	debug.assert(db).is('object');
 
@@ -1691,15 +1739,22 @@ function create_watchdog(db, opts) {
 	return w;
 }
 
-/* Defaults */
+/** Defaults
+ * @type {{} | *}
+ */
 NoPg.defaults = {};
 
 NoPg.defaults.pgconfig = PGCONFIG;
 
-/** The timeout for transactions to auto rollback. If this is `0`, there will be no timeout. If it is `undefined`, the default timeout of 30 seconds will be used. */
+/** The timeout for transactions to auto rollback. If this is `0`, there will be no timeout. If it is `undefined`, the
+ * default timeout of 30 seconds will be used.
+ */
 var NOPG_TIMEOUT = process.env.NOPG_TIMEOUT;
 
-/** The default timeout for transactions to automatically rollback. If this is `undefined`, there will be no timeout. Defaults to 30 seconds. */
+/** The default timeout for transactions to automatically rollback. If this is `undefined`, there will be no timeout.
+ * Defaults to 30 seconds.
+ * @type {number}
+ */
 NoPg.defaults.timeout = 30000;
 
 if(NOPG_TIMEOUT !== undefined) {
@@ -1708,21 +1763,24 @@ if(NOPG_TIMEOUT !== undefined) {
 
 /** If enabled NoPg will be more aware of the properties of types.
  * When a user provides a type as a string, it will be converted as
- * a type object. This will enable additional features like optional 
+ * a type object. This will enable additional features like optional
  * `traits.documents` support as a predefined in type.
+ * @type {boolean}
  */
 NoPg.defaults.enableTypeAwareness = false;
+
 if(process.env.NOPG_TYPE_AWARENESS !== undefined) {
 	NoPg.defaults.enableTypeAwareness = get_true_value(process.env.NOPG_TYPE_AWARENESS);
 }
 
 /** Start a transaction
- * @param pgconfig {string} PostgreSQL database configuration. Example: 
+ * @param pgconfig {string} PostgreSQL database configuration. Example:
                             `"postgres://user:pw@localhost:5432/test"`
  * @param opts {object} Optional options.
- * @param opts.timeout {number} The timeout, default is 
+ * @param opts.timeout {number} The timeout, default is
                                 from `NoPg.defaults.timeout`.
  * @param opts.pgconfig {string} See param `pgconfig`.
+ * @return {*}
  */
 NoPg.start = function(pgconfig, opts) {
 	return extend.promise( [NoPg], nr_fcall("nopg:start", function() {
@@ -1775,10 +1833,11 @@ NoPg.start = function(pgconfig, opts) {
 };
 
 /** Start a connection (without transaction)
- * @param pgconfig {string} PostgreSQL database configuration. Example: 
-                            `"postgres://user:pw@localhost:5432/test"`
+ * @param pgconfig {string} PostgreSQL database configuration. Example:
+ `"postgres://user:pw@localhost:5432/test"`
  * @param opts {object} Optional options.
  * @param opts.pgconfig {string} See param `pgconfig`.
+ * @return {*}
  */
 NoPg.connect = function(pgconfig, opts) {
 	return extend.promise( [NoPg], nr_fcall("nopg:connect", function() {
@@ -1817,13 +1876,14 @@ NoPg.connect = function(pgconfig, opts) {
 };
 
 /** Execute a function in a transaction with automatic commit / rollback.
- * @param pgconfig {string} PostgreSQL database configuration. Example: 
-                            `"postgres://user:pw@localhost:5432/test"`
+ * @param pgconfig {string} PostgreSQL database configuration. Example:
+ `"postgres://user:pw@localhost:5432/test"`
  * @param opts {object} Optional options.
- * @param opts.timeout {number} The timeout, default is 
-                                from `NoPg.defaults.timeout`
+ * @param opts.timeout {number} The timeout, default is
+ from `NoPg.defaults.timeout`
  * @param opts.pgconfig {string} See param `pgconfig`.
  * @param fn {function} The function to be called.
+ * @return {*}
  */
 NoPg.transaction = function(pgconfig, opts, fn) {
 	return extend.promise( [NoPg], nr_fcall("nopg:transaction", function() {
@@ -1866,14 +1926,16 @@ NoPg.transaction = function(pgconfig, opts, fn) {
 // Aliases
 NoPg.fcall = NoPg.transaction;
 
-/** Fetch next value from queue */
+/** Fetch next value from queue
+ * @return {*}
+ */
 NoPg.prototype.fetch = function() {
 	return this._values.shift();
 };
 
 /** Assume the next value in the queue is an array with single value, and throws an exception if it has more than one value.
  * @throws an error if the value is not an array or it has two or more values
- * @returns The first value in the array or otherwise `undefined`
+ * @returns {* | undefined} The first value in the array or otherwise `undefined`
  */
 NoPg.prototype.fetchSingle = function() {
 	var db = this;
@@ -1896,18 +1958,25 @@ NoPg.prototype.fetchFirst = function() {
 	return items.shift();
 };
 
-/** Push `value` to the queue. It makes it possible to implement your own functions. */
+/** Push `value` to the queue. It makes it possible to implement your own functions.
+ * @param value
+ * @return {NoPg}
+ */
 NoPg.prototype.push = function(value) {
 	this._values.push(value);
 	return this;
 };
 
-/** Returns the latest value in the queue but does not remove it */
+/** Returns the latest value in the queue but does not remove it
+ * @return {*}
+ */
 NoPg.prototype._getLastValue = function() {
 	return this._values[this._values.length - 1];
 };
 
-/** Commit transaction */
+/** Commit transaction
+ * @return {*}
+ */
 NoPg.prototype.commit = function() {
 	var self = this;
 	var start_time = new Date();
@@ -1932,7 +2001,9 @@ NoPg.prototype.commit = function() {
 	}));
 };
 
-/** Rollback transaction */
+/** Rollback transaction
+ * @return {*}
+ */
 NoPg.prototype.rollback = function() {
 	var self = this;
 	var start_time = new Date();
@@ -1958,7 +2029,9 @@ NoPg.prototype.rollback = function() {
 	}) );
 };
 
-/** Disconnect */
+/** Disconnect
+ * @return {*}
+ */
 NoPg.prototype.disconnect = function() {
 	var self = this;
 	var start_time = new Date();
@@ -1981,7 +2054,11 @@ NoPg.prototype.disconnect = function() {
 	}));
 };
 
-/** Returns CREATE TRIGGER query for Type specific TCN */
+/** Returns CREATE TRIGGER query for Type specific TCN
+ * @param type
+ * @param op
+ * @return {*}
+ */
 NoPg.createTriggerQueriesForType = function create_tcn_queries(type, op) {
 	debug.assert(type).is('string');
 	debug.assert(op).ignore(undefined).is('string');
@@ -2053,7 +2130,10 @@ NoPg.createTriggerQueriesForType = function create_tcn_queries(type, op) {
 	throw new TypeError("op invalid: "+ op);
 };
 
-/** Setup triggers for specific type */
+/** Setup triggers for specific type
+ * @param type
+ * @return {*}
+ */
 NoPg.prototype.setupTriggersForType = function(type) {
 	var self = this;
 	return extend.promise( [NoPg], nr_fcall("nopg:setupTriggersForType", function() {
@@ -2102,24 +2182,36 @@ var local_event_names = [
 	'disconnect'
 ];
 
-/** Returns true if argument is an event name */
+/** Returns true if argument is an event name
+ * @param name
+ * @return {* | boolean}
+ */
 NoPg.isTCNEventName = function is_event_name(name) {
 	return is.string(name) && (tcn_event_names.indexOf(name) >= 0);
 };
 
-/** Returns true if argument is an event name */
+/** Returns true if argument is an event name
+ * @param name
+ * @return {* | boolean}
+ */
 NoPg.isLocalEventName = function is_event_name(name) {
 	return is.string(name) && (local_event_names.indexOf(name) >= 0);
 };
 
-/** Returns true if argument is an event name */
+/** Returns true if argument is an event name
+ * @param name
+ * @return {* | boolean}
+ */
 NoPg.isEventName = function is_event_name(name) {
 	return NoPg.isTCNEventName(name) || NoPg.isLocalEventName(name);
 };
 
 /** Convert event name from object to string
- * @param name {string} The name of an event, eg. `[(type_id|type)#][id@][(eventName|id|type)]`. [See more](https://trello.com/c/qrSpMOfk/6-event-support).
- * @returns {object} Parsed values, eg. `{"type":"User", "name":"create", "id": "b6913d79-d37a-5977-94b5-95bdfe5cccda"}`, where only available properties are defined. If type_id was used, the type will have an UUID and you should convert it to string presentation if necessary.
+ * @param name {string} The name of an event, eg. `[(type_id|type)#][id@][(eventName|id|type)]`. [See
+ *     more](https://trello.com/c/qrSpMOfk/6-event-support).
+ * @returns {object} Parsed values, eg. `{"type":"User", "name":"create", "id":
+ *     "b6913d79-d37a-5977-94b5-95bdfe5cccda"}`, where only available properties are defined. If type_id was used, the
+ *     type will have an UUID and you should convert it to string presentation if necessary.
  */
 NoPg.stringifyEventName = function parse_event_name(event) {
 	debug.assert(event).is('object');
@@ -2147,8 +2239,11 @@ NoPg.stringifyEventName = function parse_event_name(event) {
 };
 
 /** Parse event name from string into object.
- * @param name {string} The name of an event, eg. `[(type_id|type)#][id@][(eventName|id|type)]`. [See more](https://trello.com/c/qrSpMOfk/6-event-support).
- * @returns {object} Parsed values, eg. `{"type":"User", "name":"create", "id": "b6913d79-d37a-5977-94b5-95bdfe5cccda"}`, where only available properties are defined. If type_id was used, the type will have an UUID and you should convert it to string presentation if necessary.
+ * @param name {string} The name of an event, eg. `[(type_id|type)#][id@][(eventName|id|type)]`. [See
+ *     more](https://trello.com/c/qrSpMOfk/6-event-support).
+ * @returns {object} Parsed values, eg. `{"type":"User", "name":"create", "id":
+ *     "b6913d79-d37a-5977-94b5-95bdfe5cccda"}`, where only available properties are defined. If type_id was used, the
+ *     type will have an UUID and you should convert it to string presentation if necessary.
  */
 NoPg.parseEventName = function parse_event_name(name) {
 	debug.assert(name).is('string');
@@ -2184,7 +2279,8 @@ NoPg.parseEventName = function parse_event_name(name) {
 };
 
 /** Parse tcn channel name to listen from NoPg event name
- * @param event {string|object} The name of an event, eg. `[(type_id|type)#][id@][(eventName|id|type)]`. [See more](https://trello.com/c/qrSpMOfk/6-event-support).
+ * @param event {string|object} The name of an event, eg. `[(type_id|type)#][id@][(eventName|id|type)]`. [See
+ *     more](https://trello.com/c/qrSpMOfk/6-event-support).
  * @returns {string} Channel name for TCN, eg. `tcn_User` or `tcn` for non-typed events.
  * @todo Hmm, should we throw an exception if it isn't TCN event?
  */
@@ -2247,7 +2343,8 @@ NoPg.parseTCNPayload = function nopg_parse_tcn_payload(payload) {
 
 /** Returns a listener for notifications from TCN extension
  * @param events {EventEmitter} The event emitter where we should trigger matching events.
- * @param when {object} We should only trigger events that match this specification. Object with optional properties `type`, `id` and `name`.
+ * @param when {object} We should only trigger events that match this specification. Object with optional properties
+ *     `type`, `id` and `name`.
  */
 function create_tcn_listener(events, when) {
 
@@ -2281,6 +2378,7 @@ function create_tcn_listener(events, when) {
 }
 
 /** Start listening new event listener
+ * @return {*}
  */
 NoPg.prototype.setupTCN = function() {
 	var self = this;
@@ -2393,7 +2491,9 @@ NoPg.prototype.setupTCN = function() {
 	};
 });
 
-/** Checks if server has compatible version */
+/** Checks if server has compatible version
+ * @return {*}
+ */
 NoPg.prototype.testServerVersion = function() {
 	var self = this;
 	return extend.promise( [NoPg], nr_fcall("nopg:testServerVersion", function() {
@@ -2411,7 +2511,10 @@ NoPg.prototype.testServerVersion = function() {
 	}));
 };
 
-/** Checks if server has compatible version */
+/** Checks if server has compatible version
+ * @param name
+ * @return {*}
+ */
 NoPg.prototype.testExtension = function(name) {
 	var self = this;
 	return extend.promise( [NoPg], nr_fcall("nopg:testExtension", function() {
@@ -2427,7 +2530,9 @@ NoPg.prototype.testExtension = function(name) {
 	}));
 };
 
-/** Tests if the server is compatible */
+/** Tests if the server is compatible
+ * @return {*}
+ */
 NoPg.prototype.test = function() {
 	var self = this;
 	return extend.promise( [NoPg], nr_fcall("nopg:test", function() {
@@ -2435,7 +2540,11 @@ NoPg.prototype.test = function() {
 	}));
 };
 
-/** Returns a number padded to specific width */
+/** Returns a number padded to specific width
+ * @param num
+ * @param size
+ * @return {string}
+ */
 function pad(num, size) {
 	var s = num+"";
 	while (s.length < size) {
@@ -2444,12 +2553,17 @@ function pad(num, size) {
 	return s;
 }
 
-/** Runs `require(file)` and push results to `builders` array */
+/** Runs `require(file)` and push results to `builders` array
+ * @param builders
+ * @param file
+ */
 function push_file(builders, file) {
 	FUNCTION(builders.push).apply(builders, require(file) );
 }
 
-/** Initialize the database */
+/** Initialize the database
+ * @return {*}
+ */
 NoPg.prototype.init = function() {
 	var self = this;
 	return extend.promise( [NoPg], nr_fcall("nopg:init", function() {
@@ -2501,7 +2615,10 @@ NoPg.prototype.init = function() {
 	}));
 };
 
-/** Create document by type: `db.create([TYPE])([OPT(S)])`. */
+/** Create document by type: `db.create([TYPE])([OPT(S)])`.
+ * @param type
+ * @return {create2}
+ */
 NoPg.prototype.create = function(type) {
 	var self = this;
 
@@ -2541,13 +2658,19 @@ NoPg.prototype.create = function(type) {
 	return create2;
 };
 
-/** Add new DBVersion record */
+/** Add new DBVersion record
+ * @param data
+ * @return {Promise.<TResult>}
+ */
 NoPg.prototype._addDBVersion = function(data) {
 	var self = this;
 	return do_insert(self, NoPg.DBVersion, data).then(_get_result(NoPg.DBVersion));
 };
 
-/** Search documents */
+/** Search documents
+ * @param type
+ * @return {search2}
+ */
 NoPg.prototype.search = function(type) {
 	var self = this;
 	var ObjType = NoPg.Document;
@@ -2559,7 +2682,10 @@ NoPg.prototype.search = function(type) {
 	return search2;
 };
 
-/** Count documents */
+/** Count documents
+ * @param type
+ * @return {count2}
+ */
 NoPg.prototype.count = function(type) {
 	var self = this;
 	var ObjType = NoPg.Document;
@@ -2572,7 +2698,10 @@ NoPg.prototype.count = function(type) {
 	return count2;
 };
 
-/** Search single document */
+/** Search single document
+ * @param type
+ * @return {searchSingle2}
+ */
 NoPg.prototype.searchSingle = function(type) {
 	var self = this;
 	var ObjType = NoPg.Document;
@@ -2587,14 +2716,22 @@ NoPg.prototype.searchSingle = function(type) {
 	return searchSingle2;
 };
 
-/** Update document */
+/** Update document
+ * @param obj
+ * @param data
+ * @return {Promise.<TResult>}
+ */
 NoPg.prototype._update = function(obj, data) {
 	var self = this;
 	var ObjType = NoPg._getObjectType(obj) || NoPg.Document;
 	return do_update(self, ObjType, obj, data).then(_get_result(ObjType));
 };
 
-/** Update document */
+/** Update document
+ * @param obj
+ * @param data
+ * @return {*}
+ */
 NoPg.prototype.update = function(obj, data) {
 	var self = this;
 	var ObjType = NoPg._getObjectType(obj) || NoPg.Document;
@@ -2615,7 +2752,10 @@ NoPg.prototype.update = function(obj, data) {
 	}));
 };
 
-/** Delete resource */
+/** Delete resource
+ * @param obj
+ * @return {*}
+ */
 NoPg.prototype.del = function(obj) {
 	if(!obj.$id) { throw new TypeError("opts.$id invalid: " + util.inspect(obj) ); }
 	var self = this;
@@ -3289,7 +3429,11 @@ NoPg.prototype.getType = function(name) {
 /** Alias for `pghelpers.escapeFunction()` */
 NoPg._escapeFunction = pghelpers.escapeFunction;
 
-/** Returns the latest database server version */
+/** Returns the latest database server version
+ * @param self
+ * @return {Promise}
+ * @private
+ */
 function _latestDBVersion(self) {
 	var table = NoPg.DBVersion.meta.table;
 	return pg_table_exists(self, table).then(function(exists) {
