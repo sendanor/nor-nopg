@@ -126,9 +126,9 @@ $Q.fcall(function() {
 	//debug.log("Returning with exit status 0");
 	process.exit(0);
 }).fail(function(err) {
-	util.error(''+err);
+	console.error(''+err);
 
-	if(argv.v) {
+	if (argv.v) {
 		debug.error(err);
 	}
 
