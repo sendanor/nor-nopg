@@ -1447,12 +1447,47 @@ function pg_create_index_query_internal_v1(self, ObjType, type, field, typefield
 	return query;
 }
 
-/** Create index */
+/** Returns index query
+ * @param self
+ * @param ObjType
+ * @param type
+ * @param field
+ * @param typefield
+ * @param is_unique
+ * @return {string | *}
+ */
+function pg_create_index_query_internal_v2(self, ObjType, type, field, typefield, is_unique) {
+	var query;
+	var pgcast = parse_predicate_pgcast(ObjType, type, field);
+	var colname = _parse_predicate_key(ObjType, {'epoch':false}, field);
+	var name = pg_create_index_name(self, ObjType, type, field, typefield);
+	query = "CREATE " + (is_unique?'UNIQUE ':'') + "INDEX "+name+" ON public." + (ObjType.meta.table) + " USING btree ";
+	if( (ObjType === NoPg.Document) && (typefield !== undefined)) {
+		if(!typefield) {
+			throw new TypeError("No typefield set for NoPg.Document!");
+		}
+		query += "(" + typefield+", "+ wrap_casts(pgcast(colname.getString())) + ")";
+	} else {
+		query += "(" + wrap_casts(pgcast(colname.getString())) + ")";
+	}
+	return query;
+}
+
+/** Create index
+ * @param self
+ * @param ObjType
+ * @param type
+ * @param field
+ * @param typefield
+ * @param is_unique
+ * @return {*}
+ */
 function pg_create_index(self, ObjType, type, field, typefield, is_unique) {
 	return nr_fcall("nopg:pg_create_index", function() {
 		var colname = _parse_predicate_key(ObjType, {'epoch':false}, field);
 		var name = pg_create_index_name(self, ObjType, type, field, typefield);
-		var query = pg_create_index_query_internal(self, ObjType, type, field, typefield, is_unique);
+		var query = pg_create_index_query_internal_v1(self, ObjType, type, field, typefield, is_unique);
+		var query_v2 = pg_create_index_query_internal_v2(self, ObjType, type, field, typefield, is_unique);
 
 		query = Query.numerifyPlaceHolders(query);
 		var params = colname.getParams();
@@ -1460,7 +1495,7 @@ function pg_create_index(self, ObjType, type, field, typefield, is_unique) {
 		return do_query(self, query, params).then(function verify_index_was_created_correctly(res) {
 			// Check that the index was created correctly
 			return pg_get_indexdef(self, name).then(function(indexdef) {
-				if(indexdef !== query) {
+				if ( (indexdef !== query) || (indexdef !== query_v2) ) {
 					debug.log('attempted to use: ', query, '\n',
 					          '.but created as: ', indexdef);
 					throw new TypeError("Failed to create index correctly!");
@@ -1471,19 +1506,53 @@ function pg_create_index(self, ObjType, type, field, typefield, is_unique) {
 	});
 }
 
-/** Returns the create index query as string and throws an error if any parameters exists */
-function pg_create_index_query(self, ObjType, type, field, typefield, is_unique) {
+/** Returns the create index query as string and throws an error if any parameters exists
+ * @param self
+ * @param ObjType
+ * @param type
+ * @param field
+ * @param typefield
+ * @param is_unique
+ * @return {string | *}
+ */
+function pg_create_index_query_v1 (self, ObjType, type, field, typefield, is_unique) {
 	var colname = _parse_predicate_key(ObjType, {'epoch':false}, field);
-	var query = pg_create_index_query_internal(self, ObjType, type, field, typefield, is_unique);
-	//query = Query.numerifyPlaceHolders(query);
+	var query = pg_create_index_query_internal_v1(self, ObjType, type, field, typefield, is_unique);
 	var params = colname.getParams();
 	if(params.length !== 0) {
-		throw new TypeError("pg_create_index_query() does not support params!");
+		throw new TypeError("pg_create_index_query_v1() does not support params!");
 	}
 	return query;
 }
 
-/** Internal CREATE INDEX query that will create the index only if the relation does not exists already */
+/** Returns the create index query as string and throws an error if any parameters exists
+ * @param self
+ * @param ObjType
+ * @param type
+ * @param field
+ * @param typefield
+ * @param is_unique
+ * @return {string | *}
+ */
+function pg_create_index_query_v2 (self, ObjType, type, field, typefield, is_unique) {
+	var colname = _parse_predicate_key(ObjType, {'epoch':false}, field);
+	var query = pg_create_index_query_internal_v2(self, ObjType, type, field, typefield, is_unique);
+	var params = colname.getParams();
+	if(params.length !== 0) {
+		throw new TypeError("pg_create_index_query_v2() does not support params!");
+	}
+	return query;
+}
+
+/** Internal CREATE INDEX query that will create the index only if the relation does not exists already
+ * @param self
+ * @param ObjType
+ * @param type
+ * @param field
+ * @param typefield
+ * @param is_unique
+ * @return {Promise.<TResult>}
+ */
 function pg_declare_index(self, ObjType, type, field, typefield, is_unique) {
 	var colname = _parse_predicate_key(ObjType, {'epoch':false}, field);
 	var datakey = colname.getMeta('datakey');
@@ -1495,13 +1564,18 @@ function pg_declare_index(self, ObjType, type, field, typefield, is_unique) {
 		}
 
 		return pg_get_indexdef(self, name).then(function(old_indexdef) {
-			var new_indexdef = pg_create_index_query(self, ObjType, type, field, typefield, is_unique);
+			var new_indexdef_v1 = pg_create_index_query_v1(self, ObjType, type, field, typefield, is_unique);
+			var new_indexdef_v2 = pg_create_index_query_v2(self, ObjType, type, field, typefield, is_unique);
 
-			if(new_indexdef === old_indexdef) {
+			if (new_indexdef_v1 === old_indexdef) {
 				return self;
 			}
 
-			if(NoPg.debug) {
+			if (new_indexdef_v2 === old_indexdef) {
+				return self;
+			}
+
+			if (NoPg.debug) {
 				debug.info('Rebuilding index...');
 				debug.log('old index is: ', old_indexdef);
 				debug.log('new index is: ', new_indexdef);
