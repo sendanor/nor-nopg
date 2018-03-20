@@ -1,6 +1,6 @@
 /** Database schema creation functions */
 var NoPg = require('nor-nopg');
-var uuid = require('node-uuid');
+var uuid = require('uuid/v4');
 var debug = require('nor-debug');
 module.exports = [
 
@@ -55,7 +55,7 @@ module.exports = [
 	/** The json documents */
 	function(db) {
 
-		var documents_uuid = uuid.v4();
+		var documents_uuid = uuid();
 		debug.assert(documents_uuid).is('uuid');
 
 		return db.query('CREATE SEQUENCE documents_seq')
@@ -76,7 +76,7 @@ module.exports = [
 
 	/** #4 */
 	function(db) {
-		var attachments_uuid = uuid.v4();
+		var attachments_uuid = uuid();
 		debug.assert(attachments_uuid).is('uuid');
 
 		return db.query('CREATE SEQUENCE attachments_seq')

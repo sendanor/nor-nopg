@@ -33,7 +33,7 @@
   "dependencies": {
     "merge": "^1.1.3",
     "minimist": "^1.1.0",
-    "node-uuid": "^1.4.1",
+    "uuid": "^3.2.1",
     "nor-array": "^1.0.0",
     "nor-data": "^1.0.0",
     "nor-debug": "^1.0.0",

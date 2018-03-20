@@ -1,5 +1,5 @@
 /** Database schema creation functions */
-var uuid = require('node-uuid');
+var uuid = require('uuid/v4');
 var debug = require('nor-debug');
 
 module.exports = [
@@ -11,7 +11,7 @@ module.exports = [
 	 * There is a manually generated "namespace" UUID for UUIDv5 generator
 	 */
 	function(db) {
-		var types_uuid = uuid.v4();
+		var types_uuid = uuid();
 		debug.assert(types_uuid).is('uuid');
 		return db.query('CREATE SEQUENCE types_seq')
 			.query([

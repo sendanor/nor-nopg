@@ -2,13 +2,13 @@
 
 /** Database schema creation functions */
 var _Q = require('q');
-var uuid = require('node-uuid');
+var uuid = require('uuid');
 var debug = require('nor-debug');
 module.exports = [
 
 	/** The methods table */
 	function(db) {
-		var methods_uuid = uuid.v4();
+		var methods_uuid = uuid();
 		debug.assert(methods_uuid).is('uuid');
 
 		return db.query('CREATE SEQUENCE methods_seq')

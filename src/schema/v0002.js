@@ -1,12 +1,12 @@
 /** Database schema creation functions */
 var NoPg = require('nor-nopg');
-var uuid = require('node-uuid');
+var uuid = require('uuid/v4');
 var debug = require('nor-debug');
 module.exports = [
 
 	/** #2 Table for storing JS libraries (01_js_library_environment.sql) */
 	function(db) {
-		var libs_uuid = uuid.v4();
+		var libs_uuid = uuid();
 		debug.assert(libs_uuid).is('uuid');
 		return db.query('CREATE SEQUENCE libs_seq'
 			).query([

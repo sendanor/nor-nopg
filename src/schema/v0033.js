@@ -2,13 +2,13 @@
 
 /** Database schema creation functions */
 var _Q = require('q');
-var uuid = require('node-uuid');
+var uuid = require('uuid');
 var debug = require('nor-debug');
 module.exports = [
 
 	/** The views table */
 	function(db) {
-		var views_uuid = uuid.v4();
+		var views_uuid = uuid();
 		debug.assert(views_uuid).is('uuid');
 
 		return db.query('CREATE SEQUENCE views_seq')
