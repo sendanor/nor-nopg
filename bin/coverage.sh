@@ -9,6 +9,7 @@ fi
 set -x
 cd "$pkg_root_dir"
 
+# Disable debug logs to stdout in nor-debug
 export DEBUG_USE_CONSOLE_LOG=false
 export DEBUG_USE_CONSOLE_INFO=false
 
