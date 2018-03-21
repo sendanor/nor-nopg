@@ -9,6 +9,9 @@ fi
 set -x
 cd "$pkg_root_dir"
 
+export DEBUG_USE_CONSOLE_LOG=false
+export DEBUG_USE_CONSOLE_INFO=false
+
 mkdir -p ./coverage/
 mocha -R mocha-lcov-reporter tests/test-*.js > ./coverage/coverage_temp.lcov
 
