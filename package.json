@@ -9,7 +9,7 @@
   "main": "src/index.js",
   "scripts": {
     "test": "./bin/test.sh",
-    "test-coverage": "mocha -R mocha-lcov-reporter tests/test-*.js|coveralls",
+    "test-coverage": "mocha -R mocha-lcov-reporter tests/test-*.js|sed 's,SF:,SF:src/,'|coveralls",
     "test-dot": "mocha -u bdd -c -R dot tests/test-*.js",
     "test-list": "mocha -u bdd -c -R list tests/test-*.js",
     "test-spec": "mocha -u bdd -c -R spec tests/test-*.js",
