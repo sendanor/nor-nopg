@@ -20,7 +20,7 @@ psql "$PGCONFIG" -c 'CREATE EXTENSION "uuid-ossp";'
 psql "$PGCONFIG" -c 'CREATE EXTENSION tcn;'
 psql "$PGCONFIG" -c 'CREATE EXTENSION moddatetime;'
 
-./src/bin/nopg.js -v init
+./src/bin/nopg.sh -v init
 
 if test "x$test" = x; then
 	npm -s test
