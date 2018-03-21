@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-pkg_root_dir="$(dirname "$(dirname "$(readlink -e "$0")")")"
+if uname -s|grep -iq Darwin; then
+    pkg_root_dir="$(dirname "$(dirname "$(readlink -e "$0")")")"
+else
+    pkg_root_dir="$(dirname "$(dirname "$0")")"
+fi
 set -x
 cd "$pkg_root_dir"
 if test "x$ENABLE_COVERAGE" = x; then
