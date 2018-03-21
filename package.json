@@ -57,10 +57,9 @@
     "async-profile": "^0.4.0",
     "coveralls": "^3.0.0",
     "jscover": "^1.0.0",
-    "jscoverage": "^0.6.0",
     "jshint": "^2.9.2",
     "lint": "^1.1.2",
-    "mocha": "^2.2.5",
+    "mocha": "^5.0.4",
     "mocha-lcov-reporter": "^1.3.0",
     "nor-pgrunner": "^1.0.0"
   },
