@@ -1,7 +1,11 @@
 /** Database schema creation functions */
 module.exports = [
 	function(db) {
-		return db.query([
+		return db.query(
+					// This function will be replaced later with a real implementation.
+					'CREATE FUNCTION plv8_init() RETURNS boolean LANGUAGE plv8 VOLATILE AS $$ return true; $$;'
+				)
+			.query([
 				'CREATE TABLE IF NOT EXISTS dbversions (',
 				'    version integer PRIMARY KEY NOT NULL,',
 				'    updated timestamptz NOT NULL default now()',
