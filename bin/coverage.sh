@@ -16,6 +16,6 @@ export DEBUG_USE_CONSOLE_INFO=false
 mkdir -p ./coverage/
 mocha -R mocha-lcov-reporter tests/test-*.js > ./coverage/coverage_temp.lcov
 
-sed 's,SF:,SF:lib/,' ./coverage/coverage_temp.lcov > ./coverage/coverage.lcov
+sed 's,SF:,SF:./src/,' ./coverage/coverage_temp.lcov > ./coverage/coverage.lcov
 
 cat ./coverage/coverage.lcov|coveralls
