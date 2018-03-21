@@ -20,7 +20,7 @@ addons:
   postgresql: 9.3
 env:
   - PGCONFIG='pg://postgres@localhost/nopg_test' DISABLE_NEWRELIC=yes DEBUG_NOPG=true NOPG_TIMEOUT=2000
-  - ENABLE_COVERAGE=true PGCONFIG='pg://postgres@localhost/nopg_test' DISABLE_NEWRELIC=yes DEBUG_NOPG=true NOPG_TIMEOUT=2000
+  - ENABLE_COVERAGE=true PGCONFIG='pg://postgres@localhost/nopg_test' DISABLE_NEWRELIC=yes NOPG_TIMEOUT=2000
 before_script:
   - sudo apt-get update -qq
   - sudo apt-get install -qq postgresql-9.3-plv8
