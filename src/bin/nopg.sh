@@ -1,5 +1,10 @@
-#!/bin/sh
-
+#!/usr/bin/env bash
+if uname -s|grep -iq Darwin; then
+    self="$0"
+else
+    self="$(readlink -e "$0")"
+fi
+self_dir="$(dirname "$self")"
 node="$(command -v node || command -v nodejs)"
 
 if test "x$node" = x; then
@@ -7,4 +12,4 @@ if test "x$node" = x; then
     exit 1
 fi
 
-exec "$node" "$(basename "$0" ".sh").js" "$@"
+exec "$node" "$self_dir/$(basename "$self" ".sh").js" "$@"
