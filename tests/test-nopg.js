@@ -10,7 +10,8 @@ var assert = require('assert');
 var util = require('util');
 var PGCONFIG = process.env.PGCONFIG || 'pg://postgres@localhost/test';
 var debug = require('nor-debug');
-var nopg = require('../src');
+
+var nopg = process.env.ENABLE_COVERAGE ? require('../src-cov') : require('../src');
 
 var NOPG_TIMEOUT = process.env.NOPG_TIMEOUT ? parseInt(process.env.NOPG_TIMEOUT, 10) : undefined;
 
