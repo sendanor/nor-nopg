@@ -12,6 +12,7 @@ cd "$pkg_root_dir"
 # Disable debug logs to stdout in nor-debug
 export DEBUG_USE_CONSOLE_LOG=false
 export DEBUG_USE_CONSOLE_INFO=false
+export DEBUG_ENABLE_COLORS=false
 
 mkdir -p ./coverage/
 ./node_modules/.bin/mocha -R mocha-lcov-reporter tests/test-*.js > ./coverage/coverage_temp.lcov
