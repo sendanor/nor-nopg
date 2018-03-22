@@ -9,6 +9,21 @@ node_js:
   - "0.12"
   - "0.10"
 matrix:
+  exlude:
+    - node_js: "8"
+      env: ENABLE_COVERAGE=true PGCONFIG='pg://postgres@localhost/nopg_test' DISABLE_NEWRELIC=yes NOPG_TIMEOUT=2000
+    - node_js: "7"
+      env: ENABLE_COVERAGE=true PGCONFIG='pg://postgres@localhost/nopg_test' DISABLE_NEWRELIC=yes NOPG_TIMEOUT=2000
+    - node_js: "6"
+      env: ENABLE_COVERAGE=true PGCONFIG='pg://postgres@localhost/nopg_test' DISABLE_NEWRELIC=yes NOPG_TIMEOUT=2000
+    - node_js: "5"
+      env: ENABLE_COVERAGE=true PGCONFIG='pg://postgres@localhost/nopg_test' DISABLE_NEWRELIC=yes NOPG_TIMEOUT=2000
+    - node_js: "4"
+      env: ENABLE_COVERAGE=true PGCONFIG='pg://postgres@localhost/nopg_test' DISABLE_NEWRELIC=yes NOPG_TIMEOUT=2000
+    - node_js: "0.12"
+      env: ENABLE_COVERAGE=true PGCONFIG='pg://postgres@localhost/nopg_test' DISABLE_NEWRELIC=yes NOPG_TIMEOUT=2000
+    - node_js: "0.10"
+      env: ENABLE_COVERAGE=true PGCONFIG='pg://postgres@localhost/nopg_test' DISABLE_NEWRELIC=yes NOPG_TIMEOUT=2000
   allow_failures:
     - node_js: "7"
     - node_js: "5"
@@ -37,4 +52,3 @@ after_failure:
   - ls -lha . ./coverage
   - test -d coverage && cat ./coverage/coverage_temp.lcov || true
   - test -d coverage && cat ./coverage/coverage.lcov || true
-  
