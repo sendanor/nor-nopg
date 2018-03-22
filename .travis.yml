@@ -11,32 +11,38 @@ node_js:
 matrix:
   exclude:
     - node_js: "8"
-      env: ENABLE_COVERAGE=true PGCONFIG='pg://postgres@localhost/nopg_test'
+      env: ENABLE_COVERAGE=true
     - node_js: "7"
-      env: ENABLE_COVERAGE=true PGCONFIG='pg://postgres@localhost/nopg_test'
+      env: ENABLE_COVERAGE=true
     - node_js: "6"
-      env: ENABLE_COVERAGE=true PGCONFIG='pg://postgres@localhost/nopg_test'
+      env: ENABLE_COVERAGE=true
     - node_js: "5"
-      env: ENABLE_COVERAGE=true PGCONFIG='pg://postgres@localhost/nopg_test'
+      env: ENABLE_COVERAGE=true
     - node_js: "4"
-      env: ENABLE_COVERAGE=true PGCONFIG='pg://postgres@localhost/nopg_test'
+      env: ENABLE_COVERAGE=true
     - node_js: "0.12"
-      env: ENABLE_COVERAGE=true PGCONFIG='pg://postgres@localhost/nopg_test'
+      env: ENABLE_COVERAGE=true
     - node_js: "0.10"
-      env: ENABLE_COVERAGE=true PGCONFIG='pg://postgres@localhost/nopg_test'
+      env: ENABLE_COVERAGE=true
   allow_failures:
     - node_js: "7"
     - node_js: "5"
     - node_js: "0.12"
     - node_js: "0.10"
-    - env: ENABLE_COVERAGE=true PGCONFIG='pg://postgres@localhost/nopg_test'
+    - env: ENABLE_COVERAGE=true
 sudo: required
 dist: trusty
 addons:
   postgresql: 9.3
 env:
-  - PGCONFIG='pg://postgres@localhost/nopg_test' DISABLE_NEWRELIC=yes DEBUG_NOPG=true NOPG_TIMEOUT=2000
-  - ENABLE_COVERAGE=true PGCONFIG='pg://postgres@localhost/nopg_test'
+  global:
+    - PGCONFIG='pg://postgres@localhost/nopg_test'
+    - DISABLE_NEWRELIC=yes
+    - DEBUG_NOPG=true
+    - NOPG_TIMEOUT=2000
+  matrix:
+    - ENABLE_COVERAGE=false
+    - ENABLE_COVERAGE=true
 before_script:
   - sudo apt-get update -qq
   - sudo apt-get install -qq postgresql-9.3-plv8
