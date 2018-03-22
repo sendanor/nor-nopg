@@ -55,6 +55,3 @@ before_script:
 after_failure:
   - psql -c '\d' -U postgres
   - sudo cat /var/log/postgresql/postgresql-9.3-main.log
-  - ls -lha . ./coverage
-  - test -d coverage && cat ./coverage/coverage_temp.lcov || true
-  - test -d coverage && cat ./coverage/coverage.lcov || true
