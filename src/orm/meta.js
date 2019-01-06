@@ -1,12 +1,14 @@
 /* nor-nopg -- Implementation of meta objects for `NoPg.Document`, `NoPg.Type`, `NoPg.Attachment` and `NoPg.Lib`. */
+
 "use strict";
 
-//var pghelpers = require('../pghelpers.js');
-var is = require('nor-is');
-var debug = require('nor-debug');
-var ARRAY = require('nor-array');
-var FUNCTION = require('nor-function');
-var copy = require('nor-data').copy;
+import _ from 'lodash';
+import is from '@norjs/is';
+import debug from '@norjs/debug';
+import ARRAY from 'nor-array';
+import FUNCTION from 'nor-function';
+
+const copy = obj => _.cloneDeep(obj);
 
 function meta(opts) {
 	opts = opts || {};

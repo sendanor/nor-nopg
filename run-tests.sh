@@ -5,13 +5,13 @@ test="$1"
 set -e
 
 function finish {
-	./node_modules/.bin/nor-pgrunner destroy
+	./node_modules/.bin/norjs-pgrunner destroy
 }
 trap finish EXIT
 
 export DEBUG_NOPG=true
 export NOPG_TIMEOUT=2000
-export PGCONFIG="$(./node_modules/.bin/nor-pgrunner create)"
+export PGCONFIG="$(./node_modules/.bin/norjs-pgrunner create)"
 
 #psql "$PGCONFIG" < scripts/cleanup.sql;
 
@@ -20,7 +20,7 @@ psql "$PGCONFIG" -c 'CREATE EXTENSION "uuid-ossp";'
 psql "$PGCONFIG" -c 'CREATE EXTENSION tcn;'
 psql "$PGCONFIG" -c 'CREATE EXTENSION moddatetime;'
 
-./src/bin/nopg.sh -v init
+./bin/nopg.sh -v init
 
 if test "x$test" = x; then
 	npm -s test

@@ -1,9 +1,10 @@
 /** Database schema creation functions */
 "use strict";
-var debug = require('nor-debug');
-var ARRAY = require('nor-array');
-var _Q = require('q');
-var NoPg = require('nor-nopg');
+import NoPg from 'nor-nopg';
+import debug from '@norjs/debug';
+import ARRAY from 'nor-array';
+import _Q from 'q';
+
 module.exports = [
 
 	/** Create triggers for [tcn extension](https://www.postgresql.org/docs/9.3/static/tcn.html)

@@ -1,21 +1,27 @@
 {
   "name": "nor-nopg",
-  "version": "1.4.4",
+  "version": "1.5.0",
   "description": "NoSQL Library for PostgreSQL",
   "bin": {
     "nor-nopg-import": "./tools/import.js",
-    "nor-nopg": "./src/bin/nopg.sh"
+    "nor-nopg": "./bin/nopg.sh"
   },
-  "main": "src/index.js",
+  "main": "./dist/index.js",
   "scripts": {
+    "compile-watch": "babel --watch -d dist/ src/",
+    "compile": "babel -d dist/ src/",
+    "prepare": "npm run -s compile",
+    "pretest": "npm run -s compile",
+    "preversion": "npm test",
+    "postversion": "git push && git push --tags",
     "test": "./bin/test.sh",
     "test-coverage": "./bin/coverage.sh",
-    "test-dot": "mocha -u bdd -c -R dot tests/test-*.js",
-    "test-list": "mocha -u bdd -c -R list tests/test-*.js",
-    "test-spec": "mocha -u bdd -c -R spec tests/test-*.js",
-    "test-progress": "mocha -u bdd -c -R progress tests/test-*.js",
-    "test-min": "mocha -u bdd -c -R min tests/test-*.js",
-    "test-markdown": "mocha -u bdd -c -R markdown tests/test-*.js",
+    "test-dot": "mocha --require @babel/register -u bdd -c -R dot tests/test-*.js",
+    "test-list": "mocha --require @babel/register -u bdd -c -R list tests/test-*.js",
+    "test-spec": "mocha --require @babel/register -u bdd -c -R spec tests/test-*.js",
+    "test-progress": "mocha --require @babel/register -u bdd -c -R progress tests/test-*.js",
+    "test-min": "mocha --require @babel/register -u bdd -c -R min tests/test-*.js",
+    "test-markdown": "mocha --require @babel/register -u bdd -c -R markdown tests/test-*.js",
     "build-tests.md": "npm run test-markdown > tests.md",
     "lint": "node-lint src/ --config=lint.json",
     "jshint": "jshint src/"
@@ -32,38 +38,41 @@
     "client"
   ],
   "dependencies": {
-    "merge": "^1.1.3",
+    "@norjs/debug": "^1.3.0",
+    "@norjs/extend": "^1.3.0",
+    "@norjs/is": "^1.3.0",
+    "@norjs/pg": "^1.3.2",
+    "@norjs/ref": "^1.3.0",
+    "lodash": "^4.17.11",
+    "merge": "^1.2.1",
     "minimist": "^1.1.0",
-    "nor-array": "^1.0.0",
-    "nor-data": "^1.0.0",
-    "nor-debug": "^1.0.0",
-    "nor-extend": "^1.0.0",
-    "nor-fs": "^1.0.0",
-    "nor-function": "^1.0.0",
-    "nor-is": "^1.0.0",
-    "nor-newrelic": "^1.0.0",
-    "nor-pg": "^1.2.0",
-    "nor-ref": "^1.0.0",
+    "moment": "^2.23.0",
+    "nor-array": "^1.0.1",
+    "nor-function": "^1.0.1",
     "optimist": "^0.6.1",
     "pg-escape": "^0.2.0",
     "q": "^1.0.1",
     "tv4": "^1.0.18",
     "uuid": "^3.2.1"
   },
-  "optionalDependencies": {
-    "newrelic": "^1.13.2"
-  },
   "devDependencies": {
+    "@babel/cli": "^7.2.3",
+    "@babel/core": "^7.2.2",
+    "@babel/preset-env": "^7.2.3",
+    "@babel/register": "^7.0.0",
+    "@norjs/pgrunner": "^1.3.0",
     "async-profile": "^0.4.0",
-    "coveralls": "^3.0.0",
-    "jscover": "^1.0.0",
-    "jshint": "^2.9.2",
+    "coveralls": "^3.0.2",
+    "jshint": "^2.9.7",
     "lint": "^1.1.2",
     "mocha": "^5.0.4",
-    "mocha-lcov-reporter": "^1.3.0",
-    "nor-pgrunner": "^1.0.0"
+    "mocha-lcov-reporter": "^1.3.0"
   },
   "author": "Jaakko-Heikki Heusala <jheusala@iki.fi>",
+  "contributors": [
+    "Jaakko-Heikki Heusala <jheusala@iki.fi>",
+    "Juho Juopperi <jkj@kapsi.fi>"
+  ],
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/sendanor/nor-nopg/issues"

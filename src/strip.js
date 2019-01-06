@@ -3,16 +3,16 @@
 
 "use strict";
 
-var ARRAY = require('nor-array');
-var debug = require("nor-debug");
-var copy = require("nor-data").copy;
+import _ from "lodash";
+import ARRAY from "nor-array";
+import debug from "@norjs/debug";
 
 /** Interface to strip properties from objects
  * @param data {object} The object which properties you want to manipulate
  * @returns interface which can be used to manipulate objects
  */
 module.exports = function(data) {
-	data = copy(data);
+	data = _.cloneDeep(data);
 
 	var strip = {};
 

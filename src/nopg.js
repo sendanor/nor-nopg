@@ -6,9 +6,9 @@
 
 "use strict";
 
-var debug = require('nor-debug');
-var ARRAY = require('nor-array');
-var FUNCTION = require('nor-function');
+import debug from '@norjs/debug';
+import ARRAY from 'nor-array';
+import FUNCTION from 'nor-function';
 
 // Make NOPG_EVENT_TIMES as obsolete
 if( (process.env.NOPG_EVENT_TIMES !== undefined) && (process.env.DEBUG_NOPG_EVENT_TIMES === undefined) ) {
@@ -16,30 +16,63 @@ if( (process.env.NOPG_EVENT_TIMES !== undefined) && (process.env.DEBUG_NOPG_EVEN
 	process.env.DEBUG_NOPG_EVENT_TIMES = process.env.NOPG_EVENT_TIMES;
 }
 
-var util = require('util');
-var $Q = require('q');
-var is = require('nor-is');
-var fs = require('nor-fs');
-var pg = require('nor-pg');
-var extend = require('nor-extend').setup({useFunctionPromises:true});
-var orm = require('./orm');
-var merge = require('merge');
-var pghelpers = require('./pghelpers.js');
-var Query = require('./query.js');
-var InsertQuery = require('./insert_query.js');
-var Predicate = require('./Predicate.js');
-var EventEmitter = require('events');
-var pg_escape = require('pg-escape');
+import util from 'util';
+import Q from 'q';
+import is from '@norjs/is';
+import FS from 'fs';
+
+import moment from 'moment';
+import pg from '@norjs/pg';
+import { types } from '@norjs/pg';
+const TIMESTAMPTZ_OID = 1184;
+const TIMESTAMP_OID = 1114;
+types.setTypeParser(TIMESTAMP_OID, (timestamp) => moment(timestamp).toISOString());
+types.setTypeParser(TIMESTAMPTZ_OID, (timestamp) => moment(timestamp).toISOString());
+
+import EXTEND from '@norjs/extend';
+const extend = EXTEND.setup({useFunctionPromises:true});
+
+import orm from './orm';
+import merge from 'merge';
+import pghelpers from './pghelpers.js';
+import Query from './query.js';
+import InsertQuery from './insert_query.js';
+import Predicate from './Predicate.js';
+import EventEmitter from 'events';
+import pg_escape from 'pg-escape';
 
 /* ----------- ENVIRONMENT SETTINGS ------------- */
 
-var PGCONFIG = process.env.PGCONFIG || undefined;
+const PGCONFIG = process.env.PGCONFIG || undefined;
 
 /* ------- (OPTIONAL) NEWRELIC SUPPORT ---------- */
 
-var nr_fcall = require('nor-newrelic/src/fcall.js');
+function nr_fcall (desc, fn) {
+	return Q.fcall(fn);
+}
 
 /* ------------- HELPER FUNCTIONS --------------- */
+
+function readFile (file, {encoding='utf8'} = {}) {
+	return Q.Promise((resolve, reject) => {
+		try {
+			FS.readFile(file, {encoding}, (err, data) => {
+				try {
+					if (err) {
+						reject(err);
+					} else {
+						resolve(data);
+					}
+				} catch (err) {
+					debug.error('Unexpected exception: ', err);
+					reject(err);
+				}
+			});
+		} catch (err) {
+			reject(err);
+		}
+	});
+}
 
 /** Returns seconds between two date values
  * @returns {number} Time between two values (ms)
@@ -536,8 +569,14 @@ function parse_predicates(Type) {
 /* ------------- PRIVATE FUNCTIONS --------------- */
 
 
-/** Perform generic query */
-function do_query(self, query, values) {
+/** Perform generic query
+ *
+ * @param self
+ * @param query
+ * @param values
+ * @returns {*}
+ */
+function do_query (self, query, values) {
 	return nr_fcall("nopg:do_query", function() {
 
 		if(!query) { throw new TypeError("invalid: query: " + util.inspect(query)); }
@@ -548,10 +587,10 @@ function do_query(self, query, values) {
 
 		debug.assert(self).is('object');
 		debug.assert(self._db).is('object');
-		debug.assert(self._db._query).is('function');
+		debug.assert(self._db[pg.query]).is('function');
 
 		var start_time = new Date();
-		return self._db._query(query, values).then(function(res) {
+		return self._db[pg.query](query, values).then(function(res) {
 			var end_time = new Date();
 
 			self._record_sample({
@@ -994,9 +1033,9 @@ function _get_type_by_name(self, document_type) {
 
 /** Returns the query object for SELECT queries
  * @param self {object} The NoPg connection/transaction object
- * @param types {} 
- * @param search_opts {} 
- * @param traits {object} 
+ * @param types {}
+ * @param search_opts {}
+ * @param traits {object}
  */
 function prepare_select_query(self, types, search_opts, traits) {
 	var ObjType, document_type, document_type_obj;
@@ -1065,7 +1104,7 @@ function prepare_select_query(self, types, search_opts, traits) {
 			document_type_obj = document_type;
 		}
 
-		return $Q.fcall(function() {
+		return Q.fcall(function() {
 
 			// Do not search type if recursive call
 			if(_recursive) {
@@ -1177,9 +1216,9 @@ function do_select(self, types, search_opts, traits) {
 
 /** Generic SELECT COUNT(*) query
  * @param self {object} The NoPg connection/transaction object
- * @param types {} 
- * @param search_opts {} 
- * @param traits {object} 
+ * @param types {}
+ * @param search_opts {}
+ * @param traits {object}
  */
 function do_count(self, types, search_opts, traits) {
 	return nr_fcall("nopg:do_count", function() {
@@ -1733,7 +1772,7 @@ function create_watchdog(db, opts) {
 	w.timeout = setTimeout(function() {
 		debug.warn('Got timeout.');
 		w.timeout = undefined;
-		$Q.fcall(function() {
+		Q.fcall(function() {
 			var tr_open, tr_commit, tr_rollback, state, tr_unknown, tr_disconnect;
 
 			// NoPg instance
@@ -1976,15 +2015,15 @@ NoPg.transaction = function(pgconfig, opts, fn) {
 		}).fail(function(err) {
 			if(!_db) {
 				//debug.error('Passing on error: ', err);
-				return $Q.reject(err);
+				return Q.reject(err);
 			}
 			return _db.rollback().fail(function(err2) {
 				debug.error("rollback failed: ", err2);
 				//debug.error('Passing on error: ', err);
-				return $Q.reject(err);
+				return Q.reject(err);
 			}).then(function() {
 				//debug.error('Passing on error: ', err);
-				return $Q.reject(err);
+				return Q.reject(err);
 			});
 		});
 
@@ -2209,7 +2248,7 @@ NoPg.prototype.setupTriggersForType = function(type) {
 			return function step() {
 				return do_query(self, query);
 			};
-		}).reduce($Q.when, $Q()).then(function() {
+		}).reduce(Q.when, Q()).then(function() {
 			return self;
 		});
 	}));
@@ -2535,7 +2574,7 @@ NoPg.prototype.setupTCN = function() {
 	NoPg.prototype[fn] = function(event, listener) {
 		var self = this;
 		return extend.promise( [NoPg], nr_fcall("nopg:"+fn, function() {
-			return $Q.fcall(function() {
+			return Q.fcall(function() {
 				event = NoPg.parseEventName(event);
 				debug.assert(event).is('object');
 
@@ -2625,7 +2664,7 @@ function pad(num, size) {
  * @param builders
  * @param file
  */
-function push_file(builders, file) {
+function push_file (builders, file) {
 	FUNCTION(builders.push).apply(builders, require(file) );
 }
 
@@ -2653,7 +2692,7 @@ NoPg.prototype.init = function() {
 					//FUNCTION(builders.push).apply(builders, require(file) );
 					push_file(builders, file);
 				} catch(err) {
-					//debug.log("Exception: ", err);
+					debug.error("Exception: ", err);
 					throw new TypeError("Failed to load: "+ file + ": " + err);
 				}
 			}
@@ -2669,7 +2708,7 @@ NoPg.prototype.init = function() {
 					db.fetchAll();
 					return db;
 				}).then(f);
-			}, $Q(self._db)).then(function() {
+			}, Q(self._db)).then(function() {
 				return db._addDBVersion({'$version': code_version});
 			}).then(function() {
 				//debug.log('Successfully upgraded database from v' + db_version + ' to v' + code_version); 
@@ -2862,7 +2901,7 @@ NoPg.prototype._createType = function(name) {
 				data.$name = ''+name;
 			}
 			return do_insert(self, NoPg.Type, data).then(_get_result(NoPg.Type)).then(function(result) {
-				return $Q.fcall(function() {
+				return Q.fcall(function() {
 					if(name !== undefined) {
 						return self.setupTriggersForType(name);
 					}
@@ -2956,7 +2995,7 @@ NoPg.prototype.declareType = function(name, opts) {
 							return pg_declare_index(self, NoPg.Document, type, index, "type", uniqueIndexes.indexOf(index) >= 0);
 						});
 					};
-				}).reduce($Q.when, $Q()).then(function() {
+				}).reduce(Q.when, Q()).then(function() {
 					return self.push(type);
 				});
 			});
@@ -3401,7 +3440,7 @@ NoPg.prototype.declareIndexes = function(name) {
 							return pg_declare_index(self, NoPg.Document, type, index, "type", uniqueIndexes.indexOf(index) >= 0);
 						});
 					};
-				}).reduce($Q.when, $Q()).then(function() {
+				}).reduce(Q.when, Q()).then(function() {
 					return self;
 				});
 			});
@@ -3458,7 +3497,7 @@ NoPg.prototype._updateTypeCache = function(name, type) {
 	debug.assert(objects).is('object');
 	var types = cache.types;
 	debug.assert(types).is('object');
-	var cached_type = types[name] = $Q.when(type).then(function(result) {
+	var cached_type = types[name] = Q.when(type).then(function(result) {
 		var result_id;
 		if(is.obj(result)) {
 			result_id = result.$id;
@@ -3480,7 +3519,7 @@ NoPg.prototype._getType = function(name, traits) {
 	}
 
 	if(self._cache.types.hasOwnProperty(name)) {
-		return $Q.when(self._cache.types[name]);
+		return Q.when(self._cache.types[name]);
 	}
 
 	return self._updateTypeCache(name, do_select(self, NoPg.Type, name, traits).then(_get_result(NoPg.Type)));
@@ -3540,9 +3579,9 @@ NoPg.prototype._importLib = function(file, opts) {
 		file = undefined;
 	}
 
-	return $Q.fcall(function() {
+	return Q.fcall(function() {
 		if(file) {
-			return fs.readFile(file, {'encoding':'utf8'});
+			return readFile(file, {'encoding':'utf8'});
 		}
 		if(opts.$content) {
 			return;
@@ -3610,7 +3649,7 @@ NoPg.prototype.searchTypes = function(opts, traits) {
 
 /** Create an attachment from a file in the filesystem.
  * @param obj {object} The document object where the attachment will be placed.
- *          If it is an attachment object, it's parent will be used. If it is 
+ *          If it is an attachment object, it's parent will be used. If it is
  *          undefined, then last object in the queue will be used.
  */
 NoPg.prototype.createAttachment = function(doc) {
@@ -3619,7 +3658,7 @@ NoPg.prototype.createAttachment = function(doc) {
 
 	function createAttachment2(file, opts) {
 		return extend.promise( [NoPg], nr_fcall("nopg:createAttachment", function() {
-			return $Q.fcall(function() {
+			return Q.fcall(function() {
 				opts = opts || {};
 
 				var file_is_buffer = false;
@@ -3658,7 +3697,7 @@ NoPg.prototype.createAttachment = function(doc) {
 					return file;
 				}
 
-				return fs.readFile(file, {'encoding':'hex'});
+				return readFile(file, {'encoding':'hex'});
 
 			}).then(function(buffer) {
 

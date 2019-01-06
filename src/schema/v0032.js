@@ -1,9 +1,9 @@
 "use strict";
 
 /** Database schema creation functions */
-var _Q = require('q');
-var uuid = require('uuid');
-var debug = require('nor-debug');
+import _Q from 'q';
+import uuid from 'uuid';
+import debug from '@norjs/debug';
 module.exports = [
 
 	/** The methods table */

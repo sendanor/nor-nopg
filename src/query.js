@@ -2,10 +2,9 @@
 
 "use strict";
 
-var debug = require('nor-debug');
-//var is = require('nor-is');
-var Predicate = require('./Predicate.js');
-var ARRAY = require('nor-array');
+import debug from '@norjs/debug';
+import Predicate from './Predicate.js';
+import ARRAY from 'nor-array';
 
 /** SELECT query */
 function Query(opts) {

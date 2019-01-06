@@ -1,6 +1,4 @@
 /** Database schema creation functions */
-var NoPg = require('nor-nopg');
-var debug = require('nor-debug');
 module.exports = [
 
 	/** Create INDEXes */

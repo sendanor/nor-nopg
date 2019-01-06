@@ -7,15 +7,16 @@
 
 "use strict";
 
-var FUNCTION = require('nor-function');
-var ARRAY = require('nor-array');
-var debug = require('nor-debug');
-var merge = require('merge');
-var copy = require('nor-data').copy;
-var is = require('nor-is');
-var debug = require('nor-debug');
-var strip = require('./strip.js');
-var ref = require('nor-ref');
+import is from '@norjs/is';
+import debug from '@norjs/debug';
+import ref from '@norjs/ref';
+import _ from 'lodash';
+import FUNCTION from 'nor-function';
+import ARRAY from 'nor-array';
+import merge from 'merge';
+import strip from './strip.js';
+
+const copy = (obj) => _.cloneDeep(obj);
 
 /** Compute keys */
 function compute_keys(o, opts, req, res) {

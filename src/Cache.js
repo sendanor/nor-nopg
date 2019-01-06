@@ -1,11 +1,11 @@
 
 "use strict";
 
-var is = require('nor-is');
-var debug = require('nor-debug');
-var ARRAY = require('nor-array');
-var VariableStore = require('./VariableStore.js');
-var InternalCursor = require('./InternalCursor.js');
+import is from '@norjs/is';
+import debug from '@norjs/debug';
+import ARRAY from 'nor-array';
+import VariableStore from './VariableStore.js';
+import InternalCursor from './InternalCursor.js';
 
 /** The cache object */
 function Cache(opts) {

@@ -13,8 +13,6 @@ cd "$pkg_root_dir"
 export DEBUG_USE_CONSOLE_LOG=false
 export DEBUG_USE_CONSOLE_INFO=false
 export DEBUG_ENABLE_COLORS=false
-export DISABLE_NEWRELIC=yes
-export NOPG_TIMEOUT=2000
 
 mkdir -p ./coverage/
 ./node_modules/.bin/mocha -R mocha-lcov-reporter tests/test-*.js > ./coverage/coverage_temp.lcov
