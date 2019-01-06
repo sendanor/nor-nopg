@@ -1,10 +1,8 @@
 
 "use strict";
 
-//var is = require('nor-is');
-var debug = require('nor-debug');
-var ARRAY = require('nor-array');
-//var VariableStore = require('./VariableStore.js');
+import debug from '@norjs/debug';
+import ARRAY from 'nor-array';
 
 /** Internal cursor object */
 function InternalCursor(parent, key) {

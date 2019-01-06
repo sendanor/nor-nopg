@@ -1,11 +1,10 @@
 /* nor-nopg -- NoPg.Attachment object implementation */
 "use strict";
 
-var is = require('nor-is');
-var debug = require('nor-debug');
-var util = require("util");
-//var events = require("events");
-var NoPgORM = require("./ORM.js");
+import is from '@norjs/is';
+import debug from '@norjs/debug';
+import util from "util";
+import NoPgORM from "./ORM.js";
 
 var meta = require('./meta.js')({
 	"table": "attachments",

@@ -17,6 +17,4 @@ npm-debug.log
 node_modules
 .testenv.cnf
 
-/src/schema/funcs/*.sql
-
-/dist/
+/src/

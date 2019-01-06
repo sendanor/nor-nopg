@@ -1,9 +1,9 @@
 
 "use strict";
 
-var is = require('nor-is');
-var debug = require('nor-debug');
-var Cache = require('./Cache.js');
+import is from '@norjs/is';
+import debug from '@norjs/debug';
+import Cache from './Cache.js';
 
 /** Scan object(s) recursively and returns every scanned object mapped with identification property $id
  * @param objs {Array|object} Object or array of objects to scan

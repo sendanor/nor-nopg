@@ -1,7 +1,7 @@
 /** Database schema creation functions */
-var NoPg = require('nor-nopg');
-var uuid = require('uuid/v4');
-var debug = require('nor-debug');
+import NoPg from 'nor-nopg';
+import uuid from 'uuid/v4';
+import debug from '@norjs/debug';
 module.exports = [
 
 	/** #2 Table for storing JS libraries (01_js_library_environment.sql) */

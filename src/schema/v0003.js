@@ -1,6 +1,6 @@
 /** Database schema creation functions */
-var uuid = require('uuid/v4');
-var debug = require('nor-debug');
+import uuid from 'uuid/v4';
+import debug from '@norjs/debug';
 
 module.exports = [
 

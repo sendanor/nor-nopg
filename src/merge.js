@@ -1,8 +1,8 @@
 "use strict";
 
-var is = require('nor-is');
-var debug = require('nor-debug');
-var ARRAY = require('nor-array');
+import is from '@norjs/is';
+import debug from '@norjs/debug';
+import ARRAY from 'nor-array';
 
 /** Merge two arrays */
 function _merge_array(opts, a, b) {

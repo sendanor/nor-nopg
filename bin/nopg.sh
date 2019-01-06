@@ -12,4 +12,4 @@ if test "x$node" = x; then
     exit 1
 fi
 
-exec "$node" "$self_dir/$(basename "$self" ".sh").js" "$@"
+exec "$node" "$self_dir/../dist/bin/$(basename "$self" ".sh").js" "$@"

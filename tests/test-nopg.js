@@ -1,19 +1,37 @@
 "use strict";
 
-var _Q = require('q');
+import _Q from 'q';
 _Q.longStackSupport = true;
 
-var crypto = require('crypto');
-var fs = require('nor-fs');
-var is = require('nor-is');
-var assert = require('assert');
-var util = require('util');
-var PGCONFIG = process.env.PGCONFIG || 'pg://postgres@localhost/test';
-var debug = require('nor-debug');
+import crypto from 'crypto';
+import assert from 'assert';
+import debug from '@norjs/debug';
+import FS from 'fs';
 
-var nopg = process.env.ENABLE_COVERAGE ? require('../src-cov') : require('../src');
+const PGCONFIG = process.env.PGCONFIG || 'pg://postgres@localhost/test';
+const nopg = process.env.ENABLE_COVERAGE ? require('../dist-cov/index.js') : require('../dist/index.js');
+const NOPG_TIMEOUT = process.env.NOPG_TIMEOUT ? parseInt(process.env.NOPG_TIMEOUT, 10) : undefined;
 
-var NOPG_TIMEOUT = process.env.NOPG_TIMEOUT ? parseInt(process.env.NOPG_TIMEOUT, 10) : undefined;
+function readFile (file) {
+	return _Q.Promise((resolve, reject) => {
+		try {
+			FS.readFile(file, (err, data) => {
+				try {
+					if (err) {
+						reject(err);
+					} else {
+						resolve(data);
+					}
+				} catch (err) {
+					debug.error('Unexpected exception: ', err);
+					reject(err);
+				}
+			});
+		} catch (err) {
+			reject(err);
+		}
+	});
+}
 
 /** */
 function not_in(a) {
@@ -853,7 +871,7 @@ describe('nopg', function(){
 			var doc;
 			//var buffer;
 			return _Q.fcall(function() {
-				return fs.readFile( __dirname + '/files/test1.jpg'/*, {'encoding':'hex'}*/ );
+				return readFile( __dirname + '/files/test1.jpg' );
 			}).then(function(buffer) {
 
 				debug.assert(buffer).typeOf('object').instanceOf(Buffer);
@@ -2650,6 +2668,3 @@ describe('nopg', function(){
 	});
 
 });
-
-/* EOF */
-

@@ -1,11 +1,11 @@
 
 "use strict";
 
-var debug = require('nor-debug');
-var ARRAY = require('nor-array');
-var scan = require('./scan.js');
-var merge = require('./merge.js');
-var is = require('nor-is');
+import debug from '@norjs/debug';
+import is from '@norjs/is';
+import ARRAY from 'nor-array';
+import scan from './scan.js';
+import merge from './merge.js';
 
 /** Scan document for same partial objects and compact them with full objects in $documents
  * @param doc {object} The document to compact

@@ -1,9 +1,7 @@
 
 "use strict";
 
-//var is = require('nor-is');
-var debug = require('nor-debug');
-//var ARRAY = require('nor-array');
+import debug from '@norjs/debug';
 
 /** Create a new store for variables. This is useful for creating indexes for things like arrays and other objects. */
 function VariableStore() {
